@@ -1,0 +1,205 @@
+import { useState } from 'react';
+import { useAuth } from '../hooks/useAuth';
+import { userAPI } from '../api/user.api';
+import { uploadAPI } from '../api/upload.api';
+import Button from '../components/common/Button';
+import Input from '../components/common/Input';
+import toast from 'react-hot-toast';
+import { FiCamera, FiSave } from 'react-icons/fi';
+
+const Profile = () => {
+  const { user, updateUser } = useAuth();
+  const [formData, setFormData] = useState({
+    name: user?.name || '',
+    email: user?.email || '',
+  });
+  const [loading, setLoading] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      [name]: value,
+    }));
+  };
+
+  const handleUpdateProfile = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    try {
+      const response = await userAPI.updateProfile(formData);
+      if (response.success) {
+        updateUser(response.data.user);
+        toast.success(response.message || 'Profile updated successfully');
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to update profile';
+      toast.error(message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleImageUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+      toast.error('Image size must be less than 5MB');
+      return;
+    }
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+      toast.error('Please upload an image file');
+      return;
+    }
+
+    setUploadingImage(true);
+
+    try {
+      const response = await uploadAPI.uploadImage(file);
+      if (response.success) {
+        updateUser({ avatar: response.data.avatar });
+        toast.success('Profile image updated successfully');
+      }
+    } catch (error) {
+      const message = error.response?.data?.message || 'Failed to upload image';
+      toast.error(message);
+    } finally {
+      setUploadingImage(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen bg-gray-50 py-8">
+      <div className="container-custom max-w-2xl">
+        <h1 className="text-3xl font-bold text-gray-900 mb-8">Profile Settings</h1>
+
+        {/* Profile Image */}
+        <div className="bg-white rounded-lg shadow p-6 mb-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Profile Picture
+          </h2>
+          <div className="flex items-center space-x-6">
+            <div className="relative">
+              <div className="w-24 h-24 rounded-full bg-primary-100 flex items-center justify-center overflow-hidden">
+                {user?.avatar?.url ? (
+                  <img
+                    src={user.avatar.url}
+                    alt={user.name}
+                    className="w-full h-full object-cover"
+                  />
+                ) : (
+                  <span className="text-3xl font-bold text-primary-600">
+                    {user?.name?.charAt(0).toUpperCase()}
+                  </span>
+                )}
+              </div>
+              <label
+                htmlFor="avatar-upload"
+                className="absolute bottom-0 right-0 bg-primary-600 text-white p-2 rounded-full cursor-pointer hover:bg-primary-700 transition-colors"
+              >
+                {uploadingImage ? (
+                  <div className="animate-spin h-4 w-4 border-2 border-white border-t-transparent rounded-full"></div>
+                ) : (
+                  <FiCamera className="w-4 h-4" />
+                )}
+                <input
+                  id="avatar-upload"
+                  type="file"
+                  accept="image/*"
+                  onChange={handleImageUpload}
+                  disabled={uploadingImage}
+                  className="hidden"
+                />
+              </label>
+            </div>
+            <div>
+              <p className="text-sm text-gray-600">
+                Click the camera icon to upload a new photo
+              </p>
+              <p className="text-xs text-gray-500 mt-1">
+                JPG, PNG or WEBP. Max size 5MB.
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {/* Profile Information */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Personal Information
+          </h2>
+          <form onSubmit={handleUpdateProfile} className="space-y-4">
+            <Input
+              label="Full Name"
+              type="text"
+              name="name"
+              value={formData.name}
+              onChange={handleChange}
+              required
+            />
+
+            <Input
+              label="Email Address"
+              type="email"
+              name="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              helperText="Contact support to change your email address"
+              disabled
+            />
+
+            <div className="pt-4">
+              <Button
+                type="submit"
+                loading={loading}
+                disabled={loading}
+                className="flex items-center space-x-2"
+              >
+                <FiSave />
+                <span>Save Changes</span>
+              </Button>
+            </div>
+          </form>
+        </div>
+
+        {/* Account Information */}
+        <div className="bg-white rounded-lg shadow p-6 mt-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Account Information
+          </h2>
+          <div className="space-y-3 text-sm">
+            <div className="flex justify-between">
+              <span className="text-gray-600">Member since:</span>
+              <span className="font-medium">
+                {new Date(user?.createdAt).toLocaleDateString()}
+              </span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Account status:</span>
+              <span className="font-medium text-green-600">Active</span>
+            </div>
+            <div className="flex justify-between">
+              <span className="text-gray-600">Email verified:</span>
+              <span className="font-medium">
+                {user?.isEmailVerified ? (
+                  <span className="text-green-600">Yes</span>
+                ) : (
+                  <span className="text-yellow-600">Pending</span>
+                )}
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+};
+
+export default Profile;
