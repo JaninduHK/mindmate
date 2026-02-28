@@ -51,14 +51,21 @@ const userSchema = new mongoose.Schema(
       type: Boolean,
       default: true,
     },
+    stripeCustomerId: {
+      type: String,
+      sparse: true,
+    },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
+    },
   },
   {
     timestamps: true,
   }
 );
-
-// Index for faster queries
-userSchema.index({ email: 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function (next) {
@@ -93,6 +100,7 @@ userSchema.methods.toPublicJSON = function () {
   return {
     _id: this._id,
     name: this.name,
+    username: this.username,
     email: this.email,
     avatar: this.avatar,
     role: this.role,

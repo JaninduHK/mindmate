@@ -1,6 +1,7 @@
 import User from '../models/User.model.js';
 import RefreshToken from '../models/RefreshToken.model.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.util.js';
+import { generateUsername } from '../utils/username.util.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
@@ -26,11 +27,21 @@ export const register = asyncHandler(async (req, res) => {
     throw new ApiError(HTTP_STATUS.CONFLICT, 'Email already registered');
   }
 
+  // Generate a unique friendly username (retry on collision)
+  let username;
+  for (let i = 0; i < 5; i++) {
+    const candidate = generateUsername();
+    const exists = await User.findOne({ username: candidate }).select('_id');
+    if (!exists) { username = candidate; break; }
+  }
+  if (!username) username = generateUsername(); // fallback — collision is extremely rare
+
   // Create user
   const user = await User.create({
     name,
     email,
     password,
+    username,
   });
 
   // Generate tokens

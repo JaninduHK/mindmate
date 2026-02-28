@@ -1,5 +1,6 @@
+import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { FiUser, FiActivity, FiCalendar } from 'react-icons/fi';
+import { FiUser, FiActivity, FiCalendar, FiAward } from 'react-icons/fi';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -61,18 +62,29 @@ const Dashboard = () => {
             Quick Actions
           </h2>
           <div className="grid md:grid-cols-2 gap-4">
-            <button className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left">
-              <h3 className="font-semibold text-gray-900">Daily Check-in</h3>
+            <Link to="/events" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">Browse Events</h3>
               <p className="text-gray-600 text-sm mt-1">
-                Log your mood and feelings
+                Find sessions and workshops near you
               </p>
-            </button>
-            <button className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left">
-              <h3 className="font-semibold text-gray-900">Resources</h3>
+            </Link>
+            <Link to="/booking/my" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">My Bookings</h3>
               <p className="text-gray-600 text-sm mt-1">
-                Explore mental health resources
+                View and manage your upcoming sessions
               </p>
-            </button>
+            </Link>
+            {user?.role === 'user' && (
+              <Link to="/counselor/onboarding" className="p-4 border-2 border-primary-200 bg-primary-50 rounded-lg hover:border-primary-500 transition-colors text-left block">
+                <div className="flex items-center space-x-2 mb-1">
+                  <FiAward className="w-4 h-4 text-primary-600" />
+                  <h3 className="font-semibold text-primary-900">Become a Counselor</h3>
+                </div>
+                <p className="text-primary-700 text-sm">
+                  Register as a professional counselor and start publishing sessions
+                </p>
+              </Link>
+            )}
           </div>
         </div>
 

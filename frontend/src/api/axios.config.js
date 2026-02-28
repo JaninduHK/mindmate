@@ -64,9 +64,8 @@ axiosInstance.interceptors.response.use(
         originalRequest.headers.Authorization = `Bearer ${data.data.accessToken}`;
         return axiosInstance(originalRequest);
       } catch (refreshError) {
-        // Refresh failed, clear token and redirect to login
+        // Refresh failed — clear token and let the caller handle the 401
         clearAccessToken();
-        window.location.href = '/login';
         return Promise.reject(refreshError);
       }
     }

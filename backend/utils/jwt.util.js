@@ -1,21 +1,22 @@
 import jwt from 'jsonwebtoken';
-import { JWT_CONFIG } from '../config/constants.js';
 
+// Read from process.env at call time (not load time) to avoid
+// ES module hoisting issues where dotenv hasn't run yet.
 export const generateAccessToken = (payload) => {
-  return jwt.sign(payload, JWT_CONFIG.ACCESS_TOKEN_SECRET, {
-    expiresIn: JWT_CONFIG.ACCESS_TOKEN_EXPIRY,
+  return jwt.sign(payload, process.env.JWT_ACCESS_SECRET, {
+    expiresIn: process.env.JWT_ACCESS_EXPIRY || '15m',
   });
 };
 
 export const generateRefreshToken = (payload) => {
-  return jwt.sign(payload, JWT_CONFIG.REFRESH_TOKEN_SECRET, {
-    expiresIn: JWT_CONFIG.REFRESH_TOKEN_EXPIRY,
+  return jwt.sign(payload, process.env.JWT_REFRESH_SECRET, {
+    expiresIn: process.env.JWT_REFRESH_EXPIRY || '7d',
   });
 };
 
 export const verifyAccessToken = (token) => {
   try {
-    return jwt.verify(token, JWT_CONFIG.ACCESS_TOKEN_SECRET);
+    return jwt.verify(token, process.env.JWT_ACCESS_SECRET);
   } catch (error) {
     throw new Error('Invalid or expired access token');
   }
@@ -23,7 +24,7 @@ export const verifyAccessToken = (token) => {
 
 export const verifyRefreshToken = (token) => {
   try {
-    return jwt.verify(token, JWT_CONFIG.REFRESH_TOKEN_SECRET);
+    return jwt.verify(token, process.env.JWT_REFRESH_SECRET);
   } catch (error) {
     throw new Error('Invalid or expired refresh token');
   }

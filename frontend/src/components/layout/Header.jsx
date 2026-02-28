@@ -1,6 +1,7 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../common/Button';
+import NotificationBell from '../notifications/NotificationBell';
 import { FiUser, FiLogOut, FiMenu } from 'react-icons/fi';
 import { useState } from 'react';
 
@@ -13,6 +14,9 @@ const Header = () => {
     await logout();
     navigate('/login');
   };
+
+  const isCounselor = user?.role === 'counselor' || user?.role === 'admin';
+  const isAdmin = user?.role === 'admin';
 
   return (
     <header className="bg-white shadow-sm">
@@ -28,20 +32,39 @@ const Header = () => {
 
           {/* Desktop Navigation */}
           <div className="hidden md:flex items-center space-x-4">
+            <Link to="/events" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
+              Events
+            </Link>
+            <Link to="/counselors" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
+              Counselors
+            </Link>
+
             {isAuthenticated ? (
               <>
-                <Link
-                  to="/dashboard"
-                  className="text-gray-700 hover:text-primary-600 transition-colors"
-                >
+                <Link to="/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
                   Dashboard
                 </Link>
+
+                {isCounselor && (
+                  <Link to="/counselor/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
+                    My Studio
+                  </Link>
+                )}
+
+                {isAdmin && (
+                  <Link to="/admin" className="text-gray-700 hover:text-primary-600 transition-colors text-sm font-semibold">
+                    Admin
+                  </Link>
+                )}
+
+                <NotificationBell />
+
                 <Link
                   to="/profile"
-                  className="text-gray-700 hover:text-primary-600 transition-colors flex items-center space-x-1"
+                  className="text-gray-700 hover:text-primary-600 transition-colors flex items-center space-x-1 text-sm"
                 >
                   <FiUser />
-                  <span>{user?.name}</span>
+                  <span>{user?.username || user?.name}</span>
                 </Link>
                 <Button
                   variant="outline"
@@ -56,24 +79,17 @@ const Header = () => {
             ) : (
               <>
                 <Link to="/login">
-                  <Button variant="secondary" size="sm">
-                    Login
-                  </Button>
+                  <Button variant="secondary" size="sm">Login</Button>
                 </Link>
                 <Link to="/register">
-                  <Button variant="primary" size="sm">
-                    Get Started
-                  </Button>
+                  <Button variant="primary" size="sm">Get Started</Button>
                 </Link>
               </>
             )}
           </div>
 
           {/* Mobile Menu Button */}
-          <button
-            className="md:hidden p-2"
-            onClick={() => setShowMenu(!showMenu)}
-          >
+          <button className="md:hidden p-2" onClick={() => setShowMenu(!showMenu)}>
             <FiMenu className="w-6 h-6" />
           </button>
         </div>
@@ -81,27 +97,22 @@ const Header = () => {
         {/* Mobile Menu */}
         {showMenu && (
           <div className="md:hidden mt-4 pb-4 space-y-2">
+            <Link to="/events" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Events</Link>
+            <Link to="/counselors" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Counselors</Link>
+
             {isAuthenticated ? (
               <>
-                <Link
-                  to="/dashboard"
-                  className="block py-2 text-gray-700 hover:text-primary-600"
-                  onClick={() => setShowMenu(false)}
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  to="/profile"
-                  className="block py-2 text-gray-700 hover:text-primary-600"
-                  onClick={() => setShowMenu(false)}
-                >
-                  Profile
-                </Link>
+                <Link to="/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Dashboard</Link>
+                {isCounselor && (
+                  <Link to="/counselor/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>My Studio</Link>
+                )}
+                {isAdmin && (
+                  <Link to="/admin" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Admin</Link>
+                )}
+                <Link to="/booking/my" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>My Bookings</Link>
+                <Link to="/profile" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Profile</Link>
                 <button
-                  onClick={() => {
-                    handleLogout();
-                    setShowMenu(false);
-                  }}
+                  onClick={() => { handleLogout(); setShowMenu(false); }}
                   className="w-full text-left py-2 text-gray-700 hover:text-primary-600"
                 >
                   Logout
@@ -109,20 +120,8 @@ const Header = () => {
               </>
             ) : (
               <>
-                <Link
-                  to="/login"
-                  className="block py-2 text-gray-700 hover:text-primary-600"
-                  onClick={() => setShowMenu(false)}
-                >
-                  Login
-                </Link>
-                <Link
-                  to="/register"
-                  className="block py-2 text-gray-700 hover:text-primary-600"
-                  onClick={() => setShowMenu(false)}
-                >
-                  Register
-                </Link>
+                <Link to="/login" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Login</Link>
+                <Link to="/register" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Register</Link>
               </>
             )}
           </div>

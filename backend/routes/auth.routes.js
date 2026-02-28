@@ -14,13 +14,14 @@ import { RATE_LIMIT_CONFIG } from '../config/constants.js';
 
 const router = express.Router();
 
-// Rate limiter for auth endpoints
+// Rate limiter for auth endpoints (disabled in development)
 const authLimiter = rateLimit({
   windowMs: RATE_LIMIT_CONFIG.WINDOW_MS,
   max: RATE_LIMIT_CONFIG.AUTH_MAX_REQUESTS,
   message: 'Too many authentication attempts, please try again later',
   standardHeaders: true,
   legacyHeaders: false,
+  skip: () => process.env.NODE_ENV !== 'production',
 });
 
 // Public routes

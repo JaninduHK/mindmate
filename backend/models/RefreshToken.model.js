@@ -34,9 +34,8 @@ const refreshTokenSchema = new mongoose.Schema(
   }
 );
 
-// Index for faster queries
+// Index for faster queries (token is already indexed via unique: true)
 refreshTokenSchema.index({ userId: 1 });
-refreshTokenSchema.index({ token: 1 });
 refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 }); // TTL index for auto-deletion
 
 // Method to check if token is expired

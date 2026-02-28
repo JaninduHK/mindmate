@@ -19,8 +19,39 @@ export const RATE_LIMIT_CONFIG = {
 
 export const USER_ROLES = {
   USER: 'user',
+  COUNSELOR: 'counselor',
   ADMIN: 'admin',
 };
+
+export const EVENT_CATEGORIES = [
+  'anxiety', 'depression', 'stress', 'mindfulness', 'grief',
+  'trauma', 'relationships', 'addiction', 'parenting', 'general',
+];
+
+export const EVENT_TYPES = ['session', 'workshop', 'seminar', 'group_therapy', 'webinar'];
+
+export const DELIVERY_MODES = ['online', 'in_person', 'hybrid'];
+
+export const VENUE_TYPES = [
+  'private_clinic', 'community_center', 'hospital', 'online_platform', 'home_visit',
+];
+
+export const AGE_GROUPS = ['children', 'teens', 'adults', 'seniors', 'all'];
+
+export const GENDER_FOCUS = ['any', 'male', 'female', 'non_binary'];
+
+export const EVENT_STATUSES = ['draft', 'published', 'cancelled', 'completed'];
+
+export const BOOKING_STATUSES = ['pending', 'confirmed', 'cancelled', 'completed', 'refunded'];
+
+export const PAYMENT_STATUSES = ['pending', 'paid', 'refunded', 'failed'];
+
+export const WITHDRAWAL_STATUSES = ['pending', 'processing', 'completed', 'rejected'];
+
+export const NOTIFICATION_TYPES = [
+  'booking_confirmed', 'booking_cancelled', 'event_reminder',
+  'payment_received', 'review_received', 'system',
+];
 
 export const HTTP_STATUS = {
   OK: 200,

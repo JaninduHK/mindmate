@@ -44,6 +44,7 @@ export const AuthProvider = ({ children }) => {
         toast.success(response.message || 'Registration successful!');
         return { success: true };
       }
+      return { success: false, error: 'Registration failed' };
     } catch (error) {
       const message = error.response?.data?.message || 'Registration failed';
       toast.error(message);
@@ -62,6 +63,7 @@ export const AuthProvider = ({ children }) => {
         toast.success(response.message || 'Login successful!');
         return { success: true };
       }
+      return { success: false, error: 'Login failed' };
     } catch (error) {
       const message = error.response?.data?.message || 'Login failed';
       toast.error(message);
