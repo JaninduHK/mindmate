@@ -17,6 +17,7 @@ const Header = () => {
 
   const isCounselor = user?.role === 'counselor' || user?.role === 'admin';
   const isAdmin = user?.role === 'admin';
+  const isPeerSupporter = user?.role === 'peer_supporter';
 
   return (
     <header className="bg-white shadow-sm">
@@ -48,6 +49,12 @@ const Header = () => {
                 {isCounselor && (
                   <Link to="/counselor/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
                     My Studio
+                  </Link>
+                )}
+
+                {isPeerSupporter && (
+                  <Link to="/peer-supporter/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
+                    Support Hub
                   </Link>
                 )}
 
@@ -105,6 +112,9 @@ const Header = () => {
                 <Link to="/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Dashboard</Link>
                 {isCounselor && (
                   <Link to="/counselor/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>My Studio</Link>
+                )}
+                {isPeerSupporter && (
+                  <Link to="/peer-supporter/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Support Hub</Link>
                 )}
                 {isAdmin && (
                   <Link to="/admin" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Admin</Link>

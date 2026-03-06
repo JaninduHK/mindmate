@@ -60,7 +60,12 @@ const Login = () => {
     setLoading(false);
 
     if (result.success) {
-      navigate('/dashboard');
+      const { user: loggedInUser } = result;
+      if (loggedInUser?.role === 'peer_supporter') {
+        navigate('/peer-supporter/dashboard');
+      } else {
+        navigate('/dashboard');
+      }
     }
   };
 

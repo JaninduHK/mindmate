@@ -20,6 +20,7 @@ export const RATE_LIMIT_CONFIG = {
 export const USER_ROLES = {
   USER: 'user',
   COUNSELOR: 'counselor',
+  PEER_SUPPORTER: 'peer_supporter',
   ADMIN: 'admin',
 };
 

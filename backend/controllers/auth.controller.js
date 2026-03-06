@@ -215,6 +215,53 @@ export const logout = asyncHandler(async (req, res) => {
   res.status(HTTP_STATUS.OK).json(new ApiResponse(HTTP_STATUS.OK, null, 'Logout successful'));
 });
 
+// Register peer supporter
+export const registerPeerSupporter = asyncHandler(async (req, res) => {
+  const { name, email, password } = req.body;
+
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw new ApiError(HTTP_STATUS.CONFLICT, 'Email already registered');
+  }
+
+  let username;
+  for (let i = 0; i < 5; i++) {
+    const candidate = generateUsername();
+    const exists = await User.findOne({ username: candidate }).select('_id');
+    if (!exists) { username = candidate; break; }
+  }
+  if (!username) username = generateUsername();
+
+  const user = await User.create({
+    name,
+    email,
+    password,
+    username,
+    role: 'peer_supporter',
+  });
+
+  const accessToken = generateAccessToken({ userId: user._id });
+  const refreshToken = generateRefreshToken({ userId: user._id });
+
+  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+  await RefreshToken.create({
+    userId: user._id,
+    token: refreshToken,
+    expiresAt,
+    createdByIp: req.ip,
+  });
+
+  setRefreshTokenCookie(res, refreshToken);
+
+  res.status(HTTP_STATUS.CREATED).json(
+    new ApiResponse(
+      HTTP_STATUS.CREATED,
+      { user: user.toPublicJSON(), accessToken },
+      'Peer supporter registered successfully'
+    )
+  );
+});
+
 // Get current user (for verifying token)
 export const getCurrentUser = asyncHandler(async (req, res) => {
   res.status(HTTP_STATUS.OK).json(

@@ -52,6 +52,25 @@ export const AuthProvider = ({ children }) => {
     }
   };
 
+  // Register peer supporter
+  const registerPeerSupporter = async (userData) => {
+    try {
+      const response = await authAPI.registerPeerSupporter(userData);
+      if (response.success) {
+        setUser(response.data.user);
+        setAccessToken(response.data.accessToken);
+        setIsAuthenticated(true);
+        toast.success(response.message || 'Registration successful!');
+        return { success: true };
+      }
+      return { success: false, error: 'Registration failed' };
+    } catch (error) {
+      const message = error.response?.data?.message || 'Registration failed';
+      toast.error(message);
+      return { success: false, error: message };
+    }
+  };
+
   // Login function
   const login = async (credentials) => {
     try {
@@ -61,7 +80,7 @@ export const AuthProvider = ({ children }) => {
         setAccessToken(response.data.accessToken);
         setIsAuthenticated(true);
         toast.success(response.message || 'Login successful!');
-        return { success: true };
+        return { success: true, user: response.data.user };
       }
       return { success: false, error: 'Login failed' };
     } catch (error) {
@@ -98,6 +117,7 @@ export const AuthProvider = ({ children }) => {
     loading,
     isAuthenticated,
     register,
+    registerPeerSupporter,
     login,
     logout,
     updateUser,
