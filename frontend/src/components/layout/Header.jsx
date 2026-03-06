@@ -42,9 +42,11 @@ const Header = () => {
 
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
-                  Dashboard
-                </Link>
+                {user?.role === 'user' && (
+                  <Link to="/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
+                    Dashboard
+                  </Link>
+                )}
 
                 {isCounselor && (
                   <Link to="/counselor/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
@@ -109,7 +111,9 @@ const Header = () => {
 
             {isAuthenticated ? (
               <>
-                <Link to="/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Dashboard</Link>
+                {user?.role === 'user' && (
+                  <Link to="/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Dashboard</Link>
+                )}
                 {isCounselor && (
                   <Link to="/counselor/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>My Studio</Link>
                 )}

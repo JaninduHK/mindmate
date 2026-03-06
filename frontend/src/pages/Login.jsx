@@ -17,7 +17,10 @@ const Login = () => {
 
   // Redirect if already authenticated
   if (isAuthenticated) {
-    navigate('/dashboard');
+    if (user?.role === 'peer_supporter') navigate('/peer-supporter/dashboard');
+    else if (user?.role === 'counselor') navigate('/counselor/dashboard');
+    else if (user?.role === 'admin') navigate('/admin');
+    else navigate('/dashboard');
     return null;
   }
 
@@ -61,11 +64,10 @@ const Login = () => {
 
     if (result.success) {
       const { user: loggedInUser } = result;
-      if (loggedInUser?.role === 'peer_supporter') {
-        navigate('/peer-supporter/dashboard');
-      } else {
-        navigate('/dashboard');
-      }
+      if (loggedInUser?.role === 'peer_supporter') navigate('/peer-supporter/dashboard');
+      else if (loggedInUser?.role === 'counselor') navigate('/counselor/dashboard');
+      else if (loggedInUser?.role === 'admin') navigate('/admin');
+      else navigate('/dashboard');
     }
   };
 

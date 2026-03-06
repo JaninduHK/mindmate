@@ -1,4 +1,5 @@
-import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen } from 'react-icons/fi';
+import { Link } from 'react-router-dom';
+import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen, FiAward } from 'react-icons/fi';
 import { useAuth } from '../../hooks/useAuth';
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
@@ -49,6 +50,21 @@ const PeerSupporterDashboard = () => {
           <h3 className="font-semibold text-gray-900 mb-1">Community</h3>
           <p className="text-sm text-gray-500">Connect with other peer supporters and counselors.</p>
         </div>
+      </div>
+
+      <div className="mt-6">
+        <Link
+          to="/counselor/onboarding"
+          className="flex items-start space-x-3 p-5 border-2 border-primary-200 bg-primary-50 rounded-xl hover:border-primary-500 transition-colors"
+        >
+          <FiAward className="w-5 h-5 text-primary-600 mt-0.5 shrink-0" />
+          <div>
+            <h3 className="font-semibold text-primary-900">Become a Professional Counselor</h3>
+            <p className="text-primary-700 text-sm mt-1">
+              Take the next step — register as a certified counselor and start publishing professional sessions.
+            </p>
+          </div>
+        </Link>
       </div>
     </div>
   );
