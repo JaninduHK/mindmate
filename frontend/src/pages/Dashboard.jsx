@@ -19,6 +19,18 @@ const Dashboard = () => {
 
         <div className="grid md:grid-cols-3 gap-6 mb-8">
           {/* Stats Cards */}
+
+          <div className="bg-white rounded-lg shadow p-6 cursor-pointer hover:shadow-lg transition-shadow">
+            <div className="flex items-center justify-between">
+              <div>
+                <button className="text-gray-500 text-sm">Get Support</button>
+              </div>
+              <div className="w-12 h-12 bg-primary-100 rounded-lg flex items-center justify-center">
+                <FiUser className="w-6 h-6 text-primary-600" />
+              </div>
+            </div>
+          </div>
+
           <div className="bg-white rounded-lg shadow p-6">
             <div className="flex items-center justify-between">
               <div>
