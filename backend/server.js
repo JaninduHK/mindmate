@@ -7,6 +7,11 @@ import compression from 'compression';
 import morgan from 'morgan';
 import mongoSanitize from 'express-mongo-sanitize';
 import rateLimit from 'express-rate-limit';
+import http from 'http';
+import { Server } from 'socket.io';
+
+import { socketHandler } from './socket/socketHandler.js';
+import chatRoutes from './routes/chat.routes.js';
 
 import connectDB from './config/database.js';
 import { configureCloudinary } from './config/cloudinary.js';
@@ -28,12 +33,16 @@ import withdrawalRoutes from './routes/withdrawal.routes.js';
 
 // Initialize Express app
 const app = express();
+const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
 // Configure Cloudinary
 configureCloudinary();
 
-// CORS configuration
+
+// ===============================
+// CORS CONFIGURATION
+// ===============================
 const corsOptions = {
   origin: process.env.CLIENT_URL || 'http://localhost:5173',
   credentials: true,
@@ -42,7 +51,21 @@ const corsOptions = {
   allowedHeaders: ['Content-Type', 'Authorization'],
 };
 
-// Global rate limiter (disabled in development)
+
+// ===============================
+// SOCKET.IO SETUP
+// ===============================
+const io = new Server(server, {
+  cors: corsOptions,
+});
+
+// Initialize socket events
+socketHandler(io);
+
+
+// ===============================
+// GLOBAL RATE LIMITER
+// ===============================
 const globalLimiter = rateLimit({
   windowMs: RATE_LIMIT_CONFIG.WINDOW_MS,
   max: RATE_LIMIT_CONFIG.MAX_REQUESTS,
@@ -52,26 +75,33 @@ const globalLimiter = rateLimit({
   skip: () => process.env.NODE_ENV !== 'production',
 });
 
-// Middleware stack
+
+// ===============================
+// MIDDLEWARE STACK
+// ===============================
 app.use(helmet()); // Security headers
 app.use(cors(corsOptions)); // CORS
 
-// Stripe webhook needs raw body — must come BEFORE express.json()
+// Stripe webhook must come BEFORE JSON parser
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 
-app.use(express.json({ limit: '10mb' })); // Parse JSON bodies
-app.use(express.urlencoded({ extended: true, limit: '10mb' })); // Parse URL-encoded bodies
-app.use(cookieParser()); // Parse cookies
-app.use(mongoSanitize()); // Prevent NoSQL injection
-app.use(compression()); // Compress responses
-app.use(globalLimiter); // Rate limiting
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
+app.use(cookieParser());
+app.use(mongoSanitize());
+app.use(compression());
+app.use(globalLimiter);
 
-// Logging in development
+
+// Logging only in development
 if (process.env.NODE_ENV === 'development') {
   app.use(morgan('dev'));
 }
 
-// Health check endpoint
+
+// ===============================
+// HEALTH CHECK
+// ===============================
 app.get('/api/health', (req, res) => {
   res.status(200).json({
     success: true,
@@ -80,7 +110,10 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-// API routes
+
+// ===============================
+// API ROUTES
+// ===============================
 app.use('/api/auth', authRoutes);
 app.use('/api/user', userRoutes);
 app.use('/api/upload', uploadRoutes);
@@ -92,10 +125,14 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/reviews', reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
+app.use('/api/chats', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
 
-// 404 handler
+
+// ===============================
+// 404 HANDLER
+// ===============================
 app.use('*', (req, res) => {
   res.status(404).json({
     success: false,
@@ -103,26 +140,34 @@ app.use('*', (req, res) => {
   });
 });
 
-// Global error handler (must be last)
+
+// ===============================
+// GLOBAL ERROR HANDLER
+// ===============================
 app.use(errorMiddleware);
 
-// Connect to DB then start server — ensures no queries fire before connection is ready
+
+// ===============================
+// START SERVER AFTER DB CONNECT
+// ===============================
 connectDB().then(() => {
-  app.listen(PORT, () => {
-    console.log(`\n🚀 Server is running on port ${PORT}`);
+  server.listen(PORT, () => {
+    console.log(`\n🚀 Server running on port ${PORT}`);
     console.log(`📍 Environment: ${process.env.NODE_ENV || 'development'}`);
     console.log(`🌐 API: http://localhost:${PORT}/api`);
     console.log(`🏥 Health: http://localhost:${PORT}/api/health\n`);
   });
 });
 
-// Handle unhandled promise rejections
+
+// ===============================
+// GLOBAL ERROR EVENTS
+// ===============================
 process.on('unhandledRejection', (err) => {
   console.error('❌ Unhandled Promise Rejection:', err);
   if (process.env.NODE_ENV === 'production') process.exit(1);
 });
 
-// Handle uncaught exceptions
 process.on('uncaughtException', (err) => {
   console.error('❌ Uncaught Exception:', err);
   if (process.env.NODE_ENV === 'production') process.exit(1);

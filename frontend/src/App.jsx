@@ -11,6 +11,7 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
+import ChatPage from './pages/chat/ChatPage';
 
 // Events
 import EventList from './pages/Events/EventList';
@@ -74,7 +75,7 @@ function App() {
               <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/counselors" element={<CounselorList />} />
               <Route path="/counselors/:id" element={<CounselorProfile />} />
-
+              <Route path="/chat" element={<ChatPage />} />
               {/* Protected — user role only */}
               <Route element={<ProtectedRoute allowedRoles={['user']} />}>
                 <Route path="/dashboard" element={<Dashboard />} />
