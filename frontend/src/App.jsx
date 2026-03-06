@@ -75,9 +75,13 @@ function App() {
               <Route path="/counselors" element={<CounselorList />} />
               <Route path="/counselors/:id" element={<CounselorProfile />} />
 
+              {/* Protected — user role only */}
+              <Route element={<ProtectedRoute allowedRoles={['user']} />}>
+                <Route path="/dashboard" element={<Dashboard />} />
+              </Route>
+
               {/* Protected — any authenticated user */}
               <Route element={<ProtectedRoute />}>
-                <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/profile" element={<Profile />} />
                 <Route path="/booking/checkout/:eventId" element={<BookingCheckout />} />
                 <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />

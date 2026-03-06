@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { FiUser, FiActivity, FiCalendar, FiAward } from 'react-icons/fi';
+import { FiUser, FiActivity, FiCalendar } from 'react-icons/fi';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -74,17 +74,6 @@ const Dashboard = () => {
                 View and manage your upcoming sessions
               </p>
             </Link>
-            {user?.role === 'user' && (
-              <Link to="/counselor/onboarding" className="p-4 border-2 border-primary-200 bg-primary-50 rounded-lg hover:border-primary-500 transition-colors text-left block">
-                <div className="flex items-center space-x-2 mb-1">
-                  <FiAward className="w-4 h-4 text-primary-600" />
-                  <h3 className="font-semibold text-primary-900">Become a Counselor</h3>
-                </div>
-                <p className="text-primary-700 text-sm">
-                  Register as a professional counselor and start publishing sessions
-                </p>
-              </Link>
-            )}
           </div>
         </div>
 
