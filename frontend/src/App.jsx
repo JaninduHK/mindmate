@@ -44,6 +44,10 @@ import AdminWithdrawals from './pages/Admin/AdminWithdrawals';
 // Counselor withdrawals
 import CounselorWithdrawals from './pages/Counselor/CounselorWithdrawals';
 
+// Peer Supporter pages
+import PeerSupporterRegister from './pages/PeerSupporter/PeerSupporterRegister';
+import PeerSupporterDashboard from './pages/PeerSupporter/PeerSupporterDashboard';
+
 function App() {
   return (
     <BrowserRouter>
@@ -65,6 +69,7 @@ function App() {
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/register" element={<Register />} />
+              <Route path="/register/peer-supporter" element={<PeerSupporterRegister />} />
               <Route path="/events" element={<EventList />} />
               <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/counselors" element={<CounselorList />} />
@@ -78,6 +83,11 @@ function App() {
                 <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
                 <Route path="/booking/my" element={<MyBookings />} />
                 <Route path="/counselor/onboarding" element={<CounselorOnboarding />} />
+              </Route>
+
+              {/* Protected — peer supporter role */}
+              <Route element={<ProtectedRoute allowedRoles={['peer_supporter']} />}>
+                <Route path="/peer-supporter/dashboard" element={<PeerSupporterDashboard />} />
               </Route>
 
               {/* Protected — counselor role */}

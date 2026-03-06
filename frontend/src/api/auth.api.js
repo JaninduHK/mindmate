@@ -7,6 +7,12 @@ export const authAPI = {
     return response.data;
   },
 
+  // Register peer supporter
+  registerPeerSupporter: async (userData) => {
+    const response = await axiosInstance.post('/auth/register/peer-supporter', userData);
+    return response.data;
+  },
+
   // Login user
   login: async (credentials) => {
     const response = await axiosInstance.post('/auth/login', credentials);
