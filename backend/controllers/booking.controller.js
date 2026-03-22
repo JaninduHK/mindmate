@@ -5,12 +5,17 @@ import Booking from '../models/Booking.model.js';
 import Event from '../models/Event.model.js';
 import PlatformConfig from '../models/PlatformConfig.model.js';
 import { getStripe } from '../config/stripe.js';
+import { cloudinary } from '../config/cloudinary.js';
 import { encrypt } from '../utils/encryption.util.js';
 import { HTTP_STATUS } from '../config/constants.js';
 
 // POST /api/bookings
 export const createBooking = asyncHandler(async (req, res) => {
-  const { eventId, healthData, attendee } = req.body;
+  const { eventId, healthData, attendee, paymentMethod = 'stripe' } = req.body;
+
+  if (!['stripe', 'bank_transfer'].includes(paymentMethod)) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invalid payment method');
+  }
 
   if (!healthData?.consentGiven) {
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'You must consent to sharing health information to proceed');
@@ -28,13 +33,27 @@ export const createBooking = asyncHandler(async (req, res) => {
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'No seats available');
   }
 
-  // Prevent duplicate bookings
+  // Prevent duplicate confirmed bookings; clean up stale pending ones
   const existing = await Booking.findOne({
     userId: req.user._id,
     eventId,
     status: { $in: ['pending', 'confirmed'] },
   });
-  if (existing) throw new ApiError(HTTP_STATUS.CONFLICT, 'You already have a booking for this event');
+  if (existing) {
+    if (existing.status === 'confirmed') {
+      throw new ApiError(HTTP_STATUS.CONFLICT, 'You already have a booking for this event');
+    }
+    // Stale pending booking — cancel its PaymentIntent and remove it so the user can retry
+    const stripe = getStripe();
+    if (existing.paymentIntentId) {
+      try {
+        await stripe.paymentIntents.cancel(existing.paymentIntentId);
+      } catch (_) {
+        // Intent may already be cancelled or expired — safe to ignore
+      }
+    }
+    await existing.deleteOne();
+  }
 
   const config = await PlatformConfig.getConfig();
   const amountInCents = Math.round(event.price * 100);
@@ -50,6 +69,7 @@ export const createBooking = asyncHandler(async (req, res) => {
     userId: req.user._id,
     eventId,
     counselorId: event.counselorId,
+    paymentMethod,
     amountPaid: event.price,
     platformFee: platformFeeInCents / 100,
     counselorEarning: counselorEarningInCents / 100,
@@ -66,7 +86,17 @@ export const createBooking = asyncHandler(async (req, res) => {
     },
   });
 
-  // Create Stripe PaymentIntent
+  if (paymentMethod === 'bank_transfer') {
+    return res.status(HTTP_STATUS.CREATED).json(
+      new ApiResponse(
+        HTTP_STATUS.CREATED,
+        { booking },
+        'Booking created — upload your payment slip to complete'
+      )
+    );
+  }
+
+  // Stripe flow — create PaymentIntent
   const stripe = getStripe();
   const paymentIntent = await stripe.paymentIntents.create({
     amount: amountInCents,
@@ -88,6 +118,40 @@ export const createBooking = asyncHandler(async (req, res) => {
       'Booking created — complete payment to confirm'
     )
   );
+});
+
+// POST /api/bookings/:id/upload-slip
+export const uploadBankSlip = asyncHandler(async (req, res) => {
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Booking not found');
+  if (String(booking.userId) !== String(req.user._id)) {
+    throw new ApiError(HTTP_STATUS.FORBIDDEN, 'Not authorized');
+  }
+  if (booking.paymentMethod !== 'bank_transfer') {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'This booking does not use bank transfer');
+  }
+  if (!req.file) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'No slip image uploaded');
+  }
+
+  // Delete old slip from Cloudinary if present
+  if (booking.bankSlip?.publicId) {
+    try { await cloudinary.uploader.destroy(booking.bankSlip.publicId); } catch (_) {}
+  }
+
+  // Upload new slip
+  const result = await new Promise((resolve, reject) => {
+    const stream = cloudinary.uploader.upload_stream(
+      { folder: 'mindmate/bank_slips', resource_type: 'image' },
+      (err, res) => (err ? reject(err) : resolve(res))
+    );
+    stream.end(req.file.buffer);
+  });
+
+  booking.bankSlip = { url: result.secure_url, publicId: result.public_id };
+  await booking.save();
+
+  res.json(new ApiResponse(HTTP_STATUS.OK, { booking }, 'Payment slip uploaded'));
 });
 
 // GET /api/bookings/my

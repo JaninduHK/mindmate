@@ -26,10 +26,23 @@ const Profile = () => {
 
   const handleUpdateProfile = async (e) => {
     e.preventDefault();
+    const trimmedName = formData.name.trim();
+    if (!trimmedName) {
+      toast.error('Name is required');
+      return;
+    }
+    if (trimmedName.length < 2) {
+      toast.error('Name must be at least 2 characters');
+      return;
+    }
+    if (trimmedName.length > 50) {
+      toast.error('Name cannot exceed 50 characters');
+      return;
+    }
     setLoading(true);
 
     try {
-      const response = await userAPI.updateProfile(formData);
+      const response = await userAPI.updateProfile({ ...formData, name: trimmedName });
       if (response.success) {
         updateUser(response.data.user);
         toast.success(response.message || 'Profile updated successfully');

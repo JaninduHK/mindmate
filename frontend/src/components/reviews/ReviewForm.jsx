@@ -18,7 +18,12 @@ const ReviewForm = ({ eventId, onSuccess }) => {
 
     setSubmitting(true);
     try {
-      const res = await reviewAPI.create({ eventId, rating, comment: comment.trim() });
+      const trimmedComment = comment.trim();
+      if (trimmedComment.length > 1000) {
+        toast.error('Review cannot exceed 1000 characters');
+        return;
+      }
+      const res = await reviewAPI.create({ eventId, rating, comment: trimmedComment });
       if (!res.success) throw new Error(res.message);
       toast.success('Review submitted');
       onSuccess(res.data.review);

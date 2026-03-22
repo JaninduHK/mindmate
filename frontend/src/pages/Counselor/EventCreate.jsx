@@ -56,13 +56,19 @@ const EventCreate = () => {
 
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
         <Field label="Title" error={errors.title?.message}>
-          <input {...register('title', { required: 'Title is required' })}
+          <input {...register('title', {
+            required: 'Title is required',
+            maxLength: { value: 100, message: 'Title cannot exceed 100 characters' },
+          })}
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="e.g. Group Anxiety Management Session" />
         </Field>
 
         <Field label="Description" error={errors.description?.message}>
-          <textarea {...register('description', { required: 'Description is required' })}
+          <textarea {...register('description', {
+            required: 'Description is required',
+            maxLength: { value: 2000, message: 'Description cannot exceed 2000 characters' },
+          })}
             rows={4}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Describe what attendees will learn or experience…" />
@@ -70,44 +76,61 @@ const EventCreate = () => {
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Category" error={errors.category?.message}>
-            <Select reg={register('category', { required: true })} options={CATEGORIES} />
+            <Select reg={register('category', { required: 'Category is required' })} options={CATEGORIES} placeholder="Select category" />
           </Field>
           <Field label="Event Type" error={errors.eventType?.message}>
-            <Select reg={register('eventType', { required: true })} options={EVENT_TYPES} />
+            <Select reg={register('eventType', { required: 'Event type is required' })} options={EVENT_TYPES} placeholder="Select type" />
           </Field>
           <Field label="Delivery Mode" error={errors.deliveryMode?.message}>
-            <Select reg={register('deliveryMode', { required: true })} options={DELIVERY_MODES} />
+            <Select reg={register('deliveryMode', { required: 'Delivery mode is required' })} options={DELIVERY_MODES} placeholder="Select mode" />
           </Field>
           <Field label="Venue Type" error={errors.venueType?.message}>
-            <Select reg={register('venueType', { required: true })} options={VENUE_TYPES} />
+            <Select reg={register('venueType', { required: 'Venue type is required' })} options={VENUE_TYPES} placeholder="Select venue type" />
           </Field>
         </div>
 
-        <Field label="Meeting Link / Address">
-          <input {...register('venue.meetingLink')}
+        <Field label="Meeting Link / Address" error={errors['venue.meetingLink']?.message}>
+          <input {...register('venue.meetingLink', {
+            validate: (v) => !v || /^(https?:\/\/.+|.{5,})$/.test(v.trim()) || 'Enter a valid URL or address',
+          })}
             className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Zoom link or physical address" />
         </Field>
 
         <div className="grid grid-cols-2 gap-4">
           <Field label="Start Date & Time" error={errors.startDate?.message}>
-            <input type="datetime-local" {...register('startDate', { required: 'Start date is required' })}
+            <input type="datetime-local" {...register('startDate', {
+              required: 'Start date is required',
+              validate: (v) => new Date(v) > new Date() || 'Start date must be in the future',
+            })}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500" />
           </Field>
           <Field label="Duration (minutes)" error={errors.duration?.message}>
-            <input type="number" {...register('duration', { required: true, min: 1 })}
+            <input type="number" {...register('duration', {
+              required: 'Duration is required',
+              min: { value: 15, message: 'Minimum duration is 15 minutes' },
+              max: { value: 480, message: 'Duration cannot exceed 480 minutes' },
+            })}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="60" />
           </Field>
           <Field label="Capacity" error={errors.capacity?.message}>
-            <input type="number" {...register('capacity', { required: true, min: 1 })}
+            <input type="number" {...register('capacity', {
+              required: 'Capacity is required',
+              min: { value: 1, message: 'Capacity must be at least 1' },
+              max: { value: 500, message: 'Capacity cannot exceed 500' },
+            })}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               placeholder="20" />
           </Field>
-          <Field label="Price ($)" error={errors.price?.message}>
-            <input type="number" step="0.01" {...register('price', { required: true, min: 0 })}
+          <Field label="Price (Rs.)" error={errors.price?.message}>
+            <input type="number" step="0.01" {...register('price', {
+              required: 'Price is required',
+              min: { value: 0, message: 'Price cannot be negative' },
+              max: { value: 1000000, message: 'Price cannot exceed Rs. 1,000,000' },
+            })}
               className="w-full border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="49.99" />
+              placeholder="4999.00" />
           </Field>
         </div>
 

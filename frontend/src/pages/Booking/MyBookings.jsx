@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { FiCalendar, FiUser } from 'react-icons/fi';
 import { format } from 'date-fns';
 import { bookingAPI } from '../../api/booking.api';
+import { reviewAPI } from '../../api/review.api';
 import Loading from '../../components/common/Loading';
+import ReviewForm from '../../components/reviews/ReviewForm';
 import toast from 'react-hot-toast';
 
 const STATUS_COLORS = {
@@ -16,27 +18,35 @@ const STATUS_COLORS = {
 
 const MyBookings = () => {
   const [bookings, setBookings] = useState([]);
+  const [reviewedEventIds, setReviewedEventIds] = useState(new Set());
   const [loading, setLoading] = useState(true);
 
-  const fetchBookings = async () => {
+  const fetchData = async () => {
     try {
-      const res = await bookingAPI.getMy();
-      if (res.success) setBookings(res.data.bookings);
+      const [bRes, rRes] = await Promise.all([bookingAPI.getMy(), reviewAPI.getMy()]);
+      if (bRes.success) setBookings(bRes.data.bookings);
+      if (rRes.success) {
+        setReviewedEventIds(new Set(rRes.data.reviews.map((r) => r.eventId)));
+      }
     } catch {}
     setLoading(false);
   };
 
-  useEffect(() => { fetchBookings(); }, []);
+  useEffect(() => { fetchData(); }, []);
 
   const handleCancel = async (id) => {
     if (!confirm('Are you sure you want to cancel this booking?')) return;
     try {
       await bookingAPI.cancel(id, { reason: 'Cancelled by user' });
       toast.success('Booking cancelled');
-      fetchBookings();
+      fetchData();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Could not cancel booking');
     }
+  };
+
+  const handleReviewSuccess = (review) => {
+    setReviewedEventIds((prev) => new Set([...prev, review.eventId]));
   };
 
   if (loading) return <div className="flex justify-center py-16"><Loading /></div>;
@@ -52,42 +62,58 @@ const MyBookings = () => {
         </div>
       ) : (
         <div className="space-y-4">
-          {bookings.map((b) => (
-            <div key={b._id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-              <div className="flex items-start justify-between">
-                <div className="space-y-1">
-                  <Link to={`/events/${b.eventId?._id}`} className="font-semibold text-gray-900 hover:text-primary-600">
-                    {b.eventId?.title}
-                  </Link>
-                  {b.eventId?.startDate && (
+          {bookings.map((b) => {
+            const canReview = ['confirmed', 'completed'].includes(b.status) && b.paymentStatus === 'paid';
+            const alreadyReviewed = reviewedEventIds.has(b.eventId?._id);
+
+            return (
+              <div key={b._id} className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 space-y-4">
+                <div className="flex items-start justify-between">
+                  <div className="space-y-1">
+                    <Link to={`/events/${b.eventId?._id}`} className="font-semibold text-gray-900 hover:text-primary-600">
+                      {b.eventId?.title}
+                    </Link>
+                    {b.eventId?.startDate && (
+                      <div className="flex items-center space-x-1 text-sm text-gray-500">
+                        <FiCalendar className="w-3.5 h-3.5" />
+                        <span>{format(new Date(b.eventId.startDate), 'MMM d, yyyy · h:mm a')}</span>
+                      </div>
+                    )}
                     <div className="flex items-center space-x-1 text-sm text-gray-500">
-                      <FiCalendar className="w-3.5 h-3.5" />
-                      <span>{format(new Date(b.eventId.startDate), 'MMM d, yyyy · h:mm a')}</span>
+                      <FiUser className="w-3.5 h-3.5" />
+                      <span>{b.counselorId?.name}</span>
                     </div>
-                  )}
-                  <div className="flex items-center space-x-1 text-sm text-gray-500">
-                    <FiUser className="w-3.5 h-3.5" />
-                    <span>{b.counselorId?.name}</span>
+                  </div>
+                  <div className="text-right space-y-2">
+                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${STATUS_COLORS[b.status] || 'bg-gray-100'}`}>
+                      {b.status}
+                    </span>
+                    <p className="text-sm font-semibold text-gray-900">Rs. {b.amountPaid?.toLocaleString('en-US', { minimumFractionDigits: 2 })}</p>
                   </div>
                 </div>
-                <div className="text-right space-y-2">
-                  <span className={`text-xs font-semibold px-2 py-1 rounded-full ${STATUS_COLORS[b.status] || 'bg-gray-100'}`}>
-                    {b.status}
-                  </span>
-                  <p className="text-sm font-semibold text-gray-900">${b.amountPaid?.toFixed(2)}</p>
-                </div>
-              </div>
 
-              {['pending', 'confirmed'].includes(b.status) && (
-                <button
-                  onClick={() => handleCancel(b._id)}
-                  className="mt-3 text-sm text-red-500 hover:underline"
-                >
-                  Cancel booking
-                </button>
-              )}
-            </div>
-          ))}
+                {['pending', 'confirmed'].includes(b.status) && (
+                  <button
+                    onClick={() => handleCancel(b._id)}
+                    className="text-sm text-red-500 hover:underline"
+                  >
+                    Cancel booking
+                  </button>
+                )}
+
+                {canReview && !alreadyReviewed && (
+                  <ReviewForm
+                    eventId={b.eventId?._id}
+                    onSuccess={handleReviewSuccess}
+                  />
+                )}
+
+                {canReview && alreadyReviewed && (
+                  <p className="text-sm text-green-600 font-medium">You have reviewed this session.</p>
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
     </div>

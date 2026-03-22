@@ -6,6 +6,7 @@ import CounselorProfile from '../models/CounselorProfile.model.js';
 import Event from '../models/Event.model.js';
 import Booking from '../models/Booking.model.js';
 import PlatformConfig from '../models/PlatformConfig.model.js';
+import { sendNotification } from '../services/notification.service.js';
 import { HTTP_STATUS } from '../config/constants.js';
 
 // GET /api/admin/users
@@ -147,8 +148,73 @@ export const getConfig = asyncHandler(async (req, res) => {
 // PUT /api/admin/config
 export const updateConfig = asyncHandler(async (req, res) => {
   const config = await PlatformConfig.getConfig();
-  config.commissionRate = req.body.commissionRate;
+  if (req.body.commissionRate !== undefined) config.commissionRate = req.body.commissionRate;
+  if (req.body.bankDetails) config.bankDetails = { ...config.bankDetails.toObject?.() ?? config.bankDetails, ...req.body.bankDetails };
   config.updatedBy = req.user._id;
   await config.save();
   res.json(new ApiResponse(HTTP_STATUS.OK, { config }, 'Platform config updated'));
+});
+
+// POST /api/admin/bookings/:id/confirm-bank-transfer
+export const confirmBankTransfer = asyncHandler(async (req, res) => {
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Booking not found');
+  if (booking.paymentMethod !== 'bank_transfer') {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Not a bank transfer booking');
+  }
+  if (booking.status !== 'pending') {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Booking is not in pending state');
+  }
+
+  booking.status = 'confirmed';
+  booking.paymentStatus = 'paid';
+  await booking.save();
+
+  await Event.findByIdAndUpdate(booking.eventId, { $inc: { seatsAvailable: -1 } });
+
+  const eventDoc = await Event.findById(booking.eventId);
+  await sendNotification({
+    userId: booking.userId,
+    type: 'booking_confirmed',
+    title: 'Booking Confirmed',
+    message: `Your bank transfer for "${eventDoc?.title}" has been verified and your booking is confirmed!`,
+    data: { bookingId: booking._id, eventId: booking.eventId },
+  });
+  await sendNotification({
+    userId: booking.counselorId,
+    type: 'payment_received',
+    title: 'New Booking',
+    message: `You have a new booking for "${eventDoc?.title}" (bank transfer).`,
+    data: { bookingId: booking._id, eventId: booking.eventId },
+  });
+
+  res.json(new ApiResponse(HTTP_STATUS.OK, { booking }, 'Bank transfer confirmed'));
+});
+
+// POST /api/admin/bookings/:id/reject-bank-transfer
+export const rejectBankTransfer = asyncHandler(async (req, res) => {
+  const booking = await Booking.findById(req.params.id);
+  if (!booking) throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Booking not found');
+  if (booking.paymentMethod !== 'bank_transfer') {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Not a bank transfer booking');
+  }
+  if (booking.status !== 'pending') {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Booking is not in pending state');
+  }
+
+  booking.status = 'cancelled';
+  booking.paymentStatus = 'failed';
+  booking.cancellationReason = req.body.reason || 'Bank transfer rejected by admin';
+  await booking.save();
+
+  const eventDoc = await Event.findById(booking.eventId);
+  await sendNotification({
+    userId: booking.userId,
+    type: 'booking_cancelled',
+    title: 'Payment Not Verified',
+    message: `Your bank transfer for "${eventDoc?.title}" could not be verified. Please contact support.`,
+    data: { bookingId: booking._id, eventId: booking.eventId },
+  });
+
+  res.json(new ApiResponse(HTTP_STATUS.OK, { booking }, 'Bank transfer rejected'));
 });

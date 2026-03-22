@@ -7,6 +7,15 @@ import Event from '../models/Event.model.js';
 import CounselorProfile from '../models/CounselorProfile.model.js';
 import { HTTP_STATUS } from '../config/constants.js';
 
+const ADJECTIVES = ['Calm', 'Brave', 'Mindful', 'Gentle', 'Serene', 'Hopeful', 'Kind', 'Warm', 'Quiet', 'Patient', 'Wise', 'Caring', 'Resilient', 'Thoughtful', 'Radiant'];
+const NOUNS = ['Seeker', 'Traveler', 'Soul', 'Heart', 'Spirit', 'Dreamer', 'Guide', 'Voyager', 'Pathfinder', 'Explorer', 'Journeyer', 'Wanderer'];
+
+const generateDisplayName = () => {
+  const adj = ADJECTIVES[Math.floor(Math.random() * ADJECTIVES.length)];
+  const noun = NOUNS[Math.floor(Math.random() * NOUNS.length)];
+  return `${adj} ${noun}`;
+};
+
 // Recompute and save rating averages after every review mutation
 const recalculateRatings = async (eventId, counselorId) => {
   const stats = await Review.aggregate([
@@ -55,6 +64,7 @@ export const createReview = asyncHandler(async (req, res) => {
     rating,
     comment,
     isVerified: true,
+    displayName: generateDisplayName(),
   });
 
   await recalculateRatings(event._id, event.counselorId);
@@ -62,6 +72,15 @@ export const createReview = asyncHandler(async (req, res) => {
   res
     .status(HTTP_STATUS.CREATED)
     .json(new ApiResponse(HTTP_STATUS.CREATED, { review }, 'Review submitted'));
+});
+
+// GET /api/reviews/my  (protected — returns the current user's own reviews)
+export const getMyReviews = asyncHandler(async (req, res) => {
+  const reviews = await Review.find({ userId: req.user._id })
+    .select('eventId rating')
+    .lean();
+
+  res.json(new ApiResponse(HTTP_STATUS.OK, { reviews }));
 });
 
 // GET /api/reviews/event/:eventId
@@ -72,7 +91,8 @@ export const getEventReviews = asyncHandler(async (req, res) => {
 
   const [reviews, total] = await Promise.all([
     Review.find({ eventId: req.params.eventId })
-      .populate('userId', 'name avatar')
+      .select('-userId')
+      .populate('eventId', 'title')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -92,7 +112,7 @@ export const getCounselorReviews = asyncHandler(async (req, res) => {
 
   const [reviews, total] = await Promise.all([
     Review.find({ counselorId: req.params.counselorId })
-      .populate('userId', 'name avatar')
+      .select('-userId')
       .populate('eventId', 'title')
       .sort({ createdAt: -1 })
       .skip(skip)

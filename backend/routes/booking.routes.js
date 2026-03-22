@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { verifyToken } from '../middlewares/auth.middleware.js';
-import { createBooking, getMyBookings, getBookingById, cancelBooking } from '../controllers/booking.controller.js';
+import { createBooking, getMyBookings, getBookingById, cancelBooking, uploadBankSlip } from '../controllers/booking.controller.js';
+import upload, { handleMulterError } from '../middlewares/upload.middleware.js';
 
 const router = Router();
 
@@ -10,5 +11,6 @@ router.post('/', createBooking);
 router.get('/my', getMyBookings);
 router.get('/:id', getBookingById);
 router.post('/:id/cancel', cancelBooking);
+router.post('/:id/upload-slip', upload.single('slip'), handleMulterError, uploadBankSlip);
 
 export default router;
