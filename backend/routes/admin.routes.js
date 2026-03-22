@@ -8,6 +8,8 @@ import {
   listAllEvents,
   updateEventStatus,
   listAllBookings,
+  confirmBankTransfer,
+  rejectBankTransfer,
   getEarnings,
   getConfig,
   updateConfig,
@@ -24,6 +26,8 @@ router.put('/counselors/:id/verify', toggleCounselorStatus);
 router.get('/events', listAllEvents);
 router.put('/events/:id/status', updateEventStatus);
 router.get('/bookings', listAllBookings);
+router.post('/bookings/:id/confirm-bank-transfer', confirmBankTransfer);
+router.post('/bookings/:id/reject-bank-transfer', rejectBankTransfer);
 router.get('/earnings', getEarnings);
 router.get('/config', getConfig);
 router.put('/config', updateConfig);

@@ -5,4 +5,11 @@ export const bookingAPI = {
   getMy: (params) => axiosInstance.get('/bookings/my', { params }).then((r) => r.data),
   getById: (id) => axiosInstance.get(`/bookings/${id}`).then((r) => r.data),
   cancel: (id, data) => axiosInstance.post(`/bookings/${id}/cancel`, data).then((r) => r.data),
+  uploadSlip: (id, file) => {
+    const form = new FormData();
+    form.append('slip', file);
+    return axiosInstance.post(`/bookings/${id}/upload-slip`, form, {
+      headers: { 'Content-Type': 'multipart/form-data' },
+    }).then((r) => r.data);
+  },
 };

@@ -26,9 +26,18 @@ const bookingSchema = new mongoose.Schema(
       enum: BOOKING_STATUSES,
       default: 'pending',
     },
+    paymentMethod: {
+      type: String,
+      enum: ['stripe', 'bank_transfer'],
+      default: 'stripe',
+    },
     paymentIntentId: {
       type: String,
       sparse: true,
+    },
+    bankSlip: {
+      url: { type: String, default: '' },
+      publicId: { type: String, default: '' },
     },
     paymentStatus: {
       type: String,

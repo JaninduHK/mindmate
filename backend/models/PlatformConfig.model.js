@@ -8,6 +8,13 @@ const platformConfigSchema = new mongoose.Schema(
       min: [0, 'Commission rate cannot be negative'],
       max: [100, 'Commission rate cannot exceed 100'],
     },
+    bankDetails: {
+      bankName: { type: String, default: '' },
+      accountName: { type: String, default: '' },
+      accountNumber: { type: String, default: '' },
+      branch: { type: String, default: '' },
+      instructions: { type: String, default: '' },
+    },
     updatedBy: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
