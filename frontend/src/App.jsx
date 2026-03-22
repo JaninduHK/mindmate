@@ -48,6 +48,7 @@ import CounselorWithdrawals from './pages/Counselor/CounselorWithdrawals';
 // Peer Supporter pages
 import PeerSupporterRegister from './pages/PeerSupporter/PeerSupporterRegister';
 import PeerSupporterDashboard from './pages/PeerSupporter/PeerSupporterDashboard';
+import PeerSupporterList from './pages/PeerSupporter/PeerSupporterList';
 
 function App() {
   return (
@@ -75,6 +76,7 @@ function App() {
               <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/counselors" element={<CounselorList />} />
               <Route path="/counselors/:id" element={<CounselorProfile />} />
+              <Route path="/peer-supporters" element={<PeerSupporterList />} />
               <Route path="/chat" element={<ChatPage />} />
               {/* Protected — user role only */}
               <Route element={<ProtectedRoute allowedRoles={['user']} />}>
