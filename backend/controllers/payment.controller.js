@@ -5,9 +5,16 @@ import Booking from '../models/Booking.model.js';
 import Event from '../models/Event.model.js';
 import CounselorProfile from '../models/CounselorProfile.model.js';
 import User from '../models/User.model.js';
+import PlatformConfig from '../models/PlatformConfig.model.js';
 import { getStripe } from '../config/stripe.js';
 import { sendNotification } from '../services/notification.service.js';
 import { HTTP_STATUS } from '../config/constants.js';
+
+// GET /api/payments/bank-details  (public)
+export const getBankDetails = asyncHandler(async (req, res) => {
+  const config = await PlatformConfig.getConfig();
+  res.json(new ApiResponse(HTTP_STATUS.OK, { bankDetails: config.bankDetails }));
+});
 
 // POST /api/payments/webhook  (raw body — bypass express.json)
 export const stripeWebhook = async (req, res) => {

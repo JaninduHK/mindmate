@@ -1,12 +1,15 @@
 import { Router } from 'express';
 import { verifyToken, checkRole } from '../middlewares/auth.middleware.js';
 import { USER_ROLES } from '../config/constants.js';
-import { stripeWebhook, getConnectOnboardingUrl, getConnectStatus } from '../controllers/payment.controller.js';
+import { stripeWebhook, getBankDetails, getConnectOnboardingUrl, getConnectStatus } from '../controllers/payment.controller.js';
 
 const router = Router();
 
 // Stripe webhook — raw body handled in server.js before express.json()
 router.post('/webhook', stripeWebhook);
+
+// Public
+router.get('/bank-details', getBankDetails);
 
 // Protected — counselor only
 router.get(

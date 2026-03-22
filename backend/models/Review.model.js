@@ -37,6 +37,10 @@ const reviewSchema = new mongoose.Schema(
       type: Boolean,
       default: true, // True means booking was confirmed
     },
+    displayName: {
+      type: String,
+      default: 'Anonymous',
+    },
   },
   { timestamps: true }
 );

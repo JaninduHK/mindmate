@@ -15,7 +15,7 @@ const Header = () => {
     navigate('/login');
   };
 
-  const isCounselor = user?.role === 'counselor' || user?.role === 'admin';
+  const isCounselor = user?.role === 'counselor';
   const isAdmin = user?.role === 'admin';
   const isPeerSupporter = user?.role === 'peer_supporter';
 
@@ -123,7 +123,9 @@ const Header = () => {
                 {isAdmin && (
                   <Link to="/admin" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Admin</Link>
                 )}
-                <Link to="/booking/my" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>My Bookings</Link>
+                {!isAdmin && (
+                  <Link to="/booking/my" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>My Bookings</Link>
+                )}
                 <Link to="/profile" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Profile</Link>
                 <button
                   onClick={() => { handleLogout(); setShowMenu(false); }}

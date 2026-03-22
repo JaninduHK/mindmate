@@ -31,16 +31,18 @@ const PeerSupporterRegister = () => {
   const validateForm = () => {
     const newErrors = {};
 
-    if (!formData.name) {
+    if (!formData.name.trim()) {
       newErrors.name = 'Name is required';
-    } else if (formData.name.length < 2) {
+    } else if (formData.name.trim().length < 2) {
       newErrors.name = 'Name must be at least 2 characters';
+    } else if (formData.name.trim().length > 50) {
+      newErrors.name = 'Name cannot exceed 50 characters';
     }
 
     if (!formData.email) {
       newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email)) {
+      newErrors.email = 'Enter a valid email address';
     }
 
     if (!formData.password) {

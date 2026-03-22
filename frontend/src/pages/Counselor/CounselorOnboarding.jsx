@@ -44,7 +44,11 @@ const CounselorOnboarding = () => {
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1">Bio</label>
           <textarea
-            {...register('bio', { required: 'Bio is required' })}
+            {...register('bio', {
+            required: 'Bio is required',
+            minLength: { value: 20, message: 'Bio must be at least 20 characters' },
+            maxLength: { value: 1000, message: 'Bio cannot exceed 1000 characters' },
+          })}
             rows={4}
             className="w-full border border-gray-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
             placeholder="Tell clients about yourself and your approach…"

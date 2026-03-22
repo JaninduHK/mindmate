@@ -34,12 +34,6 @@ import CounselorAnalytics from './pages/Counselor/CounselorAnalytics';
 
 // Admin pages
 import AdminDashboard from './pages/Admin/AdminDashboard';
-import AdminUsers from './pages/Admin/AdminUsers';
-import AdminCounselors from './pages/Admin/AdminCounselors';
-import AdminEvents from './pages/Admin/AdminEvents';
-import AdminBookings from './pages/Admin/AdminBookings';
-import AdminEarnings from './pages/Admin/AdminEarnings';
-import AdminWithdrawals from './pages/Admin/AdminWithdrawals';
 
 // Counselor withdrawals
 import CounselorWithdrawals from './pages/Counselor/CounselorWithdrawals';
@@ -95,7 +89,7 @@ function App() {
               </Route>
 
               {/* Protected — counselor role */}
-              <Route element={<ProtectedRoute allowedRoles={['counselor', 'admin']} />}>
+              <Route element={<ProtectedRoute allowedRoles={['counselor']} />}>
                 <Route path="/counselor/dashboard" element={<CounselorDashboard />} />
                 <Route path="/counselor/events" element={<EventManage />} />
                 <Route path="/counselor/events/create" element={<EventCreate />} />
@@ -106,13 +100,7 @@ function App() {
               {/* Protected — admin role */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/users" element={<AdminUsers />} />
-                <Route path="/admin/counselors" element={<AdminCounselors />} />
-                <Route path="/admin/events" element={<AdminEvents />} />
-                <Route path="/admin/bookings" element={<AdminBookings />} />
-                <Route path="/admin/earnings" element={<AdminEarnings />} />
-                <Route path="/admin/config" element={<AdminEarnings />} />
-                <Route path="/admin/withdrawals" element={<AdminWithdrawals />} />
+                <Route path="/admin/*" element={<AdminDashboard />} />
               </Route>
 
               {/* 404 */}

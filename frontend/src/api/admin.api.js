@@ -9,6 +9,8 @@ export const adminAPI = {
   updateEventStatus: (id, data) =>
     axiosInstance.put(`/admin/events/${id}/status`, data).then((r) => r.data),
   listBookings: (params) => axiosInstance.get('/admin/bookings', { params }).then((r) => r.data),
+  confirmBankTransfer: (id) => axiosInstance.post(`/admin/bookings/${id}/confirm-bank-transfer`).then((r) => r.data),
+  rejectBankTransfer: (id, data) => axiosInstance.post(`/admin/bookings/${id}/reject-bank-transfer`, data).then((r) => r.data),
   getEarnings: () => axiosInstance.get('/admin/earnings').then((r) => r.data),
   getConfig: () => axiosInstance.get('/admin/config').then((r) => r.data),
   updateConfig: (data) => axiosInstance.put('/admin/config', data).then((r) => r.data),
