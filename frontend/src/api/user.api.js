@@ -24,4 +24,10 @@ export const userAPI = {
     const response = await axiosInstance.delete('/user/account');
     return response.data;
   },
+
+  // Get all users (for peer supporters to help)
+  getUsers: async (params) => {
+    const response = await axiosInstance.get('/user/help/users', { params });
+    return response.data;
+  },
 };

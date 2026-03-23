@@ -4,7 +4,8 @@ import {
   updateProfile,
   changePassword,
   deleteAccount,
-  getPeerSupportUsers
+  getPeerSupportUsers,
+  getUsers
 } from '../controllers/user.controller.js';
 import { verifyToken} from '../middlewares/auth.middleware.js';
 import validate from '../middlewares/validate.middleware.js';
@@ -20,4 +21,5 @@ router.put('/profile', validate(updateProfileSchema), updateProfile);
 router.put('/password', validate(changePasswordSchema), changePassword);
 router.delete('/account', deleteAccount);
 router.get('/peer-supporters', getPeerSupportUsers);
+router.get('/help/users', getUsers);
 export default router;

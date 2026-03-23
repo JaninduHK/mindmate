@@ -24,6 +24,40 @@ export const getPeerSupportUsers = asyncHandler(async (req, res) => {
   }
 });
 
+// Get all regular users (for peer supporters to help)
+export const getUsers = asyncHandler(async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 1;
+    const limit = parseInt(req.query.limit) || 12;
+    const skip = (page - 1) * limit;
+
+    const [users, total] = await Promise.all([
+      User.find({ role: 'user', isActive: true })
+        .select('name email avatar')
+        .sort({ createdAt: -1 })
+        .skip(skip)
+        .limit(limit),
+      User.countDocuments({ role: 'user', isActive: true }),
+    ]);
+
+    res.status(200).json({
+      success: true,
+      data: {
+        users,
+        total,
+        page,
+        pages: Math.ceil(total / limit),
+      },
+    });
+  } catch (error) {
+    console.error('Error fetching users:', error);
+    res.status(500).json({
+      success: false,
+      message: 'Failed to fetch users',
+    });
+  }
+});
+
 // Get user profile
 export const getProfile = asyncHandler(async (req, res) => {
   res.status(HTTP_STATUS.OK).json(

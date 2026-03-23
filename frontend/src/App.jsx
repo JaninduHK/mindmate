@@ -43,6 +43,7 @@ import CounselorWithdrawals from './pages/Counselor/CounselorWithdrawals';
 import PeerSupporterRegister from './pages/PeerSupporter/PeerSupporterRegister';
 import PeerSupporterDashboard from './pages/PeerSupporter/PeerSupporterDashboard';
 import PeerSupporterList from './pages/PeerSupporter/PeerSupporterList';
+import UsersList from './pages/PeerSupporter/UsersList';
 
 function App() {
   return (
@@ -72,6 +73,7 @@ function App() {
               <Route path="/counselors/:id" element={<CounselorProfile />} />
               <Route path="/peer-supporters" element={<PeerSupporterList />} />
               <Route path="/chat" element={<ChatPage />} />
+              <Route path="/chat/:recipientId" element={<ChatPage />} />
               {/* Protected — user role only */}
               <Route element={<ProtectedRoute allowedRoles={['user']} />}>
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -89,6 +91,7 @@ function App() {
               {/* Protected — peer supporter role */}
               <Route element={<ProtectedRoute allowedRoles={['peer_supporter']} />}>
                 <Route path="/peer-supporter/dashboard" element={<PeerSupporterDashboard />} />
+                <Route path="/peer-supporter/users" element={<UsersList />} />
               </Route>
 
               {/* Protected — counselor role */}
