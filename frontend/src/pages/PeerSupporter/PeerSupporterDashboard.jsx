@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen, FiAward } from 'react-icons/fi';
 import { useAuth } from '../../hooks/useAuth';
+import AvailabilityToggle from '../../components/peer/AvailabilityToggle';
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -18,12 +20,22 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 
 const PeerSupporterDashboard = () => {
   const { user } = useAuth();
+  const [isAvailable, setIsAvailable] = useState(user?.isAvailableNow || false);
+
+  const handleAvailabilityChange = (newStatus) => {
+    setIsAvailable(newStatus);
+  };
 
   return (
     <div className="container-custom py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Peer Supporter Dashboard</h1>
         <p className="text-gray-500 mt-1">Welcome back, {user?.name}</p>
+      </div>
+
+      {/* Availability Toggle */}
+      <div className="mb-8">
+        <AvailabilityToggle isAvailableNow={isAvailable} onStatusChange={handleAvailabilityChange} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">

@@ -4,8 +4,9 @@ import {
   updateProfile,
   changePassword,
   deleteAccount,
-  getPeerSupportUsers,
-  getUsers
+  getUsers,
+  toggleAvailabilityNow,
+  getAvailabilityStatus
 } from '../controllers/user.controller.js';
 import { verifyToken} from '../middlewares/auth.middleware.js';
 import validate from '../middlewares/validate.middleware.js';
@@ -20,6 +21,10 @@ router.get('/profile', getProfile);
 router.put('/profile', validate(updateProfileSchema), updateProfile);
 router.put('/password', validate(changePasswordSchema), changePassword);
 router.delete('/account', deleteAccount);
-router.get('/peer-supporters', getPeerSupportUsers);
 router.get('/help/users', getUsers);
+
+// Peer counselor availability routes
+router.put('/availability/toggle', toggleAvailabilityNow);
+router.get('/availability/status/:peerId', getAvailabilityStatus);
+
 export default router;

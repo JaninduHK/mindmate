@@ -14,7 +14,7 @@ export const listPeerSupporters = asyncHandler(async (req, res) => {
 
   const [peerSupporters, total] = await Promise.all([
     User.find(filter)
-      .select('name email avatar')
+      .select('name email avatar isAvailableNow')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),
@@ -32,7 +32,7 @@ export const getPeerSupporterById = asyncHandler(async (req, res) => {
     _id: req.params.id,
     role: 'peer_supporter',
     isActive: true,
-  }).select('name email avatar');
+  }).select('name email avatar isAvailableNow');
 
   if (!profile) {
     throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Peer supporter not found');

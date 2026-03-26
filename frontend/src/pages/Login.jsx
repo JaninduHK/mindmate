@@ -7,7 +7,7 @@ import { FiMail, FiLock } from 'react-icons/fi';
 
 const Login = () => {
   const navigate = useNavigate();
-  const { login, isAuthenticated } = useAuth();
+  const { login, isAuthenticated, user } = useAuth();
   const [formData, setFormData] = useState({
     email: '',
     password: '',
@@ -65,7 +65,7 @@ const Login = () => {
     setLoading(false);
 
     if (result.success) {
-      const { user: loggedInUser } = result;
+      const loggedInUser = result.user;
       if (loggedInUser?.role === 'peer_supporter') navigate('/peer-supporter/dashboard');
       else if (loggedInUser?.role === 'counselor') navigate('/counselor/dashboard');
       else if (loggedInUser?.role === 'admin') navigate('/admin');

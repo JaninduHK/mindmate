@@ -6,24 +6,6 @@ import ApiResponse from '../utils/ApiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { HTTP_STATUS } from '../config/constants.js';
 
-//fiter peer-support users
-export const getPeerSupportUsers = asyncHandler(async (req, res) => {
-  try{
-    const peerSupporters = await User.find({role: "peer_supporter"}).select('-password');
-
-    res.status(200).json({
-      success: true,
-      data: peerSupporters
-    });
-  }catch(error){
-    console.error('Error fetching peer supporters:', error);
-    res.status(500).json({
-      success: false,
-      message: 'Failed to fetch peer supporters'
-    });
-  }
-});
-
 // Get all regular users (for peer supporters to help)
 export const getUsers = asyncHandler(async (req, res) => {
   try {
@@ -158,5 +140,55 @@ export const deleteAccount = asyncHandler(async (req, res) => {
 
   res.status(HTTP_STATUS.OK).json(
     new ApiResponse(HTTP_STATUS.OK, null, 'Account deleted successfully')
+  );
+});
+
+// Toggle availability status for peer counselors
+export const toggleAvailabilityNow = asyncHandler(async (req, res) => {
+  const user = await User.findById(req.user._id);
+
+  if (!user) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'User not found');
+  }
+
+  if (user.role !== 'peer_supporter') {
+    throw new ApiError(HTTP_STATUS.FORBIDDEN, 'Only peer supporters can toggle availability');
+  }
+
+  // Toggle availability
+  user.isAvailableNow = !user.isAvailableNow;
+  user.lastAvailableToggle = new Date();
+  await user.save();
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(
+      HTTP_STATUS.OK,
+      {
+        isAvailableNow: user.isAvailableNow,
+        message: user.isAvailableNow ? 'You are now available' : 'You are now unavailable'
+      },
+      user.isAvailableNow ? 'Status updated to available' : 'Status updated to unavailable'
+    )
+  );
+});
+
+// Get peer counselor availability status
+export const getAvailabilityStatus = asyncHandler(async (req, res) => {
+  const { peerId } = req.params;
+
+  const peer = await User.findById(peerId).select('isAvailableNow name email avatar role');
+
+  if (!peer || peer.role !== 'peer_supporter') {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Peer counselor not found');
+  }
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(HTTP_STATUS.OK, {
+      peerId: peer._id,
+      name: peer.name,
+      email: peer.email,
+      avatar: peer.avatar,
+      isAvailableNow: peer.isAvailableNow,
+    })
   );
 });

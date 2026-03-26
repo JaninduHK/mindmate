@@ -194,6 +194,14 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 export const logout = asyncHandler(async (req, res) => {
   const { refreshToken } = req.cookies;
 
+  // If peer supporter is logging out, set them as offline
+  if (req.user && req.user.role === 'peer_supporter') {
+    await User.findByIdAndUpdate(req.user._id, {
+      isAvailableNow: false,
+      lastAvailableToggle: new Date(),
+    });
+  }
+
   if (refreshToken) {
     // Revoke refresh token
     const storedToken = await RefreshToken.findOne({ token: refreshToken });

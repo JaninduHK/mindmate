@@ -30,4 +30,16 @@ export const userAPI = {
     const response = await axiosInstance.get('/user/help/users', { params });
     return response.data;
   },
+
+  // Toggle peer counselor availability
+  toggleAvailability: async () => {
+    const response = await axiosInstance.put('/user/availability/toggle');
+    return response.data;
+  },
+
+  // Get peer counselor availability status
+  getAvailabilityStatus: async (peerId) => {
+    const response = await axiosInstance.get(`/user/availability/status/${peerId}`);
+    return response.data;
+  },
 };

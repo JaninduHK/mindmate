@@ -2,38 +2,77 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { peerSupporterAPI } from '../../api/peerSupporter.api';
 import Loading from '../../components/common/Loading';
-import { FiMessageCircle } from 'react-icons/fi';
+import { FiMessageCircle, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 
 const PeerSupporterList = () => {
   const navigate = useNavigate();
   const [peerSupporters, setPeerSupporters] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
+  const fetchPeerSupporters = async (pageNum = 1, showLoading = true) => {
+    if (showLoading) setLoading(true);
+    else setRefreshing(true);
+    
+    try {
+      const res = await peerSupporterAPI.list({ page: pageNum, limit: 12 });
+      if (res.success) {
+        setPeerSupporters(res.data.peerSupporters);
+        setTotalPages(res.data.pages);
+      }
+    } catch {
+      toast.error('Failed to load peer supporters');
+    } finally {
+      if (showLoading) setLoading(false);
+      else setRefreshing(false);
+    }
+  };
+
   useEffect(() => {
-    const fetch = async () => {
-      setLoading(true);
-      try {
-        const res = await peerSupporterAPI.list({ page, limit: 12 });
-        if (res.success) {
-          setPeerSupporters(res.data.peerSupporters);
-          setTotalPages(res.data.pages);
-        }
-      } catch {}
-      setLoading(false);
-    };
-    fetch();
+    fetchPeerSupporters(page, true);
   }, [page]);
 
-  const handleChatClick = (supporterId) => {
+  // Auto-refresh every 30 seconds to check availability updates
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchPeerSupporters(page, false);
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [page]);
+
+  const handleChatClick = (supporterId, isAvailable) => {
+    if (!isAvailable) {
+      toast.error('This peer counselor is currently unavailable. Please try again later.');
+      return;
+    }
     navigate(`/chat/${supporterId}`);
+  };
+
+  const handleManualRefresh = async () => {
+    await fetchPeerSupporters(page, false);
+    toast.success('List refreshed');
   };
 
   return (
     <div className="container-custom py-8">
-      <h1 className="text-2xl font-bold text-gray-900 mb-2">Find a Peer Supporter</h1>
-      <p className="text-gray-600 mb-6">Choose a peer supporter to chat with</p>
+      <div className="flex items-center justify-between mb-6">
+        <div>
+          <h1 className="text-3xl font-bold text-gray-900">Find a Peer Supporter</h1>
+          <p className="text-gray-600 mt-2">Chat with an available peer supporter or schedule a session</p>
+        </div>
+        <button
+          onClick={handleManualRefresh}
+          disabled={refreshing}
+          className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+        >
+          <FiRefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+          {refreshing ? 'Refreshing...' : 'Refresh'}
+        </button>
+      </div>
 
       {loading ? (
         <div className="flex justify-center py-16"><Loading /></div>
@@ -67,9 +106,29 @@ const PeerSupporterList = () => {
                     </div>
                   </div>
 
+                  {/* Availability Status */}
+                  <div className="mb-4">
+                    {ps.isAvailableNow ? (
+                      <div className="flex items-center justify-center gap-2 text-green-600 font-semibold text-sm bg-green-50 py-2 rounded-lg">
+                        <FiCheck className="w-4 h-4" />
+                        Available Now
+                      </div>
+                    ) : (
+                      <div className="flex items-center justify-center gap-2 text-gray-600 font-semibold text-sm bg-gray-100 py-2 rounded-lg">
+                        <FiX className="w-4 h-4" />
+                        Offline
+                      </div>
+                    )}
+                  </div>
+
                   <button
-                    onClick={() => handleChatClick(ps._id)}
-                    className="w-full bg-blue-600 text-white py-3 rounded-lg hover:bg-blue-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                    onClick={() => handleChatClick(ps._id, ps.isAvailableNow)}
+                    disabled={!ps.isAvailableNow}
+                    className={`w-full py-3 rounded-lg transition-colors font-semibold flex items-center justify-center gap-2 ${
+                      ps.isAvailableNow
+                        ? 'bg-blue-600 text-white hover:bg-blue-700'
+                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                    }`}
                   >
                     <FiMessageCircle className="w-5 h-5" />
                     Chat Now
