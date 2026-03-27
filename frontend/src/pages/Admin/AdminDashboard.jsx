@@ -877,6 +877,202 @@ const SettingsTab = () => {
   );
 };
 
+// ─── Peer Supporters Tab ──────────────────────────────────────────────────────
+const PeerSupportersTab = () => {
+  const [pending, setPending] = useState([]);
+  const [peers, setPeers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [activeView, setActiveView] = useState('pending'); // 'pending' or 'approved'
+  const [processingId, setProcessingId] = useState(null);
+  const [rejectModal, setRejectModal] = useState(null);
+  const [rejectReason, setRejectReason] = useState('');
+
+  const load = useCallback(async () => {
+    setLoading(true);
+    try {
+      const [pendingRes, allRes] = await Promise.all([
+        adminAPI.listPendingPeerSupporters({ limit: 60 }),
+        adminAPI.listPeerSupporters({ limit: 60 }),
+      ]);
+      if (pendingRes.success) setPending(pendingRes.data.peerSupporters);
+      if (allRes.success) setPeers(allRes.data.peerSupporters);
+    } catch { toast.error('Failed to load peer supporters'); }
+    finally { setLoading(false); }
+  }, []);
+
+  useEffect(() => { load(); }, [load]);
+
+  const handleApprove = async (id) => {
+    setProcessingId(id);
+    try {
+      await adminAPI.approvePeerSupporter(id);
+      toast.success('Peer supporter approved');
+      load();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setProcessingId(null); }
+  };
+
+  const handleRejectConfirm = async () => {
+    setProcessingId(rejectModal.id);
+    try {
+      await adminAPI.rejectPeerSupporter(rejectModal.id, { reason: rejectReason || 'Application rejected' });
+      toast.success('Peer supporter application rejected');
+      setRejectModal(null);
+      setRejectReason('');
+      load();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed'); }
+    finally { setProcessingId(null); }
+  };
+
+  const handleToggleStatus = async (peer) => {
+    setProcessingId(peer._id);
+    try {
+      // For suspended/active toggle, we would need additional controller function
+      // For now, we'll just show a message
+      toast.info('Status management coming soon');
+    } catch { toast.error('Failed to update status'); }
+    finally { setProcessingId(null); }
+  };
+
+  const currentData = activeView === 'pending' ? pending : peers;
+
+  return (
+    <div className="space-y-6">
+      <div className="flex items-center justify-between">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900">Peer Supporters</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Manage peer supporter applications and accounts.</p>
+        </div>
+        <div className="flex gap-2">
+          <button
+            onClick={() => setActiveView('pending')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeView === 'pending'
+                ? 'bg-yellow-100 text-yellow-700 border border-yellow-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Pending {pending.length > 0 && <span className="ml-1 font-bold">({pending.length})</span>}
+          </button>
+          <button
+            onClick={() => setActiveView('approved')}
+            className={`px-4 py-2 rounded-lg text-sm font-medium transition-colors ${
+              activeView === 'approved'
+                ? 'bg-green-100 text-green-700 border border-green-200'
+                : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
+            }`}
+          >
+            Approved
+          </button>
+        </div>
+      </div>
+
+      {loading ? <div className="flex justify-center py-16"><Loading /></div> : (
+        <div className="space-y-3">
+          {currentData.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+              <p className="text-gray-400">
+                {activeView === 'pending' ? 'No pending applications.' : 'No approved peer supporters yet.'}
+              </p>
+            </div>
+          ) : (
+            currentData.map(p => {
+              const busy = processingId === p._id;
+              return (
+                <div key={p._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between gap-4">
+                  <div className="flex items-center space-x-4 min-w-0">
+                    {p.userId?.avatar?.url ? (
+                      <img src={p.userId.avatar.url} alt={p.userId.name} className="w-11 h-11 rounded-full object-cover flex-shrink-0" />
+                    ) : (
+                      <div className="w-11 h-11 rounded-full bg-purple-100 flex items-center justify-center font-bold text-purple-600 flex-shrink-0">
+                        {p.userId?.name?.[0]}
+                      </div>
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-semibold text-gray-900">{p.userId?.name}</p>
+                      <p className="text-sm text-gray-500">{p.userId?.email}</p>
+                      {p.rejectionReason && (
+                        <p className="text-xs text-red-600 mt-1">Rejected: {p.rejectionReason}</p>
+                      )}
+                      {p.bio && (
+                        <p className="text-xs text-gray-400 mt-0.5 line-clamp-2">{p.bio}</p>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {activeView === 'pending' && p.isVerified === false ? (
+                      <>
+                        <button
+                          onClick={() => handleApprove(p._id)}
+                          disabled={busy}
+                          className="flex items-center gap-1 text-xs bg-green-500 hover:bg-green-600 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          <FiCheckCircle className="w-3.5 h-3.5" /> {busy ? '…' : 'Approve'}
+                        </button>
+                        <button
+                          onClick={() => setRejectModal({ id: p._id })}
+                          disabled={busy}
+                          className="flex items-center gap-1 text-xs bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg transition-colors"
+                        >
+                          <FiXCircle className="w-3.5 h-3.5" /> {busy ? '…' : 'Reject'}
+                        </button>
+                      </>
+                    ) : (
+                      <>
+                        <Badge label={p.isVerified ? 'Approved' : 'Pending'} color={p.isVerified ? 'green' : 'yellow'} />
+                        {p.rating > 0 && (
+                          <span className="text-xs text-gray-500">{p.rating.toFixed(1)} ★ ({p.reviewCount})</span>
+                        )}
+                      </>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+      )}
+
+      {/* Reject modal */}
+      {rejectModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Reject Application</h3>
+            <p className="text-sm text-gray-600">
+              This peer supporter's application will be rejected. Optionally provide a reason.
+            </p>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1">Rejection Reason (optional)</label>
+              <textarea
+                value={rejectReason}
+                onChange={e => setRejectReason(e.target.value)}
+                rows={3}
+                placeholder="e.g. Incomplete profile, concerned about background, etc."
+                className="w-full border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+            </div>
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                onClick={() => { setRejectModal(null); setRejectReason(''); }}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleRejectConfirm}
+                disabled={processingId === rejectModal.id}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300 rounded-xl transition-colors"
+              >
+                {processingId === rejectModal.id ? 'Rejecting…' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
 // ─── Sidebar nav config ───────────────────────────────────────────────────────
 const NAV_ITEMS = [
   { id: 'overview',     label: 'Overview',     icon: FiGrid },
@@ -885,6 +1081,7 @@ const NAV_ITEMS = [
   { id: 'events',      label: 'Events',       icon: FiCalendar },
   { id: 'users',       label: 'Users',        icon: FiUsers },
   { id: 'counselors',  label: 'Counselors',   icon: FiUserCheck },
+  { id: 'peer-supporters', label: 'Peer Supporters', icon: FiUsers },
   { id: 'withdrawals', label: 'Withdrawals',  icon: FiDollarSign },
   { id: 'settings',    label: 'Settings',     icon: FiSettings },
 ];
@@ -902,6 +1099,7 @@ const AdminDashboard = () => {
       case 'events':      return <EventsTab />;
       case 'users':       return <UsersTab />;
       case 'counselors':  return <CounselorsTab />;
+      case 'peer-supporters': return <PeerSupportersTab />;
       case 'withdrawals': return <WithdrawalsTab />;
       case 'settings':    return <SettingsTab />;
       default:            return null;

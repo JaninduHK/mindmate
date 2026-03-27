@@ -13,6 +13,10 @@ import {
   getEarnings,
   getConfig,
   updateConfig,
+  listPendingPeerSupporters,
+  listAllPeerSupporters,
+  approvePeerSupporter,
+  rejectPeerSupporter,
 } from '../controllers/admin.controller.js';
 import { listWithdrawals, processWithdrawal } from '../controllers/withdrawal.controller.js';
 
@@ -23,6 +27,10 @@ router.use(verifyToken, checkRole(USER_ROLES.ADMIN));
 router.get('/users', listUsers);
 router.get('/counselors', listCounselors);
 router.put('/counselors/:id/verify', toggleCounselorStatus);
+router.get('/peer-supporters/pending', listPendingPeerSupporters);
+router.get('/peer-supporters', listAllPeerSupporters);
+router.put('/peer-supporters/:id/approve', approvePeerSupporter);
+router.put('/peer-supporters/:id/reject', rejectPeerSupporter);
 router.get('/events', listAllEvents);
 router.put('/events/:id/status', updateEventStatus);
 router.get('/bookings', listAllBookings);

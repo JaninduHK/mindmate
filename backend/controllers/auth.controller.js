@@ -1,5 +1,6 @@
 import User from '../models/User.model.js';
 import RefreshToken from '../models/RefreshToken.model.js';
+import PeerSupporterProfile from '../models/PeerSupporterProfile.model.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.util.js';
 import { generateUsername } from '../utils/username.util.js';
 import ApiError from '../utils/ApiError.js';
@@ -251,6 +252,12 @@ export const registerPeerSupporter = asyncHandler(async (req, res) => {
     password,
     username,
     role: 'peer_supporter',
+  });
+
+  // Create peer supporter profile (starts as unverified/pending)
+  await PeerSupporterProfile.create({
+    userId: user._id,
+    isVerified: false,
   });
 
   const accessToken = generateAccessToken({ userId: user._id });
