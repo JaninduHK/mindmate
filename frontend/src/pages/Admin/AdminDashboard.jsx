@@ -887,6 +887,7 @@ const PeerSupportersTab = () => {
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
   const [deleteModal, setDeleteModal] = useState(null);
+  const [search, setSearch] = useState('');
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -949,6 +950,15 @@ const PeerSupportersTab = () => {
 
   const currentData = activeView === 'pending' ? pending : peers;
 
+  // Filter data based on search term
+  const filteredData = currentData.filter(p => {
+    const searchLower = search.toLowerCase();
+    return (
+      p.userId?.name?.toLowerCase().includes(searchLower) ||
+      p.userId?.email?.toLowerCase().includes(searchLower)
+    );
+  });
+
   return (
     <div className="space-y-6">
       <div className="flex items-center justify-between">
@@ -980,6 +990,15 @@ const PeerSupportersTab = () => {
         </div>
       </div>
 
+      {/* Search bar */}
+      <input
+        type="text"
+        placeholder="Search by name or email…"
+        value={search}
+        onChange={e => setSearch(e.target.value)}
+        className="w-full max-w-sm border border-gray-200 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+      />
+
       {loading ? <div className="flex justify-center py-16"><Loading /></div> : (
         <div className="space-y-3">
           {currentData.length === 0 ? (
@@ -988,8 +1007,14 @@ const PeerSupportersTab = () => {
                 {activeView === 'pending' ? 'No pending applications.' : 'No approved peer supporters yet.'}
               </p>
             </div>
+          ) : filteredData.length === 0 ? (
+            <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
+              <p className="text-gray-400">
+                No peer supporters found matching "<strong>{search}</strong>"
+              </p>
+            </div>
           ) : (
-            currentData.map(p => {
+            filteredData.map(p => {
               const busy = processingId === p._id;
               return (
                 <div key={p._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm p-5 flex items-center justify-between gap-4">
