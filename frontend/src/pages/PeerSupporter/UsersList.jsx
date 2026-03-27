@@ -61,19 +61,18 @@ const UsersList = () => {
                     {user.avatar?.url ? (
                       <img
                         src={user.avatar.url}
-                        alt={user.name}
+                        alt="Anonymous User"
                         className="w-20 h-20 rounded-full object-cover border-4 border-primary-50"
                       />
                     ) : (
                       <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-600">
-                        {user.name?.[0]}
+                        A
                       </div>
                     )}
                   </div>
                   
                   <div className="text-center mb-5">
-                    <h3 className="font-semibold text-lg text-gray-900">{user.name}</h3>
-                    <p className="text-sm text-gray-500 mt-1">{user.email}</p>
+                    <h3 className="font-semibold text-lg text-gray-900">Anonymous User</h3>
                     <div className="mt-3 inline-block bg-primary-50 text-primary-700 px-3 py-1.5 rounded-full text-xs font-semibold">
                       Needs Support
                     </div>
