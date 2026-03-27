@@ -9,6 +9,7 @@ export const adminAPI = {
   listPeerSupporters: (params) => axiosInstance.get('/admin/peer-supporters', { params }).then((r) => r.data),
   approvePeerSupporter: (id) => axiosInstance.put(`/admin/peer-supporters/${id}/approve`).then((r) => r.data),
   rejectPeerSupporter: (id, data) => axiosInstance.put(`/admin/peer-supporters/${id}/reject`, data).then((r) => r.data),
+  deletePeerSupporter: (id) => axiosInstance.delete(`/admin/peer-supporters/${id}`).then((r) => r.data),
   listEvents: (params) => axiosInstance.get('/admin/events', { params }).then((r) => r.data),
   updateEventStatus: (id, data) =>
     axiosInstance.put(`/admin/events/${id}/status`, data).then((r) => r.data),

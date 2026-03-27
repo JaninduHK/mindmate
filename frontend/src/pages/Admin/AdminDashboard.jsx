@@ -886,6 +886,7 @@ const PeerSupportersTab = () => {
   const [processingId, setProcessingId] = useState(null);
   const [rejectModal, setRejectModal] = useState(null);
   const [rejectReason, setRejectReason] = useState('');
+  const [deleteModal, setDeleteModal] = useState(null);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -931,6 +932,18 @@ const PeerSupportersTab = () => {
       // For now, we'll just show a message
       toast.info('Status management coming soon');
     } catch { toast.error('Failed to update status'); }
+    finally { setProcessingId(null); }
+  };
+
+  const handleDelete = async () => {
+    if (!deleteModal) return;
+    setProcessingId(deleteModal.id);
+    try {
+      await adminAPI.deletePeerSupporter(deleteModal.id);
+      toast.success('Peer supporter removed successfully');
+      setDeleteModal(null);
+      load();
+    } catch (err) { toast.error(err.response?.data?.message || 'Failed to remove'); }
     finally { setProcessingId(null); }
   };
 
@@ -1023,6 +1036,15 @@ const PeerSupportersTab = () => {
                         {p.rating > 0 && (
                           <span className="text-xs text-gray-500">{p.rating.toFixed(1)} ★ ({p.reviewCount})</span>
                         )}
+                        {activeView === 'approved' && p.isVerified && (
+                          <button
+                            onClick={() => setDeleteModal({ id: p._id, name: p.userId?.name })}
+                            disabled={busy}
+                            className="flex items-center gap-1 text-xs bg-red-500 hover:bg-red-600 disabled:bg-gray-300 text-white px-3 py-1.5 rounded-lg transition-colors"
+                          >
+                            <FiXCircle className="w-3.5 h-3.5" /> {busy ? '…' : 'Remove'}
+                          </button>
+                        )}
                       </>
                     )}
                   </div>
@@ -1064,6 +1086,38 @@ const PeerSupportersTab = () => {
                 className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300 rounded-xl transition-colors"
               >
                 {processingId === rejectModal.id ? 'Rejecting…' : 'Reject'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Delete modal */}
+      {deleteModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-2xl shadow-xl max-w-md w-full p-6 space-y-4">
+            <h3 className="text-lg font-semibold text-gray-900">Remove Peer Supporter</h3>
+            <div className="bg-red-50 border border-red-200 rounded-xl p-4">
+              <p className="text-sm text-red-700">
+                <strong>Warning:</strong> This will permanently delete <strong>{deleteModal.name}</strong>'s account and profile. This action cannot be undone.
+              </p>
+            </div>
+            <p className="text-sm text-gray-600">
+              Are you sure you want to remove this peer supporter from the platform?
+            </p>
+            <div className="flex justify-end gap-3 pt-1">
+              <button
+                onClick={() => setDeleteModal(null)}
+                className="px-4 py-2 text-sm font-medium text-gray-700 bg-gray-100 hover:bg-gray-200 rounded-xl transition-colors"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleDelete}
+                disabled={processingId === deleteModal.id}
+                className="px-4 py-2 text-sm font-medium text-white bg-red-600 hover:bg-red-700 disabled:bg-gray-300 rounded-xl transition-colors"
+              >
+                {processingId === deleteModal.id ? 'Removing…' : 'Remove'}
               </button>
             </div>
           </div>

@@ -17,6 +17,7 @@ import {
   listAllPeerSupporters,
   approvePeerSupporter,
   rejectPeerSupporter,
+  deletePeerSupporter,
 } from '../controllers/admin.controller.js';
 import { listWithdrawals, processWithdrawal } from '../controllers/withdrawal.controller.js';
 
@@ -31,6 +32,7 @@ router.get('/peer-supporters/pending', listPendingPeerSupporters);
 router.get('/peer-supporters', listAllPeerSupporters);
 router.put('/peer-supporters/:id/approve', approvePeerSupporter);
 router.put('/peer-supporters/:id/reject', rejectPeerSupporter);
+router.delete('/peer-supporters/:id', deletePeerSupporter);
 router.get('/events', listAllEvents);
 router.put('/events/:id/status', updateEventStatus);
 router.get('/bookings', listAllBookings);

@@ -311,3 +311,31 @@ export const rejectPeerSupporter = asyncHandler(async (req, res) => {
     new ApiResponse(HTTP_STATUS.OK, { profile }, 'Peer supporter application rejected')
   );
 });
+
+// DELETE /api/admin/peer-supporters/:id
+export const deletePeerSupporter = asyncHandler(async (req, res) => {
+  const profile = await PeerSupporterProfile.findById(req.params.id);
+  if (!profile) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Peer supporter not found');
+  }
+
+  const user = await User.findById(profile.userId);
+
+  // Delete the peer supporter profile
+  await PeerSupporterProfile.findByIdAndDelete(req.params.id);
+
+  // Delete the user account
+  await User.findByIdAndDelete(profile.userId);
+
+  await sendNotification({
+    userId: profile.userId,
+    type: 'account_deleted',
+    title: 'Account Removed',
+    message: 'Your peer supporter account has been removed from the platform.',
+    data: { userId: profile.userId },
+  }).catch(() => {}); // Notification may fail since user is deleted
+
+  res.json(
+    new ApiResponse(HTTP_STATUS.OK, {}, 'Peer supporter removed successfully')
+  );
+});
