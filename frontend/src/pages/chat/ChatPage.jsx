@@ -104,6 +104,7 @@ const ChatPage = () => {
       <ChatBox 
         currentUserId={user?._id} 
         recipientId={recipientId}
+        recipientName={recipientInfo?.name}
       />
     </div>
   );
