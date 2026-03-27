@@ -1,17 +1,14 @@
-import axiosInstance from './axios.config';
+import { axiosInstance } from './axios.config.js';
 
 export const peerSupporterAPI = {
   list: async (params) => {
-    // Add timestamp to bust cache
     const response = await axiosInstance.get('/peer-supporters', { 
-      params: { ...params, _t: Date.now() } 
+      params
     });
     return response.data;
   },
   getById: async (id) => {
-    const response = await axiosInstance.get(`/peer-supporters/${id}`, {
-      params: { _t: Date.now() }
-    });
+    const response = await axiosInstance.get(`/peer-supporters/${id}`);
     return response.data;
   },
 };

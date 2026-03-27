@@ -14,26 +14,35 @@ const axiosInstance = axios.create({
   },
 });
 
-// Store for access token (in memory)
-let accessToken = null;
+// Store for access token (persisted in localStorage)
+let accessToken = localStorage.getItem('accessToken') || null;
 
 export const setAccessToken = (token) => {
   accessToken = token;
+  if (token) {
+    localStorage.setItem('accessToken', token);
+  } else {
+    localStorage.removeItem('accessToken');
+  }
 };
 
 export const getAccessToken = () => {
-  return accessToken;
+  return accessToken || localStorage.getItem('accessToken');
 };
 
 export const clearAccessToken = () => {
   accessToken = null;
+  localStorage.removeItem('accessToken');
 };
+
+export { axiosInstance };
 
 // Request interceptor - Add access token to requests
 axiosInstance.interceptors.request.use(
   (config) => {
-    if (accessToken) {
-      config.headers.Authorization = `Bearer ${accessToken}`;
+    const token = getAccessToken();
+    if (token) {
+      config.headers.Authorization = `Bearer ${token}`;
     }
     return config;
   },

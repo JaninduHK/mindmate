@@ -112,6 +112,7 @@ userSchema.methods.toPublicJSON = function () {
     avatar: this.avatar,
     role: this.role,
     isEmailVerified: this.isEmailVerified,
+    isAvailableNow: this.isAvailableNow,
     createdAt: this.createdAt,
   };
 };
