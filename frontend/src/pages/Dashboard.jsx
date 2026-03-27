@@ -73,7 +73,7 @@ const Dashboard = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Quick Actions
           </h2>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <Link to="/events" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
               <h3 className="font-semibold text-gray-900">Browse Events</h3>
               <p className="text-gray-600 text-sm mt-1">
@@ -84,6 +84,12 @@ const Dashboard = () => {
               <h3 className="font-semibold text-gray-900">My Bookings</h3>
               <p className="text-gray-600 text-sm mt-1">
                 View and manage your upcoming sessions
+              </p>
+            </Link>
+            <Link to="/personal-tracking" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">Personal Tracker</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                Manage your mood history and daily goals.
               </p>
             </Link>
           </div>

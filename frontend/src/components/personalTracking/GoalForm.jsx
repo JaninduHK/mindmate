@@ -42,6 +42,7 @@ export default function GoalForm({
     clearErrors,
     reset,
   } = useForm({
+    mode: 'onChange',
     defaultValues: { goalName: '', goalType: 'daily' },
   });
 
@@ -143,6 +144,10 @@ export default function GoalForm({
           {...register('goalName', {
             required: 'Goal name is required',
             validate: (v) => String(v ?? '').trim().length > 0 || 'Goal name is required',
+            pattern: {
+              value: /^[^0-9]*$/,
+              message: 'Numbers are not allowed in this field',
+            },
           })}
         />
 
@@ -185,7 +190,7 @@ export default function GoalForm({
           )}
           <button
             type="submit"
-            disabled={submitting}
+            disabled={submitting || !!errors.goalName}
             className={`
               flex-1 px-5 py-2.5 rounded-xl font-semibold text-white transition-all duration-200
               ${submitting 

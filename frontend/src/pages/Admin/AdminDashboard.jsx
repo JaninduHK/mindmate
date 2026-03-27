@@ -13,6 +13,9 @@ import { withdrawalAPI } from '../../api/withdrawal.api';
 import Loading from '../../components/common/Loading';
 import toast from 'react-hot-toast';
 import { format } from 'date-fns';
+import { useLocation, useNavigate } from 'react-router-dom';
+import { Smile } from 'lucide-react';
+import AdminWellness from './AdminWellness';
 
 // ─── Shared helpers ──────────────────────────────────────────────────────────
 const Rs = (n) => `Rs. ${(n ?? 0).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -882,6 +885,7 @@ const NAV_ITEMS = [
   { id: 'overview',     label: 'Overview',     icon: FiGrid },
   { id: 'analytics',   label: 'Analytics',    icon: FiBarChart2 },
   { id: 'bookings',    label: 'Bookings',     icon: FiBook },
+  { id: 'wellness',    label: 'Wellness Insights', icon: Smile },
   { id: 'events',      label: 'Events',       icon: FiCalendar },
   { id: 'users',       label: 'Users',        icon: FiUsers },
   { id: 'counselors',  label: 'Counselors',   icon: FiUserCheck },
@@ -891,7 +895,11 @@ const NAV_ITEMS = [
 
 // ─── Main AdminDashboard ─────────────────────────────────────────────────────
 const AdminDashboard = () => {
-  const [activeTab, setActiveTab] = useState('overview');
+  const location = useLocation();
+  const navigate = useNavigate();
+  const [activeTab, setActiveTab] = useState(
+    location.pathname === '/admin/wellness' ? 'wellness' : 'overview'
+  );
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
   const renderTab = () => {
@@ -899,6 +907,7 @@ const AdminDashboard = () => {
       case 'overview':    return <OverviewTab onTabChange={setActiveTab} />;
       case 'analytics':   return <AnalyticsTab />;
       case 'bookings':    return <BookingsTab />;
+      case 'wellness':    return <AdminWellness />;
       case 'events':      return <EventsTab />;
       case 'users':       return <UsersTab />;
       case 'counselors':  return <CounselorsTab />;
@@ -921,14 +930,18 @@ const AdminDashboard = () => {
         {NAV_ITEMS.map(({ id, label, icon: Icon }) => (
           <button
             key={id}
-            onClick={() => { setActiveTab(id); setSidebarOpen(false); }}
+            onClick={() => {
+              setActiveTab(id);
+              setSidebarOpen(false);
+              navigate(id === 'wellness' ? '/admin/wellness' : '/admin');
+            }}
             className={`w-full flex items-center space-x-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
               activeTab === id
                 ? 'bg-primary-50 text-primary-700'
                 : 'text-gray-600 hover:bg-gray-50 hover:text-gray-900'
             }`}
           >
-            <Icon className={`w-4.5 h-4.5 flex-shrink-0 ${activeTab === id ? 'text-primary-600' : 'text-gray-400'}`} />
+            <Icon className={`flex-shrink-0 ${activeTab === id ? 'text-primary-600' : 'text-gray-400'} ${id === 'wellness' ? 'w-3.5 h-3.5' : 'w-4.5 h-4.5'}`} />
             <span>{label}</span>
           </button>
         ))}

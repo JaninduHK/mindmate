@@ -1,8 +1,23 @@
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiResponse from '../utils/ApiResponse.js';
+import ApiError from '../utils/ApiError.js';
 import Mood from '../models/Mood.js';
 import Goal from '../models/Goal.js';
 import { HTTP_STATUS } from '../config/constants.js';
+
+const parseISODateOnly = (s) => {
+  if (typeof s !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(s)) return null;
+  const [y, m, d] = s.split('-').map(Number);
+  const dt = new Date(Date.UTC(y, m - 1, d));
+  if (Number.isNaN(dt.getTime())) return null;
+  if (dt.getUTCFullYear() !== y || dt.getUTCMonth() !== m - 1 || dt.getUTCDate() !== d) return null;
+  return dt;
+};
+
+const getTodayUTCDateOnly = () => {
+  const t = new Date();
+  return new Date(Date.UTC(t.getUTCFullYear(), t.getUTCMonth(), t.getUTCDate()));
+};
 
 export const getAnalyticsSummary = asyncHandler(async (req, res) => {
   // Use ObjectId for reliable $match in aggregation.
@@ -51,6 +66,47 @@ export const getAnalyticsSummary = asyncHandler(async (req, res) => {
         moodDistribution,
       },
       'Analytics summary retrieved'
+    )
+  );
+});
+
+/** Validates report date range and checks mood/goal rows in range (for PDF / download gating). */
+export const checkReportRange = asyncHandler(async (req, res) => {
+  const { startDate: startStr, endDate: endStr } = req.query;
+
+  if (!startStr || !endStr) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Start date and end date are required');
+  }
+
+  const start = parseISODateOnly(startStr);
+  const end = parseISODateOnly(endStr);
+  if (!start || !end) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invalid date format');
+  }
+
+  if (start > end) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Start date must be before or equal to end date');
+  }
+
+  const today = getTodayUTCDateOnly();
+  if (start > today || end > today) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Dates cannot be in the future');
+  }
+
+  const userId = req.user._id;
+
+  const [moodCount, goalCount] = await Promise.all([
+    Mood.countDocuments({ userId, date: { $gte: start, $lte: end } }),
+    Goal.countDocuments({ userId, date: { $gte: start, $lte: end } }),
+  ]);
+
+  const hasData = moodCount > 0 || goalCount > 0;
+
+  res.json(
+    new ApiResponse(
+      HTTP_STATUS.OK,
+      { hasData, moodCount, goalCount },
+      hasData ? 'Data available for selected period' : 'No data for selected period'
     )
   );
 });
