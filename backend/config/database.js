@@ -1,11 +1,18 @@
 import mongoose from 'mongoose';
 
+import dns from 'dns'; // ✅ DNS module එක import කරන්න
+
+// ✅ DNS settings වෙනස් කරන්න
+dns.setServers(['8.8.8.8', '8.8.4.4', '1.1.1.1']); // Google DNS, Cloudflare DNS
+
+
 const connectDB = async () => {
   try {
     const conn = await mongoose.connect(process.env.MONGODB_URI, {
       maxPoolSize: 10,
       serverSelectionTimeoutMS: 30000, // 30s — Atlas free tier can be slow to wake
       socketTimeoutMS: 45000,
+      family: 4 
     });
 
     console.log(`✅ MongoDB Connected: ${conn.connection.host}`);

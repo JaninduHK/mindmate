@@ -31,6 +31,9 @@ import notificationRoutes from './routes/notification.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import withdrawalRoutes from './routes/withdrawal.routes.js';
+import moodRoutes from './routes/moodRoutes.js';
+import goalRoutes from './routes/goalRoutes.js';
+import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
 
 // Initialize Express app
 const app = express();
@@ -138,6 +141,11 @@ app.use('/api/analytics', analyticsRoutes);
 app.use('/api/chats', chatRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
+app.use('/api/personal-tracking/moods', moodRoutes);
+// Alias for Progress 1 frontend delete requirement
+app.use('/api/moods', moodRoutes);
+app.use('/api/personal-tracking/goals', goalRoutes);
+app.use('/api/personal-tracking/analytics', personalTrackingAnalyticsRoutes);
 
 
 // ===============================

@@ -45,6 +45,9 @@ import PeerSupporterDashboard from './pages/PeerSupporter/PeerSupporterDashboard
 import PeerSupporterList from './pages/PeerSupporter/PeerSupporterList';
 import UsersList from './pages/PeerSupporter/UsersList';
 
+// Personal tracking
+import PersonalTrackingPage from './pages/PersonalTracking/PersonalTrackingPage';
+
 function App() {
   return (
     <BrowserRouter>
@@ -77,6 +80,11 @@ function App() {
               {/* Protected — user role only */}
               <Route element={<ProtectedRoute allowedRoles={['user']} />}>
                 <Route path="/dashboard" element={<Dashboard />} />
+              </Route>
+
+              {/* Protected — user + admin */}
+              <Route element={<ProtectedRoute allowedRoles={['user', 'admin']} />}>
+                <Route path="/personal-tracking" element={<PersonalTrackingPage />} />
               </Route>
 
               {/* Protected — any authenticated user */}
