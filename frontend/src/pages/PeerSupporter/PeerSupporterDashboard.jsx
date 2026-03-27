@@ -1,6 +1,8 @@
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen, FiAward } from 'react-icons/fi';
 import { useAuth } from '../../hooks/useAuth';
+import AvailabilityToggle from '../../components/peer/AvailabilityToggle';
 
 const StatCard = ({ icon: Icon, label, value, color }) => (
   <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
@@ -18,12 +20,22 @@ const StatCard = ({ icon: Icon, label, value, color }) => (
 
 const PeerSupporterDashboard = () => {
   const { user } = useAuth();
+  const [isAvailable, setIsAvailable] = useState(user?.isAvailableNow || false);
+
+  const handleAvailabilityChange = (newStatus) => {
+    setIsAvailable(newStatus);
+  };
 
   return (
     <div className="container-custom py-8">
       <div className="mb-6">
         <h1 className="text-2xl font-bold text-gray-900">Peer Supporter Dashboard</h1>
         <p className="text-gray-500 mt-1">Welcome back, {user?.name}</p>
+      </div>
+
+      {/* Availability Toggle */}
+      <div className="mb-8">
+        <AvailabilityToggle isAvailableNow={isAvailable} onStatusChange={handleAvailabilityChange} />
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
@@ -33,26 +45,36 @@ const PeerSupporterDashboard = () => {
         <StatCard icon={FiBookOpen} label="Resources Shared" value="—" color="bg-amber-500" />
       </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+        <Link to="/peer-supporter/users" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow cursor-pointer">
+          <div className="flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-gray-900">People Needing Support</h3>
+              <p className="text-sm text-gray-500 mt-1">Connect with users and provide support</p>
+            </div>
+            <div className="w-12 h-12 rounded-lg bg-green-100 flex items-center justify-center">
+              <FiUsers className="w-6 h-6 text-green-600" />
+            </div>
+          </div>
+        </Link>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h3 className="font-semibold text-gray-900 mb-1">My Profile</h3>
           <p className="text-sm text-gray-500">Update your bio, availability, and areas of support.</p>
         </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h3 className="font-semibold text-gray-900 mb-1">Support Sessions</h3>
           <p className="text-sm text-gray-500">View and manage your upcoming peer support sessions.</p>
         </div>
+
         <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
           <h3 className="font-semibold text-gray-900 mb-1">Resources</h3>
           <p className="text-sm text-gray-500">Browse mental wellness resources to share with others.</p>
         </div>
-        <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5">
-          <h3 className="font-semibold text-gray-900 mb-1">Community</h3>
-          <p className="text-sm text-gray-500">Connect with other peer supporters and counselors.</p>
-        </div>
       </div>
 
-      <div className="mt-6">
+      <div>
         <Link
           to="/counselor/onboarding"
           className="flex items-start space-x-3 p-5 border-2 border-primary-200 bg-primary-50 rounded-xl hover:border-primary-500 transition-colors"

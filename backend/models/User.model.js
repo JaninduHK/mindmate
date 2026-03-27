@@ -61,6 +61,13 @@ const userSchema = new mongoose.Schema(
       sparse: true,
       trim: true,
     },
+    isAvailableNow: {
+      type: Boolean,
+      default: false, // Only for peer_supporter role
+    },
+    lastAvailableToggle: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
@@ -105,6 +112,7 @@ userSchema.methods.toPublicJSON = function () {
     avatar: this.avatar,
     role: this.role,
     isEmailVerified: this.isEmailVerified,
+    isAvailableNow: this.isAvailableNow,
     createdAt: this.createdAt,
   };
 };

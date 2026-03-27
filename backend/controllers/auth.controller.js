@@ -161,20 +161,25 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
   const newAccessToken = generateAccessToken({ userId: user._id });
   const newRefreshToken = generateRefreshToken({ userId: user._id });
 
-  // Save new refresh token
-  const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
-  await RefreshToken.create({
-    userId: user._id,
-    token: newRefreshToken,
-    expiresAt,
-    createdByIp: req.ip,
-  });
+  try {
+    // Revoke old refresh token FIRST to avoid conflicts
+    storedToken.revokedAt = new Date();
+    storedToken.revokedByIp = req.ip;
+    storedToken.replacedByToken = newRefreshToken;
+    await storedToken.save();
 
-  // Revoke old refresh token
-  storedToken.revokedAt = new Date();
-  storedToken.revokedByIp = req.ip;
-  storedToken.replacedByToken = newRefreshToken;
-  await storedToken.save();
+    // Then save new refresh token
+    const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+    await RefreshToken.create({
+      userId: user._id,
+      token: newRefreshToken,
+      expiresAt,
+      createdByIp: req.ip,
+    });
+  } catch (dbError) {
+    console.error('Error managing refresh tokens:', dbError);
+    throw new ApiError(HTTP_STATUS.INTERNAL_SERVER_ERROR, 'Failed to refresh token');
+  }
 
   // Set new refresh token cookie
   setRefreshTokenCookie(res, newRefreshToken);
@@ -193,6 +198,14 @@ export const refreshAccessToken = asyncHandler(async (req, res) => {
 // Logout user
 export const logout = asyncHandler(async (req, res) => {
   const { refreshToken } = req.cookies;
+
+  // If peer supporter is logging out, set them as offline
+  if (req.user && req.user.role === 'peer_supporter') {
+    await User.findByIdAndUpdate(req.user._id, {
+      isAvailableNow: false,
+      lastAvailableToggle: new Date(),
+    });
+  }
 
   if (refreshToken) {
     // Revoke refresh token
