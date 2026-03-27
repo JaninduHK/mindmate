@@ -48,6 +48,15 @@ const Header = () => {
                   </Link>
                 )}
 
+                {user?.role === 'user' && (
+                  <Link
+                    to="/personal-tracking"
+                    className="text-gray-700 hover:text-primary-600 transition-colors text-sm"
+                  >
+                    Personal Tracking System
+                  </Link>
+                )}
+
                 {isCounselor && (
                   <Link to="/counselor/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
                     My Studio
@@ -63,6 +72,15 @@ const Header = () => {
                 {isAdmin && (
                   <Link to="/admin" className="text-gray-700 hover:text-primary-600 transition-colors text-sm font-semibold">
                     Admin
+                  </Link>
+                )}
+
+                {isAdmin && (
+                  <Link
+                    to="/personal-tracking"
+                    className="text-gray-700 hover:text-primary-600 transition-colors text-sm"
+                  >
+                    Personal Tracking System
                   </Link>
                 )}
 
@@ -114,6 +132,16 @@ const Header = () => {
                 {user?.role === 'user' && (
                   <Link to="/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Dashboard</Link>
                 )}
+
+                {user?.role === 'user' && (
+                  <Link
+                    to="/personal-tracking"
+                    className="block py-2 text-gray-700 hover:text-primary-600"
+                    onClick={() => setShowMenu(false)}
+                  >
+                    Personal Tracking System
+                  </Link>
+                )}
                 {isCounselor && (
                   <Link to="/counselor/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>My Studio</Link>
                 )}
@@ -122,6 +150,16 @@ const Header = () => {
                 )}
                 {isAdmin && (
                   <Link to="/admin" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Admin</Link>
+                )}
+
+                {isAdmin && (
+                  <Link
+                    to="/personal-tracking"
+                    className="block py-2 text-gray-700 hover:text-primary-600"
+                    onClick={() => setShowMenu(false)}
+                  >
+                    Personal Tracking System
+                  </Link>
                 )}
                 {!isAdmin && (
                   <Link to="/booking/my" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>My Bookings</Link>
