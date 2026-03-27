@@ -39,7 +39,7 @@ const UsersList = () => {
         </div>
         <button
           onClick={() => navigate('/peer-supporter/dashboard')}
-          className="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-800 rounded-lg hover:bg-gray-300 transition-colors font-semibold"
+          className="flex items-center gap-2 px-4 py-2 bg-gray-100 text-gray-700 rounded-xl hover:bg-gray-200 transition-colors font-semibold text-sm"
         >
           <FiArrowLeft /> Back to Dashboard
         </button>
@@ -55,36 +55,36 @@ const UsersList = () => {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {users.map((user) => (
-              <div key={user._id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+              <div key={user._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 <div className="p-6">
                   <div className="flex items-center justify-center mb-4">
                     {user.avatar?.url ? (
                       <img
                         src={user.avatar.url}
                         alt={user.name}
-                        className="w-20 h-20 rounded-full object-cover border-4 border-green-100"
+                        className="w-20 h-20 rounded-full object-cover border-4 border-primary-50"
                       />
                     ) : (
-                      <div className="w-20 h-20 rounded-full bg-green-100 flex items-center justify-center text-2xl font-bold text-green-600">
+                      <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-600">
                         {user.name?.[0]}
                       </div>
                     )}
                   </div>
                   
-                  <div className="text-center mb-4">
+                  <div className="text-center mb-5">
                     <h3 className="font-semibold text-lg text-gray-900">{user.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{user.email}</p>
-                    <div className="mt-2 inline-block bg-green-50 text-green-700 px-3 py-1 rounded-full text-xs font-semibold">
+                    <p className="text-sm text-gray-500 mt-1">{user.email}</p>
+                    <div className="mt-3 inline-block bg-primary-50 text-primary-700 px-3 py-1.5 rounded-full text-xs font-semibold">
                       Needs Support
                     </div>
                   </div>
 
                   <button
                     onClick={() => handleHelpClick(user._id)}
-                    className="w-full bg-green-600 text-white py-3 rounded-lg hover:bg-green-700 transition-colors font-semibold flex items-center justify-center gap-2"
+                    className="w-full bg-primary-600 text-white py-2.5 rounded-xl hover:bg-primary-700 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
                   >
-                    <FiMessageCircle className="w-5 h-5" />
-                    Person Help
+                    <FiMessageCircle className="w-4.5 h-4.5" />
+                    Offer Help
                   </button>
                 </div>
               </div>
@@ -92,19 +92,19 @@ const UsersList = () => {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-4 mt-12">
+            <div className="flex justify-center items-center space-x-4 mt-10">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-6 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-600 font-semibold">Page {page} of {totalPages}</span>
+              <span className="text-sm text-gray-500 font-medium">Page {page} of {totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-6 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
               >
                 Next
               </button>

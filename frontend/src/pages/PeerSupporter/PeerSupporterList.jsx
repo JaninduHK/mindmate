@@ -67,7 +67,7 @@ const PeerSupporterList = () => {
         <button
           onClick={handleManualRefresh}
           disabled={refreshing}
-          className="flex items-center gap-2 px-4 py-2 bg-blue-50 text-blue-600 rounded-lg hover:bg-blue-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold"
+          className="flex items-center gap-2 px-4 py-2 bg-primary-50 text-primary-700 rounded-xl hover:bg-primary-100 transition-colors disabled:opacity-50 disabled:cursor-not-allowed font-semibold text-sm"
         >
           <FiRefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
           {refreshing ? 'Refreshing...' : 'Refresh'}
@@ -82,17 +82,17 @@ const PeerSupporterList = () => {
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
             {peerSupporters.map((ps) => (
-              <div key={ps._id} className="bg-white rounded-lg shadow-md hover:shadow-lg transition-shadow overflow-hidden">
+              <div key={ps._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 <div className="p-6">
                   <div className="flex items-center justify-center mb-4">
                     {ps.avatar?.url ? (
                       <img
                         src={ps.avatar.url}
                         alt={ps.name}
-                        className="w-20 h-20 rounded-full object-cover border-4 border-blue-100"
+                        className="w-20 h-20 rounded-full object-cover border-4 border-primary-50"
                       />
                     ) : (
-                      <div className="w-20 h-20 rounded-full bg-blue-100 flex items-center justify-center text-2xl font-bold text-blue-600">
+                      <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-600">
                         {ps.name?.[0]}
                       </div>
                     )}
@@ -100,21 +100,21 @@ const PeerSupporterList = () => {
                   
                   <div className="text-center mb-4">
                     <h3 className="font-semibold text-lg text-gray-900">{ps.name}</h3>
-                    <p className="text-sm text-gray-600 mt-1">{ps.email}</p>
-                    <div className="mt-2 inline-block bg-blue-50 text-blue-700 px-3 py-1 rounded-full text-xs font-semibold">
+                    <p className="text-sm text-gray-500 mt-1">{ps.email}</p>
+                    <div className="mt-3 inline-block bg-primary-50 text-primary-700 px-3 py-1.5 rounded-full text-xs font-semibold">
                       Peer Supporter
                     </div>
                   </div>
 
                   {/* Availability Status */}
-                  <div className="mb-4">
+                  <div className="mb-5">
                     {ps.isAvailableNow ? (
-                      <div className="flex items-center justify-center gap-2 text-green-600 font-semibold text-sm bg-green-50 py-2 rounded-lg">
+                      <div className="flex items-center justify-center gap-2 text-green-700 font-medium text-sm bg-green-50 py-2 rounded-xl">
                         <FiCheck className="w-4 h-4" />
                         Available Now
                       </div>
                     ) : (
-                      <div className="flex items-center justify-center gap-2 text-gray-600 font-semibold text-sm bg-gray-100 py-2 rounded-lg">
+                      <div className="flex items-center justify-center gap-2 text-gray-500 font-medium text-sm bg-gray-50 py-2 rounded-xl">
                         <FiX className="w-4 h-4" />
                         Offline
                       </div>
@@ -124,13 +124,13 @@ const PeerSupporterList = () => {
                   <button
                     onClick={() => handleChatClick(ps._id, ps.isAvailableNow)}
                     disabled={!ps.isAvailableNow}
-                    className={`w-full py-3 rounded-lg transition-colors font-semibold flex items-center justify-center gap-2 ${
+                    className={`w-full py-2.5 rounded-xl transition-colors font-semibold flex items-center justify-center gap-2 text-sm ${
                       ps.isAvailableNow
-                        ? 'bg-blue-600 text-white hover:bg-blue-700'
-                        : 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                        ? 'bg-primary-600 text-white hover:bg-primary-700'
+                        : 'bg-gray-100 text-gray-400 cursor-not-allowed'
                     }`}
                   >
-                    <FiMessageCircle className="w-5 h-5" />
+                    <FiMessageCircle className="w-4.5 h-4.5" />
                     Chat Now
                   </button>
                 </div>
@@ -139,19 +139,19 @@ const PeerSupporterList = () => {
           </div>
 
           {totalPages > 1 && (
-            <div className="flex justify-center items-center space-x-4 mt-12">
+            <div className="flex justify-center items-center space-x-4 mt-10">
               <button
                 onClick={() => setPage((p) => Math.max(1, p - 1))}
                 disabled={page === 1}
-                className="px-6 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
               >
                 Previous
               </button>
-              <span className="text-sm text-gray-600 font-semibold">Page {page} of {totalPages}</span>
+              <span className="text-sm text-gray-500 font-medium">Page {page} of {totalPages}</span>
               <button
                 onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
                 disabled={page === totalPages}
-                className="px-6 py-2 rounded-lg border border-gray-300 text-sm font-semibold disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                className="px-5 py-2 rounded-xl border border-gray-200 text-sm font-semibold text-gray-700 disabled:opacity-40 hover:bg-gray-50 transition-colors"
               >
                 Next
               </button>
