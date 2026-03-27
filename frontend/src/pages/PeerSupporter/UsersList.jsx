@@ -1,15 +1,66 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userAPI } from '../../api/user.api';
+import { chatAPI } from '../../api/chat.api';
+import { socket } from '../../socket/socket';
+import { useAuth } from '../../hooks/useAuth';
 import Loading from '../../components/common/Loading';
-import { FiMessageCircle, FiArrowLeft } from 'react-icons/fi';
+import { FiMessageCircle, FiArrowLeft, FiX, FiBell } from 'react-icons/fi';
 
 const UsersList = () => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [users, setUsers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [unreadSenders, setUnreadSenders] = useState({});
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      if (currentUser) {
+        try {
+          const res = await chatAPI.getConversations(currentUser._id);
+          console.log("Conversations response:", res);
+          if (res.success && res.data && res.data.conversations) {
+            const unread = {};
+            res.data.conversations.forEach(c => {
+              if (c.lastMessage && c.lastMessage.recipientId === currentUser._id && !c.lastMessage.readAt) {
+                console.log("Marking as unread from sender:", c.lastMessage.senderId);
+                unread[c.lastMessage.senderId] = true;
+              }
+            });
+            console.log("Final unread map:", unread);
+            setUnreadSenders(unread);
+          }
+        } catch (error) {
+          console.error("Error fetching unread messages:", error);
+        }
+      }
+    };
+    fetchUnread();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      socket.emit("join_room", currentUser._id);
+      
+      const handleReceive = (data) => {
+        console.log("Received message for users list:", data);
+        // Only mark as unread if this is an incoming message (not sent by current user)
+        if (data.recipientId === currentUser._id && data.senderId !== currentUser._id) {
+          console.log("Adding unread notification for user:", data.senderId);
+          setUnreadSenders(prev => ({ ...prev, [data.senderId]: true }));
+        }
+      };
+
+      socket.on("receive_message", handleReceive);
+
+      return () => {
+        socket.off("receive_message", handleReceive);
+      };
+    }
+  }, [currentUser]);
 
   useEffect(() => {
     const fetch = async () => {
@@ -80,10 +131,16 @@ const UsersList = () => {
 
                   <button
                     onClick={() => handleHelpClick(user._id)}
-                    className="w-full bg-primary-600 text-white py-2.5 rounded-xl hover:bg-primary-700 transition-colors font-semibold flex items-center justify-center gap-2 text-sm"
+                    className="w-full bg-primary-600 text-white py-2.5 rounded-xl hover:bg-primary-700 transition-colors font-semibold flex items-center justify-center gap-2 text-sm relative"
                   >
                     <FiMessageCircle className="w-4.5 h-4.5" />
                     Offer Help
+                    {unreadSenders[user._id] && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>

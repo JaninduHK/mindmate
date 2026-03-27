@@ -1,17 +1,68 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { peerSupporterAPI } from '../../api/peerSupporter.api';
+import { chatAPI } from '../../api/chat.api';
+import { socket } from '../../socket/socket';
+import { useAuth } from '../../hooks/useAuth';
 import Loading from '../../components/common/Loading';
-import { FiMessageCircle, FiCheck, FiX, FiRefreshCw } from 'react-icons/fi';
+import { FiMessageCircle, FiCheck, FiX, FiRefreshCw, FiBell } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const PeerSupporterList = () => {
   const navigate = useNavigate();
+  const { user: currentUser } = useAuth();
   const [peerSupporters, setPeerSupporters] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [page, setPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+  const [unreadSenders, setUnreadSenders] = useState({});
+
+  useEffect(() => {
+    const fetchUnread = async () => {
+      if (currentUser) {
+        try {
+          const res = await chatAPI.getConversations(currentUser._id);
+          console.log("Conversations response:", res);
+          if (res.success && res.data && res.data.conversations) {
+            const unread = {};
+            res.data.conversations.forEach(c => {
+              if (c.lastMessage && c.lastMessage.recipientId === currentUser._id && !c.lastMessage.readAt) {
+                console.log("Marking as unread from sender:", c.lastMessage.senderId);
+                unread[c.lastMessage.senderId] = true;
+              }
+            });
+            console.log("Final unread map:", unread);
+            setUnreadSenders(unread);
+          }
+        } catch (error) {
+          console.error("Error fetching unread messages:", error);
+        }
+      }
+    };
+    fetchUnread();
+  }, [currentUser]);
+
+  useEffect(() => {
+    if (currentUser) {
+      socket.emit("join_room", currentUser._id);
+      
+      const handleReceive = (data) => {
+        console.log("Received message for peer supporter list:", data);
+        // Only mark as unread if this is an incoming message (not sent by current user)
+        if (data.recipientId === currentUser._id && data.senderId !== currentUser._id) {
+          console.log("Adding unread notification from:", data.senderId);
+          setUnreadSenders(prev => ({ ...prev, [data.senderId]: true }));
+        }
+      };
+
+      socket.on("receive_message", handleReceive);
+
+      return () => {
+        socket.off("receive_message", handleReceive);
+      };
+    }
+  }, [currentUser]);
 
   const fetchPeerSupporters = async (pageNum = 1, showLoading = true) => {
     if (showLoading) setLoading(true);
@@ -124,7 +175,7 @@ const PeerSupporterList = () => {
                   <button
                     onClick={() => handleChatClick(ps._id, ps.isAvailableNow)}
                     disabled={!ps.isAvailableNow}
-                    className={`w-full py-2.5 rounded-xl transition-colors font-semibold flex items-center justify-center gap-2 text-sm ${
+                    className={`w-full py-2.5 rounded-xl transition-colors font-semibold flex items-center justify-center gap-2 text-sm relative ${
                       ps.isAvailableNow
                         ? 'bg-primary-600 text-white hover:bg-primary-700'
                         : 'bg-gray-100 text-gray-400 cursor-not-allowed'
@@ -132,6 +183,12 @@ const PeerSupporterList = () => {
                   >
                     <FiMessageCircle className="w-4.5 h-4.5" />
                     Chat Now
+                    {unreadSenders[ps._id] && (
+                      <span className="absolute -top-1 -right-1 flex h-3 w-3">
+                        <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span className="relative inline-flex rounded-full h-3 w-3 bg-red-500"></span>
+                      </span>
+                    )}
                   </button>
                 </div>
               </div>
