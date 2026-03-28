@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback } from 'react';
 import {
   FiGrid, FiBarChart2, FiCalendar, FiBook, FiUsers, FiUserCheck,
   FiDollarSign, FiSettings, FiLogOut, FiMenu, FiX, FiCheckCircle,
-  FiXCircle, FiClock, FiEye, FiTrendingUp, FiActivity,
+  FiXCircle, FiClock, FiEye, FiTrendingUp, FiActivity, FiSearch, FiAlertTriangle
 } from 'react-icons/fi';
 import {
   PieChart, Pie, Cell, BarChart, Bar, XAxis, YAxis, CartesianGrid,
