@@ -877,7 +877,7 @@ const SettingsTab = () => {
   );
 };
 
-// ─── Peer Supporters Tab ──────────────────────────────────────────────────────
+// ─── Peer Counselor Tab ──────────────────────────────────────────────────────
 const PeerSupportersTab = () => {
   const [pending, setPending] = useState([]);
   const [peers, setPeers] = useState([]);
@@ -963,8 +963,8 @@ const PeerSupportersTab = () => {
     <div className="space-y-6">
       <div className="flex items-center justify-between">
         <div>
-          <h2 className="text-xl font-bold text-gray-900">Peer Supporters</h2>
-          <p className="text-sm text-gray-500 mt-0.5">Manage peer supporter applications and accounts.</p>
+          <h2 className="text-xl font-bold text-gray-900">Peer Counselor</h2>
+          <p className="text-sm text-gray-500 mt-0.5">Manage peer counselor applications and accounts.</p>
         </div>
         <div className="flex gap-2">
           <button
@@ -1004,13 +1004,13 @@ const PeerSupportersTab = () => {
           {currentData.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
               <p className="text-gray-400">
-                {activeView === 'pending' ? 'No pending applications.' : 'No approved peer supporters yet.'}
+                {activeView === 'pending' ? 'No pending applications.' : 'No approved peer counselors yet.'}
               </p>
             </div>
           ) : filteredData.length === 0 ? (
             <div className="text-center py-12 bg-white rounded-2xl border border-gray-100">
               <p className="text-gray-400">
-                No peer supporters found matching "<strong>{search}</strong>"
+                No peer counselors found matching "<strong>{search}</strong>"
               </p>
             </div>
           ) : (
@@ -1160,7 +1160,7 @@ const NAV_ITEMS = [
   { id: 'events',      label: 'Events',       icon: FiCalendar },
   { id: 'users',       label: 'Users',        icon: FiUsers },
   { id: 'counselors',  label: 'Counselors',   icon: FiUserCheck },
-  { id: 'peer-supporters', label: 'Peer Supporters', icon: FiUsers },
+  { id: 'peer-supporters', label: 'Peer Counselor', icon: FiUsers },
   { id: 'withdrawals', label: 'Withdrawals',  icon: FiDollarSign },
   { id: 'settings',    label: 'Settings',     icon: FiSettings },
 ];

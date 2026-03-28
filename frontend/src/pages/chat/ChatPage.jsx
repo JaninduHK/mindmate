@@ -77,7 +77,7 @@ const ChatPage = () => {
             onClick={() => navigate("/peer-supporters")}
             className="w-full mt-3 bg-gray-200 text-gray-800 py-3 rounded-lg hover:bg-gray-300 transition-colors font-semibold flex items-center justify-center gap-2"
           >
-            <FiArrowLeft /> View Peer Supporters
+            <FiArrowLeft /> View Peer Counselors
           </button>
         </div>
       </div>

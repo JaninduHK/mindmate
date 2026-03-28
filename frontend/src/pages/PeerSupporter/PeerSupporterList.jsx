@@ -112,8 +112,8 @@ const PeerSupporterList = () => {
     <div className="container-custom py-8">
       <div className="flex items-center justify-between mb-6">
         <div>
-          <h1 className="text-3xl font-bold text-gray-900">Find a Peer Supporter</h1>
-          <p className="text-gray-600 mt-2">Chat with an available peer supporter or schedule a session</p>
+          <h1 className="text-3xl font-bold text-gray-900">Find a Peer Counselor</h1>
+          <p className="text-gray-600 mt-2">Chat with an available peer counselor or schedule a session</p>
         </div>
         <button
           onClick={handleManualRefresh}
@@ -128,7 +128,7 @@ const PeerSupporterList = () => {
       {loading ? (
         <div className="flex justify-center py-16"><Loading /></div>
       ) : peerSupporters.length === 0 ? (
-        <div className="text-center py-16 text-gray-400">No peer supporters found</div>
+        <div className="text-center py-16 text-gray-400">No peer counselors found</div>
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -153,7 +153,7 @@ const PeerSupporterList = () => {
                     <h3 className="font-semibold text-lg text-gray-900">{ps.name}</h3>
                     <p className="text-sm text-gray-500 mt-1">{ps.email}</p>
                     <div className="mt-3 inline-block bg-primary-50 text-primary-700 px-3 py-1.5 rounded-full text-xs font-semibold">
-                      Peer Supporter
+                      Peer Counselor
                     </div>
                   </div>
 
