@@ -56,7 +56,7 @@ const EventManage = () => {
               <div>
                 <h3 className="font-semibold text-gray-900">{e.title}</h3>
                 <p className="text-sm text-gray-500 mt-0.5">
-                  {format(new Date(e.startDate), 'MMM d, yyyy')} · {e.seatsAvailable}/{e.capacity} seats · ${e.price.toFixed(2)}
+                  {format(new Date(e.startDate), 'MMM d, yyyy')} · {e.seatsAvailable}/{e.capacity} seats · LKR {e.price.toFixed(2)}
                 </p>
               </div>
               <div className="flex items-center space-x-3">
