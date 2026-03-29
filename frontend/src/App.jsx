@@ -38,6 +38,7 @@ import AdminDashboard from './pages/Admin/AdminDashboard';
 
 // Counselor withdrawals
 import CounselorWithdrawals from './pages/Counselor/CounselorWithdrawals';
+import EventEdit from './pages/Counselor/EventEdit';
 
 // Peer Supporter pages
 import PeerSupporterRegister from './pages/PeerSupporter/PeerSupporterRegister';
@@ -82,8 +83,8 @@ function App() {
                 <Route path="/dashboard" element={<Dashboard />} />
               </Route>
 
-              {/* Protected — user + admin */}
-              <Route element={<ProtectedRoute allowedRoles={['user', 'admin']} />}>
+              {/* Protected — user only */}
+              <Route element={<ProtectedRoute allowedRoles={['user']} />}>
                 <Route path="/personal-tracking" element={<PersonalTrackingPage />} />
               </Route>
 
@@ -107,6 +108,7 @@ function App() {
                 <Route path="/counselor/dashboard" element={<CounselorDashboard />} />
                 <Route path="/counselor/events" element={<EventManage />} />
                 <Route path="/counselor/events/create" element={<EventCreate />} />
+              <Route path="/counselor/events/:id/edit" element={<EventEdit />} />
                 <Route path="/counselor/analytics" element={<CounselorAnalytics />} />
                 <Route path="/counselor/withdrawals" element={<CounselorWithdrawals />} />
               </Route>

@@ -4,6 +4,7 @@ import { useAuth } from '../hooks/useAuth';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { FiMail, FiLock } from 'react-icons/fi';
+import logo from '../assets/MindMate Logo.png';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -78,9 +79,7 @@ const Login = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-primary-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-3xl">M</span>
-            </div>
+            <img src={logo} alt="MindMate" className="h-12" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">Welcome back</h2>
           <p className="mt-2 text-gray-600">Sign in to your MindMate account</p>

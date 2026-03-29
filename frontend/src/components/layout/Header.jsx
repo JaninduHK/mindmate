@@ -24,11 +24,8 @@ const Header = () => {
       <nav className="container-custom py-4">
         <div className="flex items-center justify-between">
           {/* Logo */}
-          <Link to="/" className="flex items-center space-x-2">
-            <div className="w-8 h-8 bg-primary-600 rounded-lg flex items-center justify-center">
-              <span className="text-white font-bold text-xl">M</span>
-            </div>
-            <span className="text-xl font-bold text-gray-900">MindMate</span>
+          <Link to="/">
+            <img src="/src/assets/MindMate Logo.png" alt="MindMate" className="h-10" />
           </Link>
 
           {/* Desktop Navigation */}

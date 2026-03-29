@@ -179,6 +179,30 @@ export const getMyBookings = asyncHandler(async (req, res) => {
   );
 });
 
+// GET /api/bookings/counselor
+export const getCounselorBookings = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const filter = { counselorId: req.user._id };
+  if (req.query.status) filter.status = req.query.status;
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate('eventId', 'title startDate price')
+      .populate('userId', 'name email avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Booking.countDocuments(filter),
+  ]);
+
+  res.json(
+    new ApiResponse(HTTP_STATUS.OK, { bookings, total, page, pages: Math.ceil(total / limit) })
+  );
+});
+
 // GET /api/bookings/:id
 export const getBookingById = asyncHandler(async (req, res) => {
   const booking = await Booking.findById(req.params.id)
