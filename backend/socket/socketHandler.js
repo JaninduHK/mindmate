@@ -36,6 +36,19 @@ export const socketHandler = (io) => {
                     isEdited: false,
                     readAt: null,
                 });
+                
+                // Send back to the sender so it shows up in their chat window instantly
+                socket.emit('receive_message', {
+                    _id: savedMessage._id,
+                    senderId,
+                    sender,
+                    message,
+                    time,
+                    recipientId,
+                    createdAt: savedMessage.createdAt,
+                    isEdited: false,
+                    readAt: null,
+                });
             } catch (error) {
                 console.error('Error saving message:', error);
                 socket.emit('message_error', { error: 'Failed to save message' });
