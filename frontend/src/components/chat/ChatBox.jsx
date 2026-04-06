@@ -55,9 +55,16 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
   useEffect(() => {
     if (!currentUserId) return;
 
+    console.log("[Chat] Joining room with userId:", currentUserId);
     socket.emit("join_room", currentUserId);
 
+    socket.on("connect", () => {
+      console.log("[Chat] Socket connected:", socket.id);
+      toast.success("Connected to chat server");
+    });
+
     socket.on("receive_message", (data) => {
+      console.log("[Chat] Received message:", data);
       setMessages((prev) => [...prev, data]);
       // Mark as read
       socket.emit("mark_read", {
@@ -68,6 +75,7 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
     });
 
     socket.on("message_edited", (data) => {
+      console.log("[Chat] Message edited:", data);
       setMessages((prev) =>
         prev.map((msg) =>
           msg._id === data.messageId
@@ -78,7 +86,7 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
     });
 
     socket.on("message_deleted", (data) => {
-      console.log("Real-time delete received for:", data.messageId);
+      console.log("[Chat] Real-time delete received for:", data.messageId);
       setMessages((prev) =>
         prev.map((msg) =>
           msg._id === data.messageId
@@ -90,6 +98,7 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
     });
 
     socket.on("message_read", (data) => {
+      console.log("[Chat] Message read:", data);
       setMessages((prev) =>
         prev.map((msg) =>
           msg._id === data.messageId
@@ -112,10 +121,22 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
     });
 
     socket.on("connect_error", (error) => {
-      console.error("Socket connection error:", error);
+      console.error("[Chat] Socket connection error:", error);
+      toast.error("Failed to connect to chat server: " + error.message);
+    });
+
+    socket.on("disconnect", (reason) => {
+      console.log("[Chat] Socket disconnected:", reason);
+      toast.error("Disconnected from chat server");
+    });
+
+    socket.on("message_error", (data) => {
+      console.error("[Chat] Message error:", data);
+      toast.error("Message error: " + data.error);
     });
 
     return () => {
+      socket.off("connect");
       socket.off("receive_message");
       socket.off("message_edited");
       socket.off("message_deleted");
@@ -123,11 +144,22 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
       socket.off("typing");
       socket.off("stop_typing");
       socket.off("connect_error");
+      socket.off("disconnect");
+      socket.off("message_error");
     };
   }, [currentUserId, recipientId]);
 
   const sendMessage = () => {
-    if (message.trim() === "") return;
+    if (message.trim() === "") {
+      toast.error("Message cannot be empty");
+      return;
+    }
+
+    if (!currentUserId || !recipientId) {
+      toast.error("User IDs missing. Please refresh the page.");
+      console.error("[Chat] Missing IDs - currentUserId:", currentUserId, "recipientId:", recipientId);
+      return;
+    }
 
     const messageData = {
       senderId: currentUserId,
@@ -137,7 +169,16 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
       time: new Date().toLocaleTimeString(),
     };
 
+    console.log("[Chat] Sending message:", messageData);
+    
+    if (!socket.connected) {
+      console.error("[Chat] Socket not connected!");
+      toast.error("Not connected to chat server. Please refresh.");
+      return;
+    }
+
     socket.emit("send_message", messageData);
+    console.log("[Chat] Message emitted to socket");
     setMessage("");
     socket.emit("stop_typing", { senderId: currentUserId, recipientId });
   };

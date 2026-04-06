@@ -69,7 +69,10 @@ const corsOptions = {
 // ===============================
 const io = new Server(server, {
   cors: corsOptions,
+  transports: ['websocket', 'polling'],
 });
+
+console.log('🔌 Socket.IO initialized with CORS:', corsOptions);
 
 // Initialize socket events
 socketHandler(io);
