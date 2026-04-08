@@ -148,6 +148,7 @@ const PeerSupporterDashboard = () => {
       </div>
 
       <div className="container-custom space-y-12">
+        <div className="space-y-12">
         {/* Stats Grid */}
         <div>
           <div className="flex items-center gap-3 mb-6">
@@ -199,9 +200,9 @@ const PeerSupporterDashboard = () => {
                 delay={500}
               />
               <ActionCard 
-                to="#" 
+                to="/peer-supporter/manage-availability" 
                 icon={FiCalendar} 
-                title="Support Sessions" 
+                title="Manage Availability" 
                 description="View your past session history and manage your upcoming peer support engagements."
                 colors={{
                   bg: 'bg-primary-50', bgHover: 'group-hover:bg-primary-500',
@@ -281,6 +282,7 @@ const PeerSupporterDashboard = () => {
         </div>
       </div>
     </div>
+  </div>
   );
 };
 

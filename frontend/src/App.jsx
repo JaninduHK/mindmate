@@ -42,6 +42,7 @@ import CounselorWithdrawals from './pages/Counselor/CounselorWithdrawals';
 // Peer Supporter pages
 import PeerSupporterRegister from './pages/PeerSupporter/PeerSupporterRegister';
 import PeerSupporterDashboard from './pages/PeerSupporter/PeerSupporterDashboard';
+import ManageAvailability from './pages/PeerSupporter/ManageAvailability';
 import PeerSupporterList from './pages/PeerSupporter/PeerSupporterList';
 import UsersList from './pages/PeerSupporter/UsersList';
 
@@ -99,6 +100,7 @@ function App() {
               {/* Protected — peer supporter role */}
               <Route element={<ProtectedRoute allowedRoles={['peer_supporter']} />}>
                 <Route path="/peer-supporter/dashboard" element={<PeerSupporterDashboard />} />
+                <Route path="/peer-supporter/manage-availability" element={<ManageAvailability />} />
                 <Route path="/peer-supporter/users" element={<UsersList />} />
               </Route>
 
