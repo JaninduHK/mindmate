@@ -51,13 +51,13 @@ router.get('/stats', verifyToken, isPeerSupporter, getAvailabilityStats);
  * PUBLIC ROUTES (For users to browse and book)
  */
 
-// Get available slots for a specific counselor
-router.get('/counselor/:counselorId', getAvailabilityByCounselor);
+// Get available slots for a specific peer supporter
+router.get('/counselor/:supporterId', getAvailabilityByCounselor);
 
 // Get all available counselors with optional filters
 router.get('/available-counselors', getAvailableCounselors);
 
 // Check if specific time slot is available
-router.post('/check', checkAvailability);
+router.get('/check', checkAvailability);
 
 export default router;

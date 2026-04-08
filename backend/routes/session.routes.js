@@ -7,6 +7,7 @@ import {
   cancelSession,
   addSessionFeedback,
   updateSessionDetails,
+  getAvailableSlots,
 } from '../controllers/session.controller.js';
 import { verifyToken } from '../middlewares/auth.middleware.js';
 
@@ -14,6 +15,9 @@ const router = Router();
 
 // All routes require authentication
 router.use(verifyToken);
+
+// Get available slots for a peer supporter on a specific date
+router.get('/available-slots', getAvailableSlots);
 
 // Book a new session
 router.post('/book', bookSession);

@@ -4,7 +4,7 @@ import User from '../models/User.model.js';
 import PeerSupporterProfile from '../models/PeerSupporterProfile.model.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
-import  asyncHandler from '../utils/asyncHandler.js';
+import asyncHandler from '../utils/asyncHandler.js';
 import { USER_ROLES } from '../config/constants.js';
 
 /**
@@ -13,20 +13,29 @@ import { USER_ROLES } from '../config/constants.js';
  * @access Private (peer_supporter only)
  */
 export const addAvailability = asyncHandler(async (req, res) => {
-  const { date, startTime, endTime, maxCapacity, description, isRecurring, recurringDays, recurringEndDate } =
-    req.body;
-  const userId = req.user._id;
+  const { date, startTime, endTime, slotDuration, notes } = req.body;
+  const supporterId = req.user._id;
+
+  console.log('Adding availability - supporterId:', supporterId, 'date:', date, 'startTime:', startTime, 'endTime:', endTime);
 
   // Validate user is a peer supporter
-  const user = await User.findById(userId);
-  if (!user || user.role !== USER_ROLES.PEER_SUPPORTER) {
+  const user = await User.findById(supporterId);
+  if (!user) {
+    throw new ApiError(404, 'User not found');
+  }
+  if (user.role !== USER_ROLES.PEER_SUPPORTER) {
     throw new ApiError(403, 'Only peer supporters can add availability');
   }
 
-  // Verify peer supporter profile exists and is verified
-  const peerProfile = await PeerSupporterProfile.findOne({ userId });
-  if (!peerProfile || !peerProfile.isVerified) {
-    throw new ApiError(403, 'Your peer supporter profile must be verified to add availability');
+  // Verify peer supporter profile exists, create if not
+  let peerProfile = await PeerSupporterProfile.findOne({ userId: supporterId });
+  if (!peerProfile) {
+    // Auto-create peer supporter profile if it doesn't exist
+    peerProfile = await PeerSupporterProfile.create({
+      userId: supporterId,
+      isVerified: false,
+    });
+    console.log('Created peer supporter profile for user:', supporterId);
   }
 
   // Validate required fields
@@ -34,40 +43,54 @@ export const addAvailability = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Date, start time, and end time are required');
   }
 
-  // Validate date format
-  const availabilityDate = new Date(date);
-  if (isNaN(availabilityDate.getTime())) {
-    throw new ApiError(400, 'Invalid date format');
+  // Validate time formats (HH:MM)
+  const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
+  if (!timeRegex.test(startTime) || !timeRegex.test(endTime)) {
+    throw new ApiError(400, 'Invalid time format. Use HH:MM format (24-hour)');
   }
 
-  // Check if slot already exists for this time
+  // Validate date format and convert to consistent format (YYYY-MM-DD)
+  // Parse as string to avoid timezone issues
+  const dateRegex = /^\d{4}-\d{2}-\d{2}$/;
+  if (!dateRegex.test(date)) {
+    throw new ApiError(400, 'Date must be in YYYY-MM-DD format');
+  }
+
+  // Create date object from the string in UTC to avoid timezone shifting
+  const [year, month, day] = date.split('-').map(Number);
+  const availabilityDate = new Date(Date.UTC(year, month - 1, day));
+
+  // Check if slot already exists for this date and time
+  const dateStart = new Date(Date.UTC(year, month - 1, day));
+  const dateEnd = new Date(Date.UTC(year, month - 1, day + 1));
+  
   const existingSlot = await Availability.findOne({
-    userId,
+    supporterId,
     date: {
-      $gte: new Date(availabilityDate.setHours(0, 0, 0, 0)),
-      $lt: new Date(availabilityDate.setHours(23, 59, 59, 999)),
+      $gte: dateStart,
+      $lt: dateEnd,
     },
     startTime,
     endTime,
   });
 
   if (existingSlot) {
-    throw new ApiError(409, 'This time slot already exists');
+    throw new ApiError(409, 'This time slot already exists for this date');
   }
 
   const availability = new Availability({
-    userId,
-    date: new Date(date),
+    supporterId,
+    date: availabilityDate,
     startTime,
     endTime,
-    maxCapacity: maxCapacity || 1,
-    description: description || '',
-    isRecurring: isRecurring || false,
-    recurringDays: recurringDays || [],
-    recurringEndDate: recurringEndDate ? new Date(recurringEndDate) : null,
+    slotDuration: slotDuration || 60,
+    notes: notes || '',
+    isActive: true,
   });
 
   await availability.save();
+
+  console.log('Availability created:', availability);
 
   return res
     .status(201)
@@ -80,16 +103,16 @@ export const addAvailability = asyncHandler(async (req, res) => {
  * @access Private (peer_supporter only)
  */
 export const getMyAvailability = asyncHandler(async (req, res) => {
-  const { startDate, endDate, isBooked } = req.query;
-  const userId = req.user._id;
+  const { startDate, endDate } = req.query;
+  const supporterId = req.user._id;
 
   // Validate user is a peer supporter
-  const user = await User.findById(userId);
+  const user = await User.findById(supporterId);
   if (!user || user.role !== USER_ROLES.PEER_SUPPORTER) {
     throw new ApiError(403, 'Only peer supporters can view their availability');
   }
 
-  let filter = { userId };
+  let filter = { supporterId };
 
   // Apply date range filter if provided
   if (startDate && endDate) {
@@ -97,11 +120,14 @@ export const getMyAvailability = asyncHandler(async (req, res) => {
       $gte: new Date(startDate),
       $lte: new Date(endDate),
     };
-  }
-
-  // Apply booking status filter if provided
-  if (isBooked !== undefined) {
-    filter.isBooked = isBooked === 'true';
+  } else {
+    // Default: show next 90 days
+    const today = new Date();
+    const ninetyDaysLater = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
+    filter.date = {
+      $gte: today,
+      $lte: ninetyDaysLater,
+    };
   }
 
   const availability = await Availability.find(filter).sort({ date: 1, startTime: 1 });
@@ -113,25 +139,25 @@ export const getMyAvailability = asyncHandler(async (req, res) => {
 
 /**
  * Get available slots for a specific peer counselor (for users to book)
- * @route GET /api/availability/counselor/:counselorId
+ * @route GET /api/availability/counselor/:supporterId
  * @access Public
  */
 export const getAvailabilityByCounselor = asyncHandler(async (req, res) => {
-  const { counselorId } = req.params;
+  const { supporterId } = req.params;
   const { startDate, endDate } = req.query;
 
   // Verify counselor exists and is a peer supporter
-  const user = await User.findById(counselorId);
+  const user = await User.findById(supporterId);
   if (!user || user.role !== USER_ROLES.PEER_SUPPORTER) {
     throw new ApiError(404, 'Peer supporter not found');
   }
 
-  const peerProfile = await PeerSupporterProfile.findOne({ userId: counselorId });
+  const peerProfile = await PeerSupporterProfile.findOne({ userId: supporterId });
   if (!peerProfile || !peerProfile.isVerified) {
     throw new ApiError(403, 'This peer supporter is not available for booking');
   }
 
-  let filter = { userId: counselorId, isBooked: false };
+  let filter = { supporterId, isActive: true };
 
   // Only show future slots
   filter.date = { $gte: new Date() };
@@ -144,7 +170,6 @@ export const getAvailabilityByCounselor = asyncHandler(async (req, res) => {
   }
 
   const availability = await Availability.find(filter)
-    .select('-isRecurring -recurringDays -recurringEndDate')
     .sort({ date: 1, startTime: 1 });
 
   return res
@@ -155,158 +180,138 @@ export const getAvailabilityByCounselor = asyncHandler(async (req, res) => {
 /**
  * Update an availability slot
  * @route PUT /api/availability/:availabilityId
- * @access Private (peer_supporter owner only)
+ * @access Private (peer_supporter only)
  */
 export const updateAvailability = asyncHandler(async (req, res) => {
   const { availabilityId } = req.params;
-  const { date, startTime, endTime, maxCapacity, description } = req.body;
-  const userId = req.user._id;
+  const { startTime, endTime, slotDuration, notes, isActive } = req.body;
+  const supporterId = req.user._id;
 
-  // Find availability slot
+  // Validate user is a peer supporter
+  const user = await User.findById(supporterId);
+  if (!user || user.role !== USER_ROLES.PEER_SUPPORTER) {
+    throw new ApiError(403, 'Only peer supporters can update availability');
+  }
+
   const availability = await Availability.findById(availabilityId);
   if (!availability) {
     throw new ApiError(404, 'Availability slot not found');
   }
 
   // Verify ownership
-  if (availability.userId.toString() !== userId.toString()) {
-    throw new ApiError(403, 'You can only edit your own availability slots');
-  }
-
-  // Prevent editing booked slots
-  if (availability.isBooked && availability.currentBookings > 0) {
-    throw new ApiError(400, 'Cannot edit a booked availability slot');
+  if (availability.supporterId.toString() !== supporterId.toString()) {
+    throw new ApiError(403, 'You can only update your own availability');
   }
 
   // Update fields
-  if (date) availability.date = new Date(date);
   if (startTime) availability.startTime = startTime;
   if (endTime) availability.endTime = endTime;
-  if (maxCapacity) availability.maxCapacity = maxCapacity;
-  if (description !== undefined) availability.description = description;
+  if (slotDuration) availability.slotDuration = slotDuration;
+  if (notes) availability.notes = notes;
+  if (isActive !== undefined) availability.isActive = isActive;
 
   await availability.save();
 
-  return res.status(200).json(new ApiResponse(200, availability, 'Availability updated successfully'));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, availability, 'Availability slot updated successfully'));
 });
 
 /**
  * Delete an availability slot
  * @route DELETE /api/availability/:availabilityId
- * @access Private (peer_supporter owner only)
+ * @access Private (peer_supporter only)
  */
 export const deleteAvailability = asyncHandler(async (req, res) => {
   const { availabilityId } = req.params;
-  const userId = req.user._id;
+  const supporterId = req.user._id;
 
-  // Find availability slot
+  // Validate user is a peer supporter
+  const user = await User.findById(supporterId);
+  if (!user || user.role !== USER_ROLES.PEER_SUPPORTER) {
+    throw new ApiError(403, 'Only peer supporters can delete availability');
+  }
+
   const availability = await Availability.findById(availabilityId);
   if (!availability) {
     throw new ApiError(404, 'Availability slot not found');
   }
 
   // Verify ownership
-  if (availability.userId.toString() !== userId.toString()) {
-    throw new ApiError(403, 'You can only delete your own availability slots');
-  }
-
-  // Prevent deleting booked slots with active bookings
-  if (availability.currentBookings > 0) {
-    throw new ApiError(400, 'Cannot delete a slot that has active bookings');
+  if (availability.supporterId.toString() !== supporterId.toString()) {
+    throw new ApiError(403, 'You can only delete your own availability');
   }
 
   await Availability.findByIdAndDelete(availabilityId);
 
-  return res.status(200).json(new ApiResponse(200, null, 'Availability slot deleted successfully'));
+  return res
+    .status(200)
+    .json(new ApiResponse(200, null, 'Availability slot deleted successfully'));
 });
 
 /**
- * Get all available peer counselors (for user browsing)
+ * Get available counselors (for users to browse)
  * @route GET /api/availability/available-counselors
  * @access Public
  */
 export const getAvailableCounselors = asyncHandler(async (req, res) => {
-  const { date, startTime, endTime, limit = 10, skip = 0 } = req.query;
+  const { date } = req.query;
 
-  let filter = {};
-
-  // Filter by specific date and time if provided
-  if (date && startTime && endTime) {
-    const availabilityDate = new Date(date);
-    filter.date = {
-      $gte: new Date(availabilityDate.setHours(0, 0, 0, 0)),
-      $lt: new Date(availabilityDate.setHours(23, 59, 59, 999)),
-    };
-    filter.startTime = startTime;
-    filter.endTime = endTime;
-    filter.isBooked = false;
-  } else {
-    // Show all available slots in the future
-    filter.date = { $gte: new Date() };
-    filter.isBooked = false;
+  if (!date) {
+    throw new ApiError(400, 'Date parameter is required');
   }
 
-  const availableSlots = await Availability.find(filter)
-    .populate({
-      path: 'userId',
-      select: 'name avatar',
-      match: { role: USER_ROLES.PEER_SUPPORTER },
-    })
-    .skip(parseInt(skip))
-    .limit(parseInt(limit))
-    .sort({ date: 1, startTime: 1 });
+  const selectedDate = new Date(date);
+  const dateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
 
-  const total = await Availability.countDocuments(filter);
+  // Find all availability entries for the selected date
+  const availabilities = await Availability.find({
+    date: {
+      $gte: dateOnly,
+      $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
+    },
+    isActive: true,
+  }).populate('supporterId', 'name email');
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        slots: availableSlots,
-        total,
-        limit: parseInt(limit),
-        skip: parseInt(skip),
-      },
-      'Available counselors retrieved successfully'
-    )
-  );
+  // Get unique counselors
+  const counselors = [...new Map(availabilities.map(av => [av.supporterId._id, av.supporterId])).values()];
+
+  return res
+    .status(200)
+    .json(new ApiResponse(200, counselors, 'Available counselors retrieved successfully'));
 });
 
 /**
- * Check availability for a specific time slot
- * @route POST /api/availability/check
+ * Check if a specific time slot is available
+ * @route GET /api/availability/check
  * @access Public
  */
 export const checkAvailability = asyncHandler(async (req, res) => {
-  const { counselorId, date, startTime, endTime } = req.body;
+  const { supporterId, date, startTime, endTime } = req.query;
 
-  if (!counselorId || !date || !startTime || !endTime) {
-    throw new ApiError(400, 'Counselor ID, date, start time, and end time are required');
+  if (!supporterId || !date || !startTime || !endTime) {
+    throw new ApiError(400, 'supporterId, date, startTime, and endTime are required');
   }
 
-  const availabilityDate = new Date(date);
-  const slot = await Availability.findOne({
-    userId: counselorId,
+  const selectedDate = new Date(date);
+  const dateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+
+  const availability = await Availability.findOne({
+    supporterId,
     date: {
-      $gte: new Date(availabilityDate.setHours(0, 0, 0, 0)),
-      $lt: new Date(availabilityDate.setHours(23, 59, 59, 999)),
+      $gte: dateOnly,
+      $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
     },
-    startTime,
-    endTime,
+    startTime: { $lte: startTime },
+    endTime: { $gte: endTime },
+    isActive: true,
   });
 
-  const isAvailable = slot && !slot.isBooked && slot.currentBookings < slot.maxCapacity;
+  const isAvailable = !!availability;
 
-  return res.status(200).json(
-    new ApiResponse(
-      200,
-      {
-        isAvailable,
-        slot: slot || null,
-      },
-      'Availability checked successfully'
-    )
-  );
+  return res
+    .status(200)
+    .json(new ApiResponse(200, { isAvailable }, isAvailable ? 'Slot is available' : 'Slot is not available'));
 });
 
 /**
@@ -315,38 +320,27 @@ export const checkAvailability = asyncHandler(async (req, res) => {
  * @access Private (peer_supporter only)
  */
 export const getAvailabilityStats = asyncHandler(async (req, res) => {
-  const userId = req.user._id;
+  const supporterId = req.user._id;
 
   // Validate user is a peer supporter
-  const user = await User.findById(userId);
+  const user = await User.findById(supporterId);
   if (!user || user.role !== USER_ROLES.PEER_SUPPORTER) {
-    throw new ApiError(403, 'Only peer supporters can view availability stats');
+    throw new ApiError(403, 'Only peer supporters can view their stats');
   }
 
-  const stats = await Availability.aggregate([
-    { $match: { userId: mongoose.Types.ObjectId(userId) } },
-    {
-      $group: {
-        _id: null,
-        totalSlots: { $sum: 1 },
-        bookedSlots: {
-          $sum: { $cond: [{ $eq: ['$isBooked', true] }, 1, 0] },
-        },
-        availableSlots: {
-          $sum: { $cond: [{ $eq: ['$isBooked', false] }, 1, 0] },
-        },
-        totalBookings: { $sum: '$currentBookings' },
-      },
-    },
-  ]);
+  const totalSlots = await Availability.countDocuments({ supporterId });
+  const activeSlots = await Availability.countDocuments({ supporterId, isActive: true });
+  const futureSlots = await Availability.countDocuments({
+    supporterId,
+    isActive: true,
+    date: { $gte: new Date() },
+  });
 
   return res
     .status(200)
-    .json(
-      new ApiResponse(
-        200,
-        stats[0] || { totalSlots: 0, bookedSlots: 0, availableSlots: 0, totalBookings: 0 },
-        'Availability statistics retrieved successfully'
-      )
-    );
+    .json(new ApiResponse(
+      200,
+      { totalSlots, activeSlots, futureSlots },
+      'Availability statistics retrieved successfully'
+    ));
 });

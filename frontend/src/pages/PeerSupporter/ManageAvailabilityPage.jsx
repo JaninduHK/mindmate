@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../../hooks/useAuth';
+import { useAuth } from '../../contexts/AuthContext';
 import * as availabilityApi from '../../api/availability.api';
 import toast from 'react-hot-toast';
 import { IoChevronBack, IoAdd, IoTrash } from 'react-icons/io5';
 
-const ManageAvailability = () => {
+export default function ManageAvailabilityPage() {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
@@ -20,20 +20,6 @@ const ManageAvailability = () => {
   });
   const [loading, setLoading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
-
-  // Helper: Convert local date to YYYY-MM-DD string (avoiding timezone issues)
-  const dateToString = (date) => {
-    const year = date.getFullYear();
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const day = String(date.getDate()).padStart(2, '0');
-    return `${year}-${month}-${day}`;
-  };
-
-  // Helper: Parse YYYY-MM-DD string as local date
-  const stringToDate = (dateStr) => {
-    const [year, month, day] = dateStr.split('-').map(Number);
-    return new Date(year, month - 1, day);
-  };
 
   // Check if logged in user is peer supporter
   useEffect(() => {
@@ -65,10 +51,7 @@ const ManageAvailability = () => {
   const getDatesWithAvailability = () => {
     const dates = {};
     availabilities.forEach((av) => {
-      // Parse date string properly to avoid timezone issues
-      const dateStr = av.date instanceof Date 
-        ? dateToString(av.date) 
-        : (typeof av.date === 'string' ? av.date.split('T')[0] : dateToString(stringToDate(av.date)));
+      const dateStr = new Date(av.date).toDateString();
       if (!dates[dateStr]) {
         dates[dateStr] = [];
       }
@@ -109,16 +92,15 @@ const ManageAvailability = () => {
   const hasAvailability = (day) => {
     if (!day) return false;
     const date = new Date(currentDate.getFullYear(), currentDate.getMonth(), day);
-    const dateStr = dateToString(date);
+    const dateStr = date.toDateString();
     const datesWithAv = getDatesWithAvailability();
     return dateStr in datesWithAv;
   };
 
   // Get availability for selected date
   const getAvailabilityForDate = (date) => {
-    const dateStr = dateToString(date);
-    const datesWithAv = getDatesWithAvailability();
-    return datesWithAv[dateStr] || [];
+    const dateStr = date.toDateString();
+    return availabilities.filter((av) => new Date(av.date).toDateString() === dateStr);
   };
 
   // Handle date selection
@@ -146,16 +128,6 @@ const ManageAvailability = () => {
       return;
     }
 
-    if (!formData.startTime) {
-      toast.error('Please enter start time');
-      return;
-    }
-
-    if (!formData.endTime) {
-      toast.error('Please enter end time');
-      return;
-    }
-
     if (formData.startTime >= formData.endTime) {
       toast.error('End time must be after start time');
       return;
@@ -163,47 +135,26 @@ const ManageAvailability = () => {
 
     try {
       setSubmitting(true);
-      const payload = {
-        date: dateToString(selectedDate),
+      await availabilityApi.addAvailability({
+        date: selectedDate,
         startTime: formData.startTime,
         endTime: formData.endTime,
         slotDuration: formData.slotDuration,
         notes: formData.notes,
-      };
+      });
 
-      console.log('Adding availability with payload:', payload);
-
-      const response = await availabilityApi.addAvailability(payload);
-      
-      if (response.success) {
-        // Immediately update state for real-time highlight
-        const newSlot = {
-          _id: response.data?._id || Date.now().toString(),
-          date: payload.date,
-          startTime: payload.startTime,
-          endTime: payload.endTime,
-          slotDuration: payload.slotDuration,
-          notes: payload.notes,
-        };
-        setAvailabilities([...availabilities, newSlot]);
-        
-        toast.success('Availability slot added successfully');
-        setFormData({
-          startTime: '09:00',
-          endTime: '10:00',
-          slotDuration: 60,
-          notes: '',
-        });
-        setShowSlotForm(false);
-        // Reload in background for data consistency
-        loadAvailability();
-      } else {
-        toast.error(response.message || 'Failed to add availability');
-      }
+      toast.success('Availability slot added successfully');
+      setFormData({
+        startTime: '09:00',
+        endTime: '10:00',
+        slotDuration: 60,
+        notes: '',
+      });
+      setShowSlotForm(false);
+      await loadAvailability();
     } catch (error) {
       console.error('Error adding availability:', error);
-      const errorMsg = error.response?.data?.message || error.message || 'Failed to add availability';
-      toast.error(errorMsg);
+      toast.error(error.response?.data?.message || 'Failed to add availability');
     } finally {
       setSubmitting(false);
     }
@@ -214,18 +165,12 @@ const ManageAvailability = () => {
     if (!window.confirm('Are you sure you want to delete this slot?')) return;
 
     try {
-      // Immediately remove from state for real-time update
-      setAvailabilities(availabilities.filter(av => av._id !== slotId));
-      
       await availabilityApi.deleteAvailability(slotId);
       toast.success('Slot deleted successfully');
-      // Reload in background for data consistency
-      loadAvailability();
+      await loadAvailability();
     } catch (error) {
       console.error('Error deleting availability:', error);
       toast.error('Failed to delete slot');
-      // Reload on error to sync state
-      loadAvailability();
     }
   };
 
@@ -496,6 +441,4 @@ const ManageAvailability = () => {
       </div>
     </div>
   );
-};
-
-export default ManageAvailability;
+}

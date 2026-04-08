@@ -1,5 +1,6 @@
 import SessionBooking from '../models/SessionBooking.model.js';
 import User from '../models/User.model.js';
+import Availability from '../models/Availability.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
@@ -39,6 +40,39 @@ export const bookSession = asyncHandler(async (req, res) => {
 
   if (existingBooking) {
     throw new ApiError(409, 'This time slot is already booked. Please choose another time.');
+  }
+
+  // Check if the time slot matches peer counselor's availability for this specific date
+  const selectedDate = new Date(sessionDate);
+  const dateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+  
+  const availabilitySlot = await Availability.findOne({
+    supporterId,
+    date: {
+      $gte: dateOnly,
+      $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
+    },
+    isActive: true,
+  });
+
+  if (!availabilitySlot) {
+    throw new ApiError(400, 'Peer counselor is not available on this date');
+  }
+
+  // Check if requested time falls within availability window
+  const [reqH, reqM] = sessionTime.split(':');
+  const [avStartH, avStartM] = availabilitySlot.startTime.split(':');
+  const [avEndH, avEndM] = availabilitySlot.endTime.split(':');
+
+  const reqTime = parseInt(reqH) * 60 + parseInt(reqM);
+  const avStart = parseInt(avStartH) * 60 + parseInt(avStartM);
+  const avEnd = parseInt(avEndH) * 60 + parseInt(avEndM);
+
+  if (reqTime < avStart || reqTime >= avEnd) {
+    throw new ApiError(
+      400,
+      `Peer counselor is available from ${availabilitySlot.startTime} to ${availabilitySlot.endTime} on this date`
+    );
   }
 
   // Create the session booking
@@ -203,4 +237,80 @@ export const updateSessionDetails = asyncHandler(async (req, res) => {
   await session.save();
 
   return res.status(200).json(new ApiResponse(200, session, 'Session updated successfully'));
+});
+
+// Get available time slots for a peer counselor
+export const getAvailableSlots = asyncHandler(async (req, res) => {
+  const { supporterId, date } = req.query;
+
+  if (!supporterId || !date) {
+    throw new ApiError(400, 'supporterId and date are required');
+  }
+
+  try {
+    const selectedDate = new Date(date);
+    const dateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+
+    // Get availability for the specific date
+    const availabilities = await Availability.find({
+      supporterId,
+      date: {
+        $gte: dateOnly,
+        $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
+      },
+      isActive: true,
+    });
+
+    if (availabilities.length === 0) {
+      return res.status(200).json(new ApiResponse(200, [], 'No availability for this date'));
+    }
+
+    // Get all booked sessions for this date
+    const bookedSessions = await SessionBooking.find({
+      supporterId,
+      sessionDate: {
+        $gte: dateOnly,
+        $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
+      },
+      status: { $in: ['pending', 'confirmed'] },
+    });
+
+    // Generate available slots for each availability window
+    const slots = [];
+    availabilities.forEach((av) => {
+      const [startH, startM] = av.startTime.split(':');
+      const [endH, endM] = av.endTime.split(':');
+
+      let currentTime = new Date(selectedDate);
+      currentTime.setHours(parseInt(startH), parseInt(startM), 0, 0);
+      const endTime = new Date(selectedDate);
+      endTime.setHours(parseInt(endH), parseInt(endM), 0, 0);
+
+      while (currentTime < endTime) {
+        const slotTime = currentTime.toTimeString().slice(0, 5);
+        const slotEndTime = new Date(currentTime.getTime() + av.slotDuration * 60 * 1000);
+        const slotEndTimeStr = slotEndTime.toTimeString().slice(0, 5);
+
+        // Check if slot is already booked
+        const isBooked = bookedSessions.some((b) => b.sessionTime === slotTime);
+
+        if (!isBooked) {
+          slots.push({
+            time: slotTime,
+            endTime: slotEndTimeStr,
+            duration: av.slotDuration,
+            available: true,
+          });
+        }
+
+        currentTime = slotEndTime;
+      }
+    });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, slots, 'Available slots retrieved successfully'));
+  } catch (error) {
+    throw new ApiError(500, 'Error fetching available slots');
+  }
 });
