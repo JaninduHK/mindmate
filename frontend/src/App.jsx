@@ -44,6 +44,7 @@ import PeerSupporterRegister from './pages/PeerSupporter/PeerSupporterRegister';
 import PeerSupporterDashboard from './pages/PeerSupporter/PeerSupporterDashboard';
 import ManageAvailability from './pages/PeerSupporter/ManageAvailability';
 import PeerSupporterList from './pages/PeerSupporter/PeerSupporterList';
+import BookSessionPage from './pages/PeerSupporter/BookSessionPage';
 import UsersList from './pages/PeerSupporter/UsersList';
 
 // Personal tracking
@@ -76,6 +77,7 @@ function App() {
               <Route path="/counselors" element={<CounselorList />} />
               <Route path="/counselors/:id" element={<CounselorProfile />} />
               <Route path="/peer-supporters" element={<PeerSupporterList />} />
+              <Route path="/book-session/:supporterId" element={<BookSessionPage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/chat/:recipientId" element={<ChatPage />} />
               {/* Protected — user role only */}

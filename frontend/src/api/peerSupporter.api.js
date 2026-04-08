@@ -11,4 +11,8 @@ export const peerSupporterAPI = {
     const response = await axiosInstance.get(`/peer-supporters/${id}`);
     return response.data;
   },
+  bookSession: async (data) => {
+    const response = await axiosInstance.post('/sessions/book', data);
+    return response.data;
+  },
 };

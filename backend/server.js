@@ -31,6 +31,7 @@ import notificationRoutes from './routes/notification.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import withdrawalRoutes from './routes/withdrawal.routes.js';
+import sessionRoutes from './routes/session.routes.js';
 import moodRoutes from './routes/moodRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
 import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
@@ -38,7 +39,7 @@ import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 5001;
+const PORT = process.env.PORT || 5000;
 
 // Configure Cloudinary
 configureCloudinary();
@@ -142,6 +143,7 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/chats', chatRoutes);
+app.use('/api/sessions', sessionRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
 app.use('/api/personal-tracking/moods', moodRoutes);
