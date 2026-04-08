@@ -1,6 +1,6 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
-import { FiUser, FiActivity, FiCalendar } from 'react-icons/fi';
+import { FiUser, FiActivity, FiCalendar, FiMessageSquare } from 'react-icons/fi';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -73,7 +73,7 @@ const Dashboard = () => {
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Quick Actions
           </h2>
-          <div className="grid md:grid-cols-2 gap-4">
+          <div className="grid md:grid-cols-3 gap-4">
             <Link to="/events" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
               <h3 className="font-semibold text-gray-900">Browse Events</h3>
               <p className="text-gray-600 text-sm mt-1">
@@ -84,6 +84,15 @@ const Dashboard = () => {
               <h3 className="font-semibold text-gray-900">My Bookings</h3>
               <p className="text-gray-600 text-sm mt-1">
                 View and manage your upcoming sessions
+              </p>
+            </Link>
+            <Link to="/my-sessions" className="p-4 border-2 border-blue-200 rounded-lg hover:border-primary-500 transition-colors text-left block bg-blue-50">
+              <div className="flex items-center gap-2">
+                <FiMessageSquare className="w-5 h-5 text-blue-600" />
+                <h3 className="font-semibold text-gray-900">Chat Sessions</h3>
+              </div>
+              <p className="text-gray-600 text-sm mt-1">
+                View upcoming sessions & chat with counselors
               </p>
             </Link>
           </div>

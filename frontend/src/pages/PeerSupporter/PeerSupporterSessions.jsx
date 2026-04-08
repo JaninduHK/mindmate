@@ -3,35 +3,35 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import * as sessionApi from '../../api/session.api';
 import toast from 'react-hot-toast';
-import { FiArrowLeft, FiCalendar, FiClock, FiMessageSquare, FiTrash2, FiCheckCircle, FiSend } from 'react-icons/fi';
+import { FiArrowLeft, FiCalendar, FiClock, FiMessageSquare, FiTrash2, FiCheckCircle, FiSend, FiUser } from 'react-icons/fi';
 
-const UserSessions = () => {
+const PeerSupporterSessions = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
   const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, pending, confirmed, completed, cancelled
 
-  // Fetch user's sessions
+  // Fetch peer supporter's bookings
   useEffect(() => {
     const fetchSessions = async () => {
       try {
         setLoading(true);
-        const res = await sessionApi.getUserSessions();
+        const res = await sessionApi.getSupporterBookings();
         if (res.success) {
           setSessions(res.data || []);
         } else {
-          toast.error('Failed to load sessions');
+          toast.error('Failed to load bookings');
         }
       } catch (error) {
-        console.error('Error fetching sessions:', error);
-        toast.error('Failed to load sessions');
+        console.error('Error fetching bookings:', error);
+        toast.error('Failed to load bookings');
       } finally {
         setLoading(false);
       }
     };
 
-    if (user) {
+    if (user && user.role === 'peer_supporter') {
       fetchSessions();
     }
   }, [user]);
@@ -41,24 +41,6 @@ const UserSessions = () => {
     if (filter === 'all') return true;
     return session.status === filter;
   });
-
-  // Cancel session
-  const handleCancelSession = async (sessionId) => {
-    if (!window.confirm('Are you sure you want to cancel this session?')) return;
-
-    try {
-      const res = await sessionApi.cancelSession(sessionId);
-      if (res.success) {
-        setSessions(sessions.map((s) => (s._id === sessionId ? { ...s, status: 'cancelled' } : s)));
-        toast.success('Session cancelled successfully');
-      } else {
-        toast.error('Failed to cancel session');
-      }
-    } catch (error) {
-      console.error('Error cancelling session:', error);
-      toast.error('Failed to cancel session');
-    }
-  };
 
   // Get status color
   const getStatusColor = (status) => {
@@ -80,10 +62,23 @@ const UserSessions = () => {
     return status.charAt(0).toUpperCase() + status.slice(1);
   };
 
+  // Confirm/Approve session (set to confirmed)
+  const handleConfirmSession = async (sessionId) => {
+    try {
+      // You may need to add an API endpoint for this
+      // For now, we'll just update the status locally
+      setSessions(sessions.map((s) => (s._id === sessionId ? { ...s, status: 'confirmed' } : s)));
+      toast.success('Session confirmed');
+    } catch (error) {
+      console.error('Error confirming session:', error);
+      toast.error('Failed to confirm session');
+    }
+  };
+
   if (loading) {
     return (
       <div className="container-custom py-8 flex justify-center">
-        <div className="animate-pulse text-gray-400">Loading sessions...</div>
+        <div className="animate-pulse text-gray-400">Loading bookings...</div>
       </div>
     );
   }
@@ -101,17 +96,17 @@ const UserSessions = () => {
 
       {/* Header */}
       <div className="mb-8">
-        <h1 className="text-4xl font-bold text-gray-900 mb-2">My Sessions</h1>
-        <p className="text-gray-600">View and manage your booked peer counseling sessions</p>
+        <h1 className="text-4xl font-bold text-gray-900 mb-2">Upcoming Schedule</h1>
+        <p className="text-gray-600">View and manage session bookings from users</p>
       </div>
 
       {/* Filter Tabs */}
-      <div className="flex gap-2 mb-8 border-b border-gray-200">
+      <div className="flex gap-2 mb-8 border-b border-gray-200 overflow-x-auto">
         {['all', 'pending', 'confirmed', 'completed', 'cancelled'].map((tab) => (
           <button
             key={tab}
             onClick={() => setFilter(tab)}
-            className={`px-4 py-3 font-medium border-b-2 transition-colors ${
+            className={`px-4 py-3 font-medium border-b-2 transition-colors whitespace-nowrap ${
               filter === tab
                 ? 'border-primary-600 text-primary-600'
                 : 'border-transparent text-gray-600 hover:text-gray-900'
@@ -129,8 +124,8 @@ const UserSessions = () => {
       {filteredSessions.length === 0 ? (
         <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
           <FiCalendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No sessions yet</h3>
-          <p className="text-gray-600">You haven't booked any sessions. Browse peer counselors to get started!</p>
+          <h3 className="text-xl font-semibold text-gray-900 mb-2">No bookings yet</h3>
+          <p className="text-gray-600">You don't have any session bookings yet. Users will book sessions with you once you set your availability.</p>
         </div>
       ) : (
         <div className="space-y-4">
@@ -143,11 +138,27 @@ const UserSessions = () => {
                 {/* Session Info */}
                 <div className="flex-1">
                   <div className="flex items-center gap-3 mb-3">
-                    <h3 className="text-lg font-bold text-gray-900">
-                      {session.supporterId?.name || 'Unknown Counselor'}
-                    </h3>
+                    <div className="flex items-center gap-2">
+                      {session.userId?.avatar?.url ? (
+                        <img
+                          src={session.userId.avatar.url}
+                          alt={session.userId?.name}
+                          className="w-10 h-10 rounded-full object-cover"
+                        />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-sm font-bold text-primary-600">
+                          {session.userId?.name?.[0] || 'U'}
+                        </div>
+                      )}
+                      <div>
+                        <h3 className="text-lg font-bold text-gray-900">
+                          {session.userId?.name || 'Unknown User'}
+                        </h3>
+                        <p className="text-xs text-gray-500">{session.userId?.email}</p>
+                      </div>
+                    </div>
                     <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium border ${getStatusColor(
+                      className={`px-3 py-1 rounded-full text-sm font-medium border ml-auto ${getStatusColor(
                         session.status
                       )}`}
                     >
@@ -186,30 +197,30 @@ const UserSessions = () => {
                   {/* Notes */}
                   {session.notes && (
                     <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-                      <strong>Notes:</strong> {session.notes}
+                      <strong>User Notes:</strong> {session.notes}
                     </p>
                   )}
                 </div>
 
                 {/* Actions */}
                 <div className="flex flex-col gap-2 flex-shrink-0">
-                  {session.supporterId?._id && (
+                  {session.userId?._id && (
                     <button
-                      onClick={() => navigate(`/chat/${session.supporterId._id}`)}
+                      onClick={() => navigate(`/chat/${session.userId._id}`)}
                       className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
-                      title="Chat with counselor"
+                      title="Chat with user"
                     >
                       <FiSend className="w-5 h-5" />
                       <span className="text-xs font-medium">Chat</span>
                     </button>
                   )}
-                  {(session.status === 'pending' || session.status === 'confirmed') && (
+                  {session.status === 'pending' && (
                     <button
-                      onClick={() => handleCancelSession(session._id)}
-                      className="p-2 rounded-lg hover:bg-red-50 text-red-600 hover:text-red-700 transition-colors"
-                      title="Cancel session"
+                      onClick={() => handleConfirmSession(session._id)}
+                      className="p-2 rounded-lg hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors"
+                      title="Confirm session"
                     >
-                      <FiTrash2 className="w-5 h-5" />
+                      <FiCheckCircle className="w-5 h-5" />
                     </button>
                   )}
                   {session.status === 'confirmed' && (
@@ -219,20 +230,6 @@ const UserSessions = () => {
                   )}
                 </div>
               </div>
-
-              {/* Meeting Link (if available) */}
-              {session.meetingLink && session.status === 'confirmed' && (
-                <div className="mt-4 pt-4 border-t border-gray-100">
-                  <a
-                    href={session.meetingLink}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className="inline-block px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white rounded-lg font-medium transition-colors"
-                  >
-                    Join Meeting
-                  </a>
-                </div>
-              )}
             </div>
           ))}
         </div>
@@ -241,4 +238,4 @@ const UserSessions = () => {
   );
 };
 
-export default UserSessions;
+export default PeerSupporterSessions;

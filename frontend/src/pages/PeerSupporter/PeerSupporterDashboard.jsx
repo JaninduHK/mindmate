@@ -203,13 +203,25 @@ const PeerSupporterDashboard = () => {
                 to="/peer-supporter/manage-availability" 
                 icon={FiCalendar} 
                 title="Manage Availability" 
-                description="View your past session history and manage your upcoming peer support engagements."
+                description="Set and update your available time slots for peer support sessions."
                 colors={{
                   bg: 'bg-primary-50', bgHover: 'group-hover:bg-primary-500',
                   text: 'text-primary-600', textHover: 'group-hover:text-primary-600',
                   borderHover: 'hover:border-primary-300', gradient: 'from-primary-400 to-blue-500'
                 }}
                 delay={600}
+              />
+              <ActionCard 
+                to="/peer-supporter/sessions" 
+                icon={FiClock} 
+                title="Upcoming Schedule" 
+                description="View booked sessions, manage requests, and chat with users who need support."
+                colors={{
+                  bg: 'bg-cyan-50', bgHover: 'group-hover:bg-cyan-500',
+                  text: 'text-cyan-600', textHover: 'group-hover:text-cyan-600',
+                  borderHover: 'hover:border-cyan-300', gradient: 'from-cyan-400 to-blue-500'
+                }}
+                delay={700}
               />
               <ActionCard 
                 to="#" 
@@ -221,7 +233,7 @@ const PeerSupporterDashboard = () => {
                   text: 'text-amber-600', textHover: 'group-hover:text-amber-600',
                   borderHover: 'hover:border-amber-300', gradient: 'from-amber-400 to-orange-500'
                 }}
-                delay={700}
+                delay={800}
               />
             </div>
           </div>
@@ -230,7 +242,7 @@ const PeerSupporterDashboard = () => {
             <div className="bg-white rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100/80 p-6 sm:p-8 h-full animate-[fadeInUp_0.6s_ease-out_forwards]" style={{ animationDelay: '600ms', opacity: 0 }}>
               <div className="flex items-center justify-between mb-8">
                 <h2 className="text-xl font-bold text-gray-900">Upcoming Schedule</h2>
-                <Link to="#" className="text-sm font-medium text-primary-600 hover:text-primary-700">View All</Link>
+                <Link to="/peer-supporter/sessions" className="text-sm font-medium text-primary-600 hover:text-primary-700">View All</Link>
               </div>
               
               <div className="space-y-2">
