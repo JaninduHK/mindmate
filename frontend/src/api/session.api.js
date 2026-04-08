@@ -1,7 +1,7 @@
 import axios from 'axios';
 import { getAccessToken } from './axios.config';
 
-const API_BASE_URL = 'http://localhost:5001/api/sessions';
+const API_BASE_URL = 'http://localhost:5000/api/sessions';
 
 /**
  * Book a new session with a peer counselor

@@ -30,10 +30,18 @@ export const bookSession = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'You cannot book a session with yourself');
   }
 
+  // Parse sessionDate in YYYY-MM-DD format to avoid timezone issues
+  const [year, month, day] = sessionDate.split('-').map(Number);
+  const dateStart = new Date(Date.UTC(year, month - 1, day));
+  const dateEnd = new Date(Date.UTC(year, month - 1, day + 1));
+
   // Check for conflicting bookings
   const existingBooking = await SessionBooking.findOne({
     supporterId,
-    sessionDate: new Date(sessionDate),
+    sessionDate: {
+      $gte: dateStart,
+      $lt: dateEnd,
+    },
     sessionTime,
     status: { $in: ['pending', 'confirmed'] },
   });
@@ -43,14 +51,11 @@ export const bookSession = asyncHandler(async (req, res) => {
   }
 
   // Check if the time slot matches peer counselor's availability for this specific date
-  const selectedDate = new Date(sessionDate);
-  const dateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
-  
   const availabilitySlot = await Availability.findOne({
     supporterId,
     date: {
-      $gte: dateOnly,
-      $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
+      $gte: dateStart,
+      $lt: dateEnd,
     },
     isActive: true,
   });
@@ -81,7 +86,7 @@ export const bookSession = asyncHandler(async (req, res) => {
     supporterId,
     topic,
     notes,
-    sessionDate: new Date(sessionDate),
+    sessionDate: dateStart,
     sessionTime,
   });
 
@@ -248,15 +253,17 @@ export const getAvailableSlots = asyncHandler(async (req, res) => {
   }
 
   try {
-    const selectedDate = new Date(date);
-    const dateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+    // Parse date string in YYYY-MM-DD format to avoid timezone issues
+    const [year, month, day] = date.split('-').map(Number);
+    const dateStart = new Date(Date.UTC(year, month - 1, day));
+    const dateEnd = new Date(Date.UTC(year, month - 1, day + 1));
 
     // Get availability for the specific date
     const availabilities = await Availability.find({
       supporterId,
       date: {
-        $gte: dateOnly,
-        $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
+        $gte: dateStart,
+        $lt: dateEnd,
       },
       isActive: true,
     });
@@ -269,14 +276,16 @@ export const getAvailableSlots = asyncHandler(async (req, res) => {
     const bookedSessions = await SessionBooking.find({
       supporterId,
       sessionDate: {
-        $gte: dateOnly,
-        $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
+        $gte: dateStart,
+        $lt: dateEnd,
       },
       status: { $in: ['pending', 'confirmed'] },
     });
 
     // Generate available slots for each availability window
     const slots = [];
+    const selectedDate = new Date(year, month - 1, day);
+    
     availabilities.forEach((av) => {
       const [startH, startM] = av.startTime.split(':');
       const [endH, endM] = av.endTime.split(':');
@@ -311,6 +320,7 @@ export const getAvailableSlots = asyncHandler(async (req, res) => {
       .status(200)
       .json(new ApiResponse(200, slots, 'Available slots retrieved successfully'));
   } catch (error) {
+    console.error('Error in getAvailableSlots:', error);
     throw new ApiError(500, 'Error fetching available slots');
   }
 });

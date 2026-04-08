@@ -152,20 +152,28 @@ export const getAvailabilityByCounselor = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Peer supporter not found');
   }
 
-  const peerProfile = await PeerSupporterProfile.findOne({ userId: supporterId });
-  if (!peerProfile || !peerProfile.isVerified) {
-    throw new ApiError(403, 'This peer supporter is not available for booking');
-  }
-
   let filter = { supporterId, isActive: true };
 
-  // Only show future slots
-  filter.date = { $gte: new Date() };
-
+  // Build date filter
   if (startDate && endDate) {
+    // Parse dates in YYYY-MM-DD format to avoid timezone issues
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    
+    const dateStart = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+    const dateEnd = new Date(Date.UTC(endYear, endMonth - 1, endDay + 1));
+    
     filter.date = {
-      $gte: new Date(startDate),
-      $lte: new Date(endDate),
+      $gte: dateStart,
+      $lt: dateEnd,
+    };
+  } else {
+    // Default: show next 90 days from today
+    const today = new Date();
+    const ninetyDaysLater = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
+    filter.date = {
+      $gte: today,
+      $lte: ninetyDaysLater,
     };
   }
 

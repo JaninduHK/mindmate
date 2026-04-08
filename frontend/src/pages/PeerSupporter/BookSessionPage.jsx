@@ -25,6 +25,14 @@ const BookSessionPage = () => {
   const [booking, setBooking] = useState(false);
   const [loadingSlots, setLoadingSlots] = useState(false);
 
+  // Helper: Convert local date to YYYY-MM-DD string (avoiding timezone issues)
+  const dateToString = (date) => {
+    const year = date.getFullYear();
+    const month = String(date.getMonth() + 1).padStart(2, '0');
+    const day = String(date.getDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Fetch peer counselor details
   useEffect(() => {
     const fetchSupporter = async () => {
@@ -53,9 +61,14 @@ const BookSessionPage = () => {
     try {
       const nextMonth = new Date();
       nextMonth.setMonth(nextMonth.getMonth() + 1);
-      const res = await availabilityApi.getAvailabilityByCounselor(supporterId, new Date().toISOString().split('T')[0], nextMonth.toISOString().split('T')[0]);
+      const res = await availabilityApi.getAvailabilityByCounselor(supporterId, dateToString(new Date()), dateToString(nextMonth));
       if (res.success) {
-        const dates = res.data.map((av) => new Date(av.date).toDateString());
+        // Use consistent date string format (YYYY-MM-DD)
+        const dates = res.data.map((av) => {
+          return av.date instanceof Date 
+            ? dateToString(av.date) 
+            : (typeof av.date === 'string' ? av.date.split('T')[0] : dateToString(new Date(av.date)));
+        });
         setAvailabilityDates([...new Set(dates)]);
       }
     } catch (error) {
@@ -66,16 +79,13 @@ const BookSessionPage = () => {
   // Load slots for selected date
   const handleDateSelect = async (day) => {
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    const dateStr = date.toISOString().split('T')[0];
+    const dateStr = dateToString(date);
 
     setSelectedDate(date);
     setSelectedTime('');
     setLoadingSlots(true);
 
     try {
-      const res = await availabilityApi.checkAvailability(supporterId, dateStr, '00:00', '23:59');
-      // Since checkAvailability is for specific slot, we need to fetch slots differently
-      // Let's use session API to get available slots
       const slotsRes = await sessionApi.getAvailableSlots(supporterId, dateStr);
       if (slotsRes.success) {
         setAvailableSlots(slotsRes.data || []);
@@ -112,7 +122,7 @@ const BookSessionPage = () => {
     try {
       const res = await sessionApi.bookSession({
         supporterId,
-        sessionDate: selectedDate,
+        sessionDate: dateToString(selectedDate),
         sessionTime: selectedTime,
         topic,
         notes,
@@ -160,7 +170,7 @@ const BookSessionPage = () => {
   const hasAvailability = (day) => {
     if (!day) return false;
     const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    const dateStr = date.toDateString();
+    const dateStr = dateToString(date);
     return availabilityDates.includes(dateStr);
   };
 
