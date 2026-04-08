@@ -12,6 +12,85 @@ const PeerSupporterSessions = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, pending, confirmed, completed, cancelled
 
+  // Check if chat is allowed for a session
+  const isChatAllowed = (session) => {
+    // Never allow chat for cancelled sessions
+    if (session.status === 'cancelled') {
+      return false;
+    }
+
+    // Allow chat for completed/past sessions (review mode)
+    if (session.status === 'completed') {
+      return true;
+    }
+
+    // Only allow chat during the actual session time window
+    const sessionDate = new Date(session.sessionDate);
+    const now = new Date();
+    const sessionDateStr = sessionDate.toISOString().split('T')[0];
+    const todayStr = now.toISOString().split('T')[0];
+
+    // Session must be today
+    if (sessionDateStr !== todayStr) {
+      return false;
+    }
+
+    // Check if current time is within session window (30 min before to 90 min after)
+    const [sessionHour, sessionMinute] = session.sessionTime.split(':').map(Number);
+    const sessionTotalMinutes = sessionHour * 60 + sessionMinute;
+    const nowTotalMinutes = now.getHours() * 60 + now.getMinutes();
+
+    // Allow 30 minutes before and 90 minutes after session start
+    const startWindow = sessionTotalMinutes - 30;
+    const endWindow = sessionTotalMinutes + 90;
+
+    return nowTotalMinutes >= startWindow && nowTotalMinutes <= endWindow;
+  };
+
+  // Get chat button tooltip
+  const getChatTooltip = (session) => {
+    if (session.status === 'cancelled') {
+      return 'Cannot chat - session cancelled';
+    }
+    if (session.status === 'completed') {
+      return 'View past chat';
+    }
+
+    const sessionDate = new Date(session.sessionDate);
+    const now = new Date();
+    const sessionDateStr = sessionDate.toISOString().split('T')[0];
+    const todayStr = now.toISOString().split('T')[0];
+
+    if (sessionDateStr > todayStr) {
+      return `Chat opens on ${sessionDateStr} at ${session.sessionTime}`;
+    }
+
+    if (sessionDateStr < todayStr) {
+      return 'Session date has passed';
+    }
+
+    // Session is today
+    const [sessionHour, sessionMinute] = session.sessionTime.split(':').map(Number);
+    const sessionTotalMinutes = sessionHour * 60 + sessionMinute;
+    const nowTotalMinutes = now.getHours() * 60 + now.getMinutes();
+
+    const startWindow = sessionTotalMinutes - 30;
+    const endWindow = sessionTotalMinutes + 90;
+
+    if (nowTotalMinutes < startWindow) {
+      const minutesUntil = startWindow - nowTotalMinutes;
+      const hoursUntil = Math.floor(minutesUntil / 60);
+      const minsRemaining = minutesUntil % 60;
+      return `Chat opens in ${hoursUntil}h ${minsRemaining}m`;
+    }
+
+    if (nowTotalMinutes > endWindow) {
+      return 'Session has ended';
+    }
+
+    return 'Chat is active';
+  };
+
   // Fetch peer supporter's bookings
   useEffect(() => {
     const fetchSessions = async () => {
@@ -207,8 +286,13 @@ const PeerSupporterSessions = () => {
                   {session.userId?._id && (
                     <button
                       onClick={() => navigate(`/chat/${session.userId._id}`)}
-                      className="p-2 rounded-lg hover:bg-blue-50 text-blue-600 hover:text-blue-700 transition-colors flex items-center gap-1"
-                      title="Chat with user"
+                      disabled={!isChatAllowed(session)}
+                      className={`p-2 rounded-lg flex items-center gap-1 transition-colors ${
+                        isChatAllowed(session)
+                          ? 'hover:bg-blue-50 text-blue-600 hover:text-blue-700 cursor-pointer'
+                          : 'text-gray-400 cursor-not-allowed opacity-50'
+                      }`}
+                      title={getChatTooltip(session)}
                     >
                       <FiSend className="w-5 h-5" />
                       <span className="text-xs font-medium">Chat</span>
