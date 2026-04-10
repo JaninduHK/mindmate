@@ -12,6 +12,16 @@ const UserSessions = () => {
   const [loading, setLoading] = useState(true);
   const [filter, setFilter] = useState('all'); // all, pending, confirmed, completed, cancelled
 
+  // Helper: Calculate duration in minutes from startTime and endTime
+  const calculateSessionDuration = (startTime, endTime) => {
+    if (!startTime || !endTime) return 60; // Default 60 minutes
+    const [startH, startM] = startTime.split(':').map(Number);
+    const [endH, endM] = endTime.split(':').map(Number);
+    const startMins = startH * 60 + startM;
+    const endMins = endH * 60 + endM;
+    return Math.max(endMins - startMins, 60); // At least 60 minutes
+  };
+
   // Check if chat is allowed for a session
   const isChatAllowed = (session) => {
     // Never allow chat for cancelled sessions
@@ -35,14 +45,31 @@ const UserSessions = () => {
       return false;
     }
 
-    // Check if current time is within session window (30 min before to 90 min after)
-    const [sessionHour, sessionMinute] = session.sessionTime.split(':').map(Number);
-    const sessionTotalMinutes = sessionHour * 60 + sessionMinute;
+    // Use startTime if available, fallback to sessionTime
+    const startTimeStr = session.startTime || session.sessionTime;
+    const endTimeStr = session.endTime;
+    
+    if (!startTimeStr) return false;
+
+    // Parse start time
+    const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+    const startTotalMinutes = startHour * 60 + startMinute;
+    
+    // Parse end time or calculate from duration
+    let endTotalMinutes;
+    if (endTimeStr) {
+      const [endHour, endMinute] = endTimeStr.split(':').map(Number);
+      endTotalMinutes = endHour * 60 + endMinute;
+    } else {
+      // Fallback: add 90 minutes to start (old behavior)
+      endTotalMinutes = startTotalMinutes + 90;
+    }
+
     const nowTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
-    // Allow 30 minutes before and 90 minutes after session start
-    const startWindow = sessionTotalMinutes - 30;
-    const endWindow = sessionTotalMinutes + 90;
+    // Allow 30 minutes before start time and 30 minutes after end time
+    const startWindow = startTotalMinutes - 30;
+    const endWindow = endTotalMinutes + 30;
 
     return nowTotalMinutes >= startWindow && nowTotalMinutes <= endWindow;
   };
@@ -61,8 +88,12 @@ const UserSessions = () => {
     const sessionDateStr = sessionDate.toISOString().split('T')[0];
     const todayStr = now.toISOString().split('T')[0];
 
+    const startTimeStr = session.startTime || session.sessionTime;
+    const endTimeStr = session.endTime;
+    const timeDisplay = endTimeStr ? `${startTimeStr} - ${endTimeStr}` : startTimeStr;
+
     if (sessionDateStr > todayStr) {
-      return `Chat opens on ${sessionDateStr} at ${session.sessionTime}`;
+      return `Chat opens on ${sessionDateStr} at ${timeDisplay}`;
     }
 
     if (sessionDateStr < todayStr) {
@@ -70,12 +101,21 @@ const UserSessions = () => {
     }
 
     // Session is today
-    const [sessionHour, sessionMinute] = session.sessionTime.split(':').map(Number);
-    const sessionTotalMinutes = sessionHour * 60 + sessionMinute;
+    const [startHour, startMinute] = startTimeStr.split(':').map(Number);
+    const startTotalMinutes = startHour * 60 + startMinute;
+    
+    let endTotalMinutes;
+    if (endTimeStr) {
+      const [endHour, endMinute] = endTimeStr.split(':').map(Number);
+      endTotalMinutes = endHour * 60 + endMinute;
+    } else {
+      endTotalMinutes = startTotalMinutes + 90;
+    }
+
     const nowTotalMinutes = now.getHours() * 60 + now.getMinutes();
 
-    const startWindow = sessionTotalMinutes - 30;
-    const endWindow = sessionTotalMinutes + 90;
+    const startWindow = startTotalMinutes - 30;
+    const endWindow = endTotalMinutes + 30;
 
     if (nowTotalMinutes < startWindow) {
       const minutesUntil = startWindow - nowTotalMinutes;
@@ -114,6 +154,14 @@ const UserSessions = () => {
       fetchSessions();
     }
   }, [user]);
+
+  // Get count of sessions for a specific status
+  const getSessionCount = (status) => {
+    if (status === 'all') {
+      return sessions.length;
+    }
+    return sessions.filter((session) => session.status === status).length;
+  };
 
   // Filter sessions
   const filteredSessions = sessions.filter((session) => {
@@ -198,7 +246,7 @@ const UserSessions = () => {
           >
             {getStatusLabel(tab)}
             <span className="ml-2 text-sm">
-              ({filteredSessions.length})
+              ({getSessionCount(tab)})
             </span>
           </button>
         ))}
@@ -252,7 +300,11 @@ const UserSessions = () => {
                     {/* Time */}
                     <div className="flex items-center gap-2 text-gray-600">
                       <FiClock className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-sm">{session.sessionTime}</span>
+                      <span className="text-sm">
+                        {session.startTime && session.endTime
+                          ? `${session.startTime} - ${session.endTime}`
+                          : session.sessionTime || 'N/A'}
+                      </span>
                     </div>
 
                     {/* Topic */}
