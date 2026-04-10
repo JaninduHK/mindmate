@@ -61,10 +61,10 @@ const CounselorDashboard = () => {
           <p className="text-sm text-gray-500">View, edit, and manage your published sessions and workshops.</p>
         </Link>
         <Link to="/counselor/analytics" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
-          <h3 className="font-semibold text-gray-900 mb-1">Analytics</h3>
-          <p className="text-sm text-gray-500">View booking trends and revenue charts.</p>
+          <h3 className="font-semibold text-gray-900 mb-1">Bookings</h3>
+          <p className="text-sm text-gray-500">View and manage bookings you have received.</p>
         </Link>
-        <Link to="/counselor/profile" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
+        <Link to="/profile" className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 hover:shadow-md transition-shadow">
           <h3 className="font-semibold text-gray-900 mb-1">Profile</h3>
           <p className="text-sm text-gray-500">Update your bio, specializations, and certifications.</p>
         </Link>

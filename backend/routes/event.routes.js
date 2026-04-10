@@ -14,9 +14,8 @@ const router = Router();
 
 // Public
 router.get('/', listEvents);
-router.get('/:id', getEventById);
 
-// Protected — counselor only
+// Protected — counselor only (must be before /:id to avoid route conflict)
 router.post(
   '/',
   verifyToken,
@@ -29,6 +28,9 @@ router.get(
   checkRole(USER_ROLES.COUNSELOR, USER_ROLES.ADMIN),
   getMyCounselorEvents
 );
+
+// Public — by ID (keep after named routes)
+router.get('/:id', getEventById);
 router.put(
   '/:id',
   verifyToken,

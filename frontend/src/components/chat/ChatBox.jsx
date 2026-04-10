@@ -5,7 +5,7 @@ import MessageBubble from "./MessageBubble";
 import { FiSearch, FiX } from "react-icons/fi";
 import toast from "react-hot-toast";
 
-const ChatBox = ({ currentUserId, recipientId }) => {
+const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -247,7 +247,7 @@ const ChatBox = ({ currentUserId, recipientId }) => {
   return (
     <div style={{ border: "1px solid #ccc", padding: "20px", borderRadius: "8px" }}>
       <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: "15px" }}>
-        <h3>Chat with {recipientId}</h3>
+        <h3>Chat with {recipientName || recipientId}</h3>
         <button
           onClick={() => setShowSearch(!showSearch)}
           style={{
