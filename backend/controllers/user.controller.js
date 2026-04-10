@@ -15,7 +15,7 @@ export const getUsers = asyncHandler(async (req, res) => {
 
     const [users, total] = await Promise.all([
       User.find({ role: 'user', isActive: true })
-        .select('name email avatar')
+        .select('name email avatar username')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
