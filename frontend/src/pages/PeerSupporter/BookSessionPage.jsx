@@ -19,7 +19,8 @@ const BookSessionPage = () => {
   const [availableSlots, setAvailableSlots] = useState([]);
   const [currentMonth, setCurrentMonth] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState(null);
-  const [selectedTime, setSelectedTime] = useState('');
+  const [selectedStartTime, setSelectedStartTime] = useState('');
+  const [selectedEndTime, setSelectedEndTime] = useState('');
   const [topic, setTopic] = useState('');
   const [notes, setNotes] = useState('');
   const [booking, setBooking] = useState(false);
@@ -82,7 +83,8 @@ const BookSessionPage = () => {
     const dateStr = dateToString(date);
 
     setSelectedDate(date);
-    setSelectedTime('');
+    setSelectedStartTime('');
+    setSelectedEndTime('');
     setLoadingSlots(true);
 
     try {
@@ -108,8 +110,8 @@ const BookSessionPage = () => {
       return;
     }
 
-    if (!selectedTime) {
-      toast.error('Please select a session time');
+    if (!selectedStartTime || !selectedEndTime) {
+      toast.error('Please select both start and end times');
       return;
     }
 
@@ -123,7 +125,8 @@ const BookSessionPage = () => {
       const res = await sessionApi.bookSession({
         supporterId,
         sessionDate: dateToString(selectedDate),
-        sessionTime: selectedTime,
+        startTime: selectedStartTime,
+        endTime: selectedEndTime,
         topic,
         notes,
       });
@@ -355,35 +358,111 @@ const BookSessionPage = () => {
                 </div>
               </div>
 
-              {/* Time Slots */}
+              {/* Time Slots Selection */}
               {selectedDate && (
                 <div>
                   <label className="block text-sm font-semibold text-gray-900 mb-4">
                     <FiClock className="inline-block w-4 h-4 mr-2" />
-                    Select Time *
+                    Select Session Time Range *
                   </label>
 
                   {loadingSlots ? (
                     <div className="text-center text-gray-500 py-4">Loading available slots...</div>
                   ) : availableSlots.length > 0 ? (
-                    <div className="grid grid-cols-4 gap-2">
-                      {availableSlots.map((slot, idx) => (
-                        <button
-                          key={idx}
-                          type="button"
-                          onClick={() => setSelectedTime(slot.time)}
-                          className={`p-2 rounded-lg font-medium text-sm transition ${
-                            selectedTime === slot.time
-                              ? 'bg-blue-500 text-white'
-                              : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
-                          }`}
-                        >
-                          {slot.time}
-                        </button>
-                      ))}
+                    <div>
+                      <p className="text-sm text-gray-600 mb-3">
+                        Available time slots are shown below. Select your preferred start and end times.
+                      </p>
+                      <div className="space-y-2">
+                        {availableSlots.map((slot, idx) => {
+                          const isSelectable = !selectedStartTime || selectedStartTime === slot.time;
+                          const isEndTimeOption =
+                            selectedStartTime &&
+                            selectedStartTime < slot.time &&
+                            slot.time > selectedStartTime;
+                          const slotDuration = slot.duration || 60;
+                          const slotLabel = `${slot.time} - ${slot.endTime} (${slotDuration} min)`;
+
+                          return (
+                            <div
+                              key={idx}
+                              className="flex items-center gap-2 p-3 border border-gray-200 rounded-lg hover:border-primary-400 transition"
+                            >
+                              {!selectedStartTime && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedStartTime(slot.time);
+                                    setSelectedEndTime(slot.endTime); // Default to slot's end time
+                                  }}
+                                  className={`flex-1 p-3 rounded-lg font-medium text-sm transition text-left ${
+                                    selectedStartTime === slot.time
+                                      ? 'bg-blue-500 text-white'
+                                      : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                                  }`}
+                                >
+                                  Start: {slotLabel}
+                                </button>
+                              )}
+
+                              {selectedStartTime && selectedStartTime === slot.time && (
+                                <div className="flex-1 p-3 bg-blue-50 rounded-lg border border-blue-200 font-medium text-sm text-blue-900">
+                                  Start: {slotLabel}
+                                </div>
+                              )}
+
+                              {selectedStartTime &&
+                                selectedStartTime !== slot.time &&
+                                isEndTimeOption && (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      setSelectedEndTime(slot.endTime);
+                                    }}
+                                    className={`flex-1 p-3 rounded-lg font-medium text-sm transition text-left ${
+                                      selectedEndTime === slot.endTime
+                                        ? 'bg-green-500 text-white'
+                                        : 'bg-gray-100 text-gray-900 hover:bg-gray-200'
+                                    }`}
+                                  >
+                                    End: {slotLabel}
+                                  </button>
+                                )}
+
+                              {selectedStartTime &&
+                                selectedStartTime !== slot.time &&
+                                !isEndTimeOption && (
+                                  <div className="flex-1 p-3 bg-gray-50 rounded-lg text-gray-400 text-sm">
+                                    Not available for your time range
+                                  </div>
+                                )}
+                            </div>
+                          );
+                        })}
+                      </div>
+
+                      {selectedStartTime && selectedEndTime && (
+                        <div className="mt-4 p-3 bg-green-50 border border-green-200 rounded-lg">
+                          <p className="text-sm font-medium text-green-900">
+                            Selected: {selectedStartTime} to {selectedEndTime}
+                          </p>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedStartTime('');
+                              setSelectedEndTime('');
+                            }}
+                            className="text-xs text-green-700 hover:text-green-900 mt-1 underline"
+                          >
+                            Change selection
+                          </button>
+                        </div>
+                      )}
                     </div>
                   ) : (
-                    <div className="text-center text-gray-500 py-4">No available slots for this date</div>
+                    <div className="text-center text-gray-500 py-4">
+                      No available slots for this date
+                    </div>
                   )}
                 </div>
               )}
@@ -429,7 +508,7 @@ const BookSessionPage = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={booking || !selectedDate || !selectedTime || !topic.trim()}
+                  disabled={booking || !selectedDate || !selectedStartTime || !selectedEndTime || !topic.trim()}
                   className="flex-1 px-6 py-3 bg-primary-600 text-white font-semibold rounded-lg hover:bg-primary-700 disabled:bg-gray-400 disabled:cursor-not-allowed transition-colors"
                 >
                   {booking ? 'Booking...' : 'Confirm Booking'}

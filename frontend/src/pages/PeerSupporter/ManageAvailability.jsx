@@ -35,6 +35,22 @@ const ManageAvailability = () => {
     return new Date(year, month - 1, day);
   };
 
+  // Helper: Extract and normalize date string from any format (ISO string, Date object, or YYYY-MM-DD)
+  const extractDateString = (dateValue) => {
+    if (typeof dateValue === 'string') {
+      // If it's an ISO string like "2024-04-10T00:00:00.000Z", extract just the date part
+      if (dateValue.includes('T')) {
+        return dateValue.split('T')[0];
+      }
+      // Otherwise assume it's already in YYYY-MM-DD format
+      return dateValue;
+    } else if (dateValue instanceof Date) {
+      return dateToString(dateValue);
+    }
+    // Fallback
+    return '';
+  };
+
   // Check if logged in user is peer supporter
   useEffect(() => {
     if (user && user.role !== 'peer_supporter') {
@@ -65,14 +81,15 @@ const ManageAvailability = () => {
   const getDatesWithAvailability = () => {
     const dates = {};
     availabilities.forEach((av) => {
-      // Parse date string properly to avoid timezone issues
-      const dateStr = av.date instanceof Date 
-        ? dateToString(av.date) 
-        : (typeof av.date === 'string' ? av.date.split('T')[0] : dateToString(stringToDate(av.date)));
-      if (!dates[dateStr]) {
-        dates[dateStr] = [];
+      // Use the normalized date extraction helper
+      const dateStr = extractDateString(av.date);
+      
+      if (dateStr && dateStr.length >= 10) {
+        if (!dates[dateStr]) {
+          dates[dateStr] = [];
+        }
+        dates[dateStr].push(av);
       }
-      dates[dateStr].push(av);
     });
     return dates;
   };

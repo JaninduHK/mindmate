@@ -1,3 +1,4 @@
+import mongoose from 'mongoose';
 import SessionBooking from '../models/SessionBooking.model.js';
 import User from '../models/User.model.js';
 import Availability from '../models/Availability.model.js';
@@ -7,16 +8,28 @@ import ApiResponse from '../utils/ApiResponse.js';
 
 // Book a session with a peer counselor
 export const bookSession = asyncHandler(async (req, res) => {
-  const { supporterId, sessionDate, sessionTime, topic, notes = '' } = req.body;
+  const { supporterId, sessionDate, sessionTime, startTime, endTime, topic, notes = '' } = req.body;
   const userId = req.user._id;
 
+  // Use startTime if provided (new format), fallback to sessionTime (legacy)
+  const bookingStartTime = startTime || sessionTime;
+  const bookingEndTime = endTime;
+
   // Validate required fields
-  if (!supporterId || !sessionDate || !sessionTime || !topic) {
-    throw new ApiError(400, 'Missing required fields');
+  if (!supporterId || !sessionDate || !bookingStartTime || !topic) {
+    throw new ApiError(400, 'Missing required fields: supporterId, sessionDate, startTime, topic');
+  }
+
+  // Convert supporterId to ObjectId for proper querying
+  let supporterObjectId;
+  try {
+    supporterObjectId = new mongoose.Types.ObjectId(supporterId);
+  } catch (error) {
+    throw new ApiError(400, 'Invalid supporter ID format');
   }
 
   // Check if supporter exists and is a peer supporter
-  const supporter = await User.findById(supporterId);
+  const supporter = await User.findById(supporterObjectId);
   if (!supporter) {
     throw new ApiError(404, 'Peer counselor not found');
   }
@@ -26,7 +39,7 @@ export const bookSession = asyncHandler(async (req, res) => {
   }
 
   // Prevent self-booking
-  if (userId.toString() === supporterId) {
+  if (userId.toString() === supporterObjectId.toString()) {
     throw new ApiError(400, 'You cannot book a session with yourself');
   }
 
@@ -35,24 +48,35 @@ export const bookSession = asyncHandler(async (req, res) => {
   const dateStart = new Date(Date.UTC(year, month - 1, day));
   const dateEnd = new Date(Date.UTC(year, month - 1, day + 1));
 
-  // Check for conflicting bookings
-  const existingBooking = await SessionBooking.findOne({
-    supporterId,
+  // Check for conflicting bookings - check for overlap
+  const existingBookings = await SessionBooking.find({
+    supporterId: supporterObjectId,
     sessionDate: {
       $gte: dateStart,
       $lt: dateEnd,
     },
-    sessionTime,
     status: { $in: ['pending', 'confirmed'] },
   });
 
-  if (existingBooking) {
-    throw new ApiError(409, 'This time slot is already booked. Please choose another time.');
+  // Check if requested time overlaps with any existing booking
+  const conflictingBooking = existingBookings.some((booking) => {
+    const bookingStart = parseInt(booking.sessionTime.split(':')[0]) * 60 + parseInt(booking.sessionTime.split(':')[1]);
+    const requestStart = parseInt(bookingStartTime.split(':')[0]) * 60 + parseInt(bookingStartTime.split(':')[1]);
+    const bookingEnd = bookingStart + (booking.sessionDuration || 60);
+    const requestEnd = bookingEndTime 
+      ? (parseInt(bookingEndTime.split(':')[0]) * 60 + parseInt(bookingEndTime.split(':')[1]))
+      : requestStart + 60;
+    
+    return requestStart < bookingEnd && requestEnd > bookingStart;
+  });
+
+  if (conflictingBooking) {
+    throw new ApiError(409, 'This time slot conflicts with an existing booking. Please choose another time.');
   }
 
   // Check if the time slot matches peer counselor's availability for this specific date
-  const availabilitySlot = await Availability.findOne({
-    supporterId,
+  const availabilitySlots = await Availability.find({
+    supporterId: supporterObjectId,
     date: {
       $gte: dateStart,
       $lt: dateEnd,
@@ -60,34 +84,54 @@ export const bookSession = asyncHandler(async (req, res) => {
     isActive: true,
   });
 
-  if (!availabilitySlot) {
+  if (availabilitySlots.length === 0) {
     throw new ApiError(400, 'Peer counselor is not available on this date');
   }
 
-  // Check if requested time falls within availability window
-  const [reqH, reqM] = sessionTime.split(':');
-  const [avStartH, avStartM] = availabilitySlot.startTime.split(':');
-  const [avEndH, avEndM] = availabilitySlot.endTime.split(':');
+  // Check if requested time falls within any availability window
+  let isTimeValid = false;
+  let duration = 60;
 
-  const reqTime = parseInt(reqH) * 60 + parseInt(reqM);
-  const avStart = parseInt(avStartH) * 60 + parseInt(avStartM);
-  const avEnd = parseInt(avEndH) * 60 + parseInt(avEndM);
+  for (const av of availabilitySlots) {
+    const [avStartH, avStartM] = av.startTime.split(':');
+    const [avEndH, avEndM] = av.endTime.split(':');
+    const [reqH, reqM] = bookingStartTime.split(':');
 
-  if (reqTime < avStart || reqTime >= avEnd) {
+    const avStart = parseInt(avStartH) * 60 + parseInt(avStartM);
+    const avEnd = parseInt(avEndH) * 60 + parseInt(avEndM);
+    const reqStart = parseInt(reqH) * 60 + parseInt(reqM);
+    const reqEnd = bookingEndTime 
+      ? (parseInt(bookingEndTime.split(':')[0]) * 60 + parseInt(bookingEndTime.split(':')[1]))
+      : reqStart + (av.slotDuration || 60);
+
+    duration = av.slotDuration || 60;
+
+    if (reqStart >= avStart && reqEnd <= avEnd) {
+      isTimeValid = true;
+      break;
+    }
+  }
+
+  if (!isTimeValid) {
+    const avWindow = availabilitySlots[0];
     throw new ApiError(
       400,
-      `Peer counselor is available from ${availabilitySlot.startTime} to ${availabilitySlot.endTime} on this date`
+      `Peer counselor is available from ${avWindow.startTime} to ${avWindow.endTime} on this date`
     );
   }
 
   // Create the session booking
   const sessionBooking = await SessionBooking.create({
     userId,
-    supporterId,
+    supporterId: supporterObjectId,
     topic,
     notes,
     sessionDate: dateStart,
-    sessionTime,
+    sessionTime: bookingStartTime,
+    sessionDuration: bookingEndTime 
+      ? (parseInt(bookingEndTime.split(':')[0]) * 60 + parseInt(bookingEndTime.split(':')[1])) - 
+        (parseInt(bookingStartTime.split(':')[0]) * 60 + parseInt(bookingStartTime.split(':')[1]))
+      : duration,
   });
 
   return res
@@ -253,6 +297,14 @@ export const getAvailableSlots = asyncHandler(async (req, res) => {
   }
 
   try {
+    // Convert supporterId string to MongoDB ObjectId for proper querying
+    let supporterObjectId;
+    try {
+      supporterObjectId = new mongoose.Types.ObjectId(supporterId);
+    } catch (error) {
+      throw new ApiError(400, 'Invalid supporter ID format');
+    }
+
     // Parse date string in YYYY-MM-DD format to avoid timezone issues
     const [year, month, day] = date.split('-').map(Number);
     const dateStart = new Date(Date.UTC(year, month - 1, day));
@@ -260,7 +312,7 @@ export const getAvailableSlots = asyncHandler(async (req, res) => {
 
     // Get availability for the specific date
     const availabilities = await Availability.find({
-      supporterId,
+      supporterId: supporterObjectId,
       date: {
         $gte: dateStart,
         $lt: dateEnd,
@@ -274,7 +326,7 @@ export const getAvailableSlots = asyncHandler(async (req, res) => {
 
     // Get all booked sessions for this date
     const bookedSessions = await SessionBooking.find({
-      supporterId,
+      supporterId: supporterObjectId,
       sessionDate: {
         $gte: dateStart,
         $lt: dateEnd,
@@ -300,8 +352,15 @@ export const getAvailableSlots = asyncHandler(async (req, res) => {
         const slotEndTime = new Date(currentTime.getTime() + av.slotDuration * 60 * 1000);
         const slotEndTimeStr = slotEndTime.toTimeString().slice(0, 5);
 
-        // Check if slot is already booked
-        const isBooked = bookedSessions.some((b) => b.sessionTime === slotTime);
+        // Check if slot is already booked or conflicts with booked sessions
+        const isBooked = bookedSessions.some((b) => {
+          const bookingStart = parseInt(b.sessionTime.split(':')[0]) * 60 + parseInt(b.sessionTime.split(':')[1]);
+          const slotStart = parseInt(slotTime.split(':')[0]) * 60 + parseInt(slotTime.split(':')[1]);
+          const bookingEnd = bookingStart + (b.sessionDuration || 60);
+          const slotEnd = parseInt(slotEndTimeStr.split(':')[0]) * 60 + parseInt(slotEndTimeStr.split(':')[1]);
+          
+          return slotStart < bookingEnd && slotEnd > bookingStart;
+        });
 
         if (!isBooked) {
           slots.push({

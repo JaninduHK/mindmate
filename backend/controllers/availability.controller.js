@@ -116,17 +116,24 @@ export const getMyAvailability = asyncHandler(async (req, res) => {
 
   // Apply date range filter if provided
   if (startDate && endDate) {
+    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+    
+    const dateStart = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+    const dateEnd = new Date(Date.UTC(endYear, endMonth - 1, endDay + 1));
+    
     filter.date = {
-      $gte: new Date(startDate),
-      $lte: new Date(endDate),
+      $gte: dateStart,
+      $lt: dateEnd,
     };
   } else {
-    // Default: show next 90 days
+    // Default: show next 90 days from today at midnight UTC
     const today = new Date();
-    const ninetyDaysLater = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
+    const todayMidnight = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+    const ninetyDaysLater = new Date(todayMidnight.getTime() + 90 * 24 * 60 * 60 * 1000);
     filter.date = {
-      $gte: today,
-      $lte: ninetyDaysLater,
+      $gte: todayMidnight,
+      $lt: ninetyDaysLater,
     };
   }
 
@@ -144,7 +151,6 @@ export const getMyAvailability = asyncHandler(async (req, res) => {
  */
 export const getAvailabilityByCounselor = asyncHandler(async (req, res) => {
   const { supporterId } = req.params;
-  const { startDate, endDate } = req.query;
 
   // Verify counselor exists and is a peer supporter
   const user = await User.findById(supporterId);
@@ -152,37 +158,53 @@ export const getAvailabilityByCounselor = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Peer supporter not found');
   }
 
-  let filter = { supporterId, isActive: true };
+  try {
+    // Convert supporterId to ObjectId for consistency in queries
+    let supporterObjectId;
+    try {
+      supporterObjectId = new mongoose.Types.ObjectId(supporterId);
+    } catch (error) {
+      throw new ApiError(400, 'Invalid supporter ID format');
+    }
 
-  // Build date filter
-  if (startDate && endDate) {
-    // Parse dates in YYYY-MM-DD format to avoid timezone issues
-    const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
-    const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
-    
-    const dateStart = new Date(Date.UTC(startYear, startMonth - 1, startDay));
-    const dateEnd = new Date(Date.UTC(endYear, endMonth - 1, endDay + 1));
-    
-    filter.date = {
-      $gte: dateStart,
-      $lt: dateEnd,
-    };
-  } else {
-    // Default: show next 90 days from today
-    const today = new Date();
-    const ninetyDaysLater = new Date(today.getTime() + 90 * 24 * 60 * 60 * 1000);
-    filter.date = {
-      $gte: today,
-      $lte: ninetyDaysLater,
-    };
+    let filter = { supporterId: supporterObjectId, isActive: true };
+
+    // Build date filter
+    const { startDate, endDate } = req.query;
+    if (startDate && endDate) {
+      // Parse dates in YYYY-MM-DD format to avoid timezone issues
+      const [startYear, startMonth, startDay] = startDate.split('-').map(Number);
+      const [endYear, endMonth, endDay] = endDate.split('-').map(Number);
+      
+      const dateStart = new Date(Date.UTC(startYear, startMonth - 1, startDay));
+      const dateEnd = new Date(Date.UTC(endYear, endMonth - 1, endDay + 1));
+      
+      filter.date = {
+        $gte: dateStart,
+        $lt: dateEnd,
+      };
+    } else {
+      // Default: show next 90 days from today at midnight UTC
+      const today = new Date();
+      const todayMidnight = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
+      const ninetyDaysLater = new Date(todayMidnight.getTime() + 90 * 24 * 60 * 60 * 1000);
+      filter.date = {
+        $gte: todayMidnight,
+        $lt: ninetyDaysLater,
+      };
+    }
+
+    const availability = await Availability.find(filter)
+      .sort({ date: 1, startTime: 1 });
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, availability, 'Available slots retrieved successfully'));
+  } catch (error) {
+    console.error('Error in getAvailabilityByCounselor:', error);
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, 'Error fetching availability');
   }
-
-  const availability = await Availability.find(filter)
-    .sort({ date: 1, startTime: 1 });
-
-  return res
-    .status(200)
-    .json(new ApiResponse(200, availability, 'Available slots retrieved successfully'));
 });
 
 /**
@@ -269,14 +291,16 @@ export const getAvailableCounselors = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'Date parameter is required');
   }
 
-  const selectedDate = new Date(date);
-  const dateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+  // Parse the date string (YYYY-MM-DD format) using UTC to avoid timezone issues
+  const [year, month, day] = date.split('-').map(Number);
+  const dateStart = new Date(Date.UTC(year, month - 1, day));
+  const dateEnd = new Date(Date.UTC(year, month - 1, day + 1));
 
   // Find all availability entries for the selected date
   const availabilities = await Availability.find({
     date: {
-      $gte: dateOnly,
-      $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
+      $gte: dateStart,
+      $lt: dateEnd,
     },
     isActive: true,
   }).populate('supporterId', 'name email');
@@ -301,25 +325,41 @@ export const checkAvailability = asyncHandler(async (req, res) => {
     throw new ApiError(400, 'supporterId, date, startTime, and endTime are required');
   }
 
-  const selectedDate = new Date(date);
-  const dateOnly = new Date(selectedDate.getFullYear(), selectedDate.getMonth(), selectedDate.getDate());
+  try {
+    // Convert supporterId string to MongoDB ObjectId for proper querying
+    let supporterObjectId;
+    try {
+      supporterObjectId = new mongoose.Types.ObjectId(supporterId);
+    } catch (error) {
+      throw new ApiError(400, 'Invalid supporter ID format');
+    }
 
-  const availability = await Availability.findOne({
-    supporterId,
-    date: {
-      $gte: dateOnly,
-      $lt: new Date(dateOnly.getTime() + 24 * 60 * 60 * 1000),
-    },
-    startTime: { $lte: startTime },
-    endTime: { $gte: endTime },
-    isActive: true,
-  });
+    // Parse the date string (YYYY-MM-DD format) using UTC to avoid timezone issues
+    const [year, month, day] = date.split('-').map(Number);
+    const dateStart = new Date(Date.UTC(year, month - 1, day));
+    const dateEnd = new Date(Date.UTC(year, month - 1, day + 1));
 
-  const isAvailable = !!availability;
+    const availability = await Availability.findOne({
+      supporterId: supporterObjectId,
+      date: {
+        $gte: dateStart,
+        $lt: dateEnd,
+      },
+      startTime: { $lte: startTime },
+      endTime: { $gte: endTime },
+      isActive: true,
+    });
 
-  return res
-    .status(200)
-    .json(new ApiResponse(200, { isAvailable }, isAvailable ? 'Slot is available' : 'Slot is not available'));
+    const isAvailable = !!availability;
+
+    return res
+      .status(200)
+      .json(new ApiResponse(200, { isAvailable }, isAvailable ? 'Slot is available' : 'Slot is not available'));
+  } catch (error) {
+    console.error('Error in checkAvailability:', error);
+    if (error instanceof ApiError) throw error;
+    throw new ApiError(500, 'Error checking availability');
+  }
 });
 
 /**
@@ -338,10 +378,14 @@ export const getAvailabilityStats = asyncHandler(async (req, res) => {
 
   const totalSlots = await Availability.countDocuments({ supporterId });
   const activeSlots = await Availability.countDocuments({ supporterId, isActive: true });
+  
+  // Count future slots from today at midnight UTC
+  const today = new Date();
+  const todayMidnight = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate()));
   const futureSlots = await Availability.countDocuments({
     supporterId,
     isActive: true,
-    date: { $gte: new Date() },
+    date: { $gte: todayMidnight },
   });
 
   return res
