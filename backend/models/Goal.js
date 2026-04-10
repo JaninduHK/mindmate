@@ -13,6 +13,13 @@ const goalSchema = new mongoose.Schema(
       required: true,
       trim: true,
     },
+    goalNameNormalized: {
+      type: String,
+      required: false,
+      trim: true,
+      default: '',
+      index: true,
+    },
     goalType: {
       type: String,
       required: true,
@@ -31,6 +38,10 @@ const goalSchema = new mongoose.Schema(
       default: 0,
       min: 0,
     },
+    completionDates: {
+      type: [Date],
+      default: [],
+    },
     status: {
       type: String,
       required: true,
@@ -48,7 +59,7 @@ const goalSchema = new mongoose.Schema(
 );
 
 // Helpful indexes for duplicate prevention
-goalSchema.index({ userId: 1, goalType: 1, goalName: 1, date: 1 });
+goalSchema.index({ userId: 1, goalType: 1, goalNameNormalized: 1, date: 1 });
 
 const Goal = mongoose.model('Goal', goalSchema);
 

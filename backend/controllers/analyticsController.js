@@ -76,17 +76,17 @@ export const checkReportRange = asyncHandler(async (req, res) => {
 
   if (!startStr || !endStr) {
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Start date and end date are required');
-  }
+  }//Required Fields Check
 
   const start = parseISODateOnly(startStr);
   const end = parseISODateOnly(endStr);
   if (!start || !end) {
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invalid date format');
-  }
+  } //End Date stops so that it cannot be set one day earlier than the Start Date.//
 
   if (start > end) {
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Start date must be before or equal to end date');
-  }
+  } //Future Date Validation
 
   const today = getTodayUTCDateOnly();
   if (start > today || end > today) {
