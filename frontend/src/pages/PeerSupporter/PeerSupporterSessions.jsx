@@ -239,122 +239,165 @@ const PeerSupporterSessions = () => {
 
       {/* Sessions List */}
       {filteredSessions.length === 0 ? (
-        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center">
-          <FiCalendar className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-xl font-semibold text-gray-900 mb-2">No bookings yet</h3>
-          <p className="text-gray-600">You don't have any session bookings yet. Users will book sessions with you once you set your availability.</p>
+        <div className="bg-white rounded-2xl border border-gray-100 p-12 text-center flex flex-col items-center justify-center">
+          <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mb-4">
+            <FiCalendar className="w-10 h-10 text-primary-400" />
+          </div>
+          <h3 className="text-xl font-bold text-gray-900 mb-2">No bookings found</h3>
+          <p className="text-gray-500 max-w-md">
+            You don't have any {filter !== 'all' ? filter : ''} session bookings yet. 
+            When users book a session with you, they will appear here.
+          </p>
         </div>
       ) : (
-        <div className="space-y-4">
+        <div className="grid grid-cols-1 gap-6">
           {filteredSessions.map((session) => (
             <div
               key={session._id}
-              className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow p-6"
+              className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-all duration-200 overflow-hidden group"
             >
-              <div className="flex items-start justify-between gap-4">
-                {/* Session Info */}
-                <div className="flex-1">
-                  <div className="flex items-center gap-3 mb-3">
-                    <div className="flex items-center gap-2">
+              {/* Top Section with Status Banner */}
+              <div className={`h-2 w-full ${
+                session.status === 'pending' ? 'bg-yellow-400' :
+                session.status === 'confirmed' ? 'bg-green-400' :
+                session.status === 'completed' ? 'bg-blue-400' :
+                'bg-red-400'
+              }`} />
+              
+              <div className="p-6 md:p-8">
+                <div className="flex flex-col md:flex-row items-start md:items-center justify-between gap-6 mb-6">
+                  {/* User Profile Info */}
+                  <div className="flex items-center gap-4">
+                    <div className="relative">
                       {session.userId?.avatar?.url ? (
                         <img
                           src={session.userId.avatar.url}
                           alt={session.userId?.name}
-                          className="w-10 h-10 rounded-full object-cover"
+                          className="w-14 h-14 rounded-full object-cover border-2 border-white shadow-sm"
                         />
                       ) : (
-                        <div className="w-10 h-10 rounded-full bg-primary-100 flex items-center justify-center text-sm font-bold text-primary-600">
-                          {session.userId?.name?.[0] || 'U'}
+                        <div className="w-14 h-14 rounded-full bg-primary-100 flex items-center justify-center text-xl font-bold text-primary-600 shadow-inner">
+                          {session.userId?.name?.[0]?.toUpperCase() || 'U'}
                         </div>
                       )}
-                      <div>
-                        <h3 className="text-lg font-bold text-gray-900">
-                          {session.userId?.name || 'Unknown User'}
-                        </h3>
-                        <p className="text-xs text-gray-500">{session.userId?.email}</p>
+                      <span className={`absolute -bottom-1 -right-1 w-4 h-4 border-2 border-white rounded-full ${
+                        session.status === 'confirmed' ? 'bg-green-500' : 'bg-gray-300'
+                      }`}></span>
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-gray-900 tracking-tight group-hover:text-primary-600 transition-colors">
+                        {session.userId?.name || 'Unknown User'}
+                      </h3>
+                      <div className="flex items-center gap-2 mt-1">
+                        <span className="text-sm text-gray-500">{session.userId?.email}</span>
                       </div>
                     </div>
+                  </div>
+
+                  {/* Actions & Status Badge Menu */}
+                  <div className="flex items-center gap-3 w-full md:w-auto">
                     <span
-                      className={`px-3 py-1 rounded-full text-sm font-medium border ml-auto ${getStatusColor(
-                        session.status
-                      )}`}
+                      className={`px-4 py-1.5 rounded-full text-sm font-semibold border shadow-sm ${
+                        session.status === 'pending' ? 'bg-yellow-50 border-yellow-200 text-yellow-700' :
+                        session.status === 'confirmed' ? 'bg-green-50 border-green-200 text-green-700' :
+                        session.status === 'completed' ? 'bg-blue-50 border-blue-200 text-blue-700' :
+                        'bg-red-50 border-red-200 text-red-700'
+                      }`}
                     >
                       {getStatusLabel(session.status)}
                     </span>
+                    
+                    {session.userId?._id && (
+                      <button
+                        onClick={() => navigate(`/chat/${session.userId._id}`)}
+                        disabled={!isChatAllowed(session)}
+                        className={`px-4 py-1.5 rounded-full flex items-center gap-2 transition-all font-medium border ${
+                          isChatAllowed(session)
+                            ? 'bg-white border-primary-200 text-primary-600 hover:bg-primary-50 hover:border-primary-300 shadow-sm cursor-pointer'
+                            : 'bg-gray-50 border-gray-200 text-gray-400 cursor-not-allowed'
+                        }`}
+                        title={getChatTooltip(session)}
+                      >
+                        <FiSend className="w-4 h-4" />
+                        <span>Chat</span>
+                      </button>
+                    )}
+                    
+                    {session.status === 'pending' && (
+                      <button
+                        onClick={() => handleConfirmSession(session._id)}
+                        className="p-2 rounded-full hover:bg-green-50 text-green-600 border border-green-200 hover:border-green-300 shadow-sm transition-all"
+                        title="Confirm session"
+                      >
+                        <FiCheckCircle className="w-5 h-5" />
+                      </button>
+                    )}
                   </div>
+                </div>
 
-                  {/* Session details */}
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-3">
-                    {/* Date */}
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <FiCalendar className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-sm">
+                <hr className="border-gray-100 mb-6" />
+
+                {/* Session details */}
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-6">
+                  {/* Date */}
+                  <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50/50 border border-gray-100 hover:bg-white hover:border-primary-100 hover:shadow-sm transition-all">
+                    <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+                      <FiCalendar className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Date</p>
+                      <p className="text-sm font-medium text-gray-900">
                         {new Date(session.sessionDate).toLocaleDateString('en-US', {
                           weekday: 'short',
                           year: 'numeric',
-                          month: 'short',
+                          month: 'long',
                           day: 'numeric',
                         })}
-                      </span>
-                    </div>
-
-                    {/* Time */}
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <FiClock className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-sm">
-                        {session.startTime && session.endTime
-                          ? `${session.startTime} - ${session.endTime}`
-                          : session.sessionTime || 'N/A'}
-                      </span>
-                    </div>
-
-                    {/* Topic */}
-                    <div className="flex items-center gap-2 text-gray-600">
-                      <FiMessageSquare className="w-4 h-4 flex-shrink-0" />
-                      <span className="text-sm font-medium truncate">{session.topic}</span>
+                      </p>
                     </div>
                   </div>
 
-                  {/* Notes */}
-                  {session.notes && (
-                    <p className="text-sm text-gray-600 bg-gray-50 rounded-lg p-3">
-                      <strong>User Notes:</strong> {session.notes}
-                    </p>
-                  )}
+                  {/* Time */}
+                  <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50/50 border border-gray-100 hover:bg-white hover:border-primary-100 hover:shadow-sm transition-all">
+                    <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+                      <FiClock className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div>
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Time</p>
+                      <p className="text-sm font-medium text-gray-900">
+                        {session.startTime && session.endTime
+                          ? `${session.startTime} - ${session.endTime}`
+                          : session.sessionTime || 'Not specified'}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Topic */}
+                  <div className="flex items-start gap-4 p-4 rounded-xl bg-gray-50/50 border border-gray-100 hover:bg-white hover:border-primary-100 hover:shadow-sm transition-all">
+                    <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center flex-shrink-0">
+                      <FiMessageSquare className="w-5 h-5 text-primary-600" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-semibold text-gray-500 uppercase tracking-wider mb-1">Topic</p>
+                      <p className="text-sm font-medium text-gray-900 truncate" title={session.topic || 'General Discussion'}>
+                        {session.topic || 'General Discussion'}
+                      </p>
+                    </div>
+                  </div>
                 </div>
 
-                {/* Actions */}
-                <div className="flex flex-col gap-2 flex-shrink-0">
-                  {session.userId?._id && (
-                    <button
-                      onClick={() => navigate(`/chat/${session.userId._id}`)}
-                      disabled={!isChatAllowed(session)}
-                      className={`p-2 rounded-lg flex items-center gap-1 transition-colors ${
-                        isChatAllowed(session)
-                          ? 'hover:bg-blue-50 text-blue-600 hover:text-blue-700 cursor-pointer'
-                          : 'text-gray-400 cursor-not-allowed opacity-50'
-                      }`}
-                      title={getChatTooltip(session)}
-                    >
-                      <FiSend className="w-5 h-5" />
-                      <span className="text-xs font-medium">Chat</span>
-                    </button>
-                  )}
-                  {session.status === 'pending' && (
-                    <button
-                      onClick={() => handleConfirmSession(session._id)}
-                      className="p-2 rounded-lg hover:bg-green-50 text-green-600 hover:text-green-700 transition-colors"
-                      title="Confirm session"
-                    >
-                      <FiCheckCircle className="w-5 h-5" />
-                    </button>
-                  )}
-                  {session.status === 'confirmed' && (
-                    <div className="p-2 rounded-lg bg-green-50 text-green-600">
-                      <FiCheckCircle className="w-5 h-5" />
+                {/* Notes */}
+                {session.notes && (
+                  <div className="mt-4 bg-[#f8fafc] rounded-xl p-5 border border-slate-100">
+                    <div className="flex items-center gap-2 mb-2">
+                      <div className="w-1.5 h-1.5 rounded-full bg-primary-400"></div>
+                      <span className="text-xs font-bold text-slate-500 uppercase tracking-widest">User Notes</span>
                     </div>
-                  )}
-                </div>
+                    <p className="text-sm text-slate-700 leading-relaxed italic border-l-2 border-primary-200 pl-4 py-1">
+                      "{session.notes}"
+                    </p>
+                  </div>
+                )}
               </div>
             </div>
           ))}
