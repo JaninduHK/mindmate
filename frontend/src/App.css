@@ -40,3 +40,249 @@
 .read-the-docs {
   color: #888;
 }
+
+.emergency-button {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #dc2626;
+  color: #ffffff;
+  padding: 0.5rem 1rem;
+  border-radius: 9999px;
+  font-weight: 600;
+  box-shadow: 0 10px 15px -3px rgba(220, 38, 38, 0.2), 0 4px 6px -2px rgba(220, 38, 38, 0.1);
+  transition: background-color 0.2s;
+}
+
+.emergency-button:hover {
+  background-color: #b91c1c;
+}
+
+.emergency-button-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.emergency-button-text {
+  display: none;
+}
+
+@media (min-width: 640px) {
+  .emergency-button-text {
+    display: inline;
+  }
+}
+
+.pulse-effect {
+  position: absolute;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  border-radius: 9999px;
+  border-width: 2px;
+  border-color: #ef4444;
+  animation: ping 1s cubic-bezier(0, 0, 0.2, 1) infinite;
+  opacity: 0.2;
+}
+
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  right: 0;
+  bottom: 0;
+  left: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background-color: rgba(15, 23, 42, 0.4);
+  backdrop-filter: blur(4px);
+}
+
+.modal-content {
+  background-color: #ffffff;
+  border-radius: 1rem;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  width: 100%;
+  max-width: 28rem;
+  overflow: hidden;
+}
+
+.modal-header {
+  background-color: #fee2e2;
+  padding: 1.5rem;
+  text-align: center;
+  border-bottom: 1px solid #fecaca;
+}
+
+.modal-icon-container {
+  width: 4rem;
+  height: 4rem;
+  background-color: #fecaca;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  color: #dc2626;
+}
+
+.modal-icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.modal-title {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  color: #b91c1c;
+  margin-bottom: 0.5rem;
+}
+
+.modal-description {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: rgba(220, 38, 38, 0.8);
+}
+
+.modal-body {
+  padding: 1.5rem;
+}
+
+.contacts-title {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  font-weight: 600;
+  color: #6b7280;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.75rem;
+}
+
+.contacts-list {
+  margin-bottom: 1.5rem;
+}
+
+.contact-item {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background-color: #f9fafb;
+  padding: 0.75rem;
+  border-radius: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.contact-info {
+  font-weight: 500;
+  color: #1f2937;
+}
+
+.contact-relationship {
+  font-size: 0.75rem;
+  line-height: 1rem;
+  color: #6b7280;
+}
+
+.contact-phone {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #4b5563;
+}
+
+.modal-actions {
+  display: flex;
+  gap: 0.75rem;
+}
+
+.confirm-button {
+  flex-grow: 1;
+  background-color: #dc2626;
+  color: #ffffff;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  box-shadow: 0 4px 6px -1px rgba(220, 38, 38, 0.1), 0 2px 4px -1px rgba(220, 38, 38, 0.06);
+  transition: background-color 0.2s;
+}
+
+.confirm-button:hover {
+  background-color: #b91c1c;
+}
+
+.confirm-button-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.cancel-button {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  padding: 0.75rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.cancel-button:hover {
+  background-color: #e5e7eb;
+}
+
+.cancel-button-icon {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.activated-view {
+  padding: 2rem;
+  text-align: center;
+}
+
+.activated-icon-container {
+  width: 4rem;
+  height: 4rem;
+  background-color: #dcfce7;
+  border-radius: 9999px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1rem;
+  color: #22c55e;
+}
+
+.activated-icon {
+  width: 2rem;
+  height: 2rem;
+}
+
+.activated-title {
+  font-size: 1.5rem;
+  line-height: 2rem;
+  font-weight: 700;
+  color: #166534;
+  margin-bottom: 0.5rem;
+}
+
+.activated-description {
+  font-size: 0.875rem;
+  line-height: 1.25rem;
+  color: #15803d;
+  margin-bottom: 1.5rem;
+}
+
+.close-button {
+  background-color: #f3f4f6;
+  color: #4b5563;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  transition: background-color 0.2s;
+}
+
+.close-button:hover {
+  background-color: #e5e7eb;
+}

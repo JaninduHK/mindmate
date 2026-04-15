@@ -6,6 +6,7 @@ const getDashboardByRole = (role) => {
   if (role === 'peer_supporter') return '/peer-supporter/dashboard';
   if (role === 'counselor') return '/counselor/dashboard';
   if (role === 'admin') return '/admin';
+  if (role === 'emergency_contact') return '/guardian-dashboard';
   return '/dashboard';
 };
 

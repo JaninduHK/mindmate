@@ -5,7 +5,7 @@ import { uploadAPI } from '../api/upload.api';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import toast from 'react-hot-toast';
-import { FiCamera, FiSave } from 'react-icons/fi';
+import { FiCamera, FiSave, FiToggleRight } from 'react-icons/fi';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
@@ -16,12 +16,28 @@ const Profile = () => {
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
 
+  // Settings state
+  const [settings, setSettings] = useState({
+    gpsEnabled: user?.settings?.gpsEnabled ?? true,
+    emailAlerts: user?.settings?.emailAlerts ?? true,
+    smsAlerts: user?.settings?.smsAlerts ?? true,
+    pushAlerts: user?.settings?.pushAlerts ?? true,
+  });
+
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({
       ...prev,
       [name]: value,
     }));
+  };
+
+  const handleToggleSetting = (key) => {
+    setSettings((prev) => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+    toast.success('Setting updated');
   };
 
   const handleUpdateProfile = async (e) => {
@@ -207,6 +223,106 @@ const Profile = () => {
                   <span className="text-yellow-600">Pending</span>
                 )}
               </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Emergency Settings */}
+        <div className="bg-white rounded-lg shadow p-6 mt-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            🚨 Emergency Settings
+          </h2>
+          <p className="text-sm text-gray-600 mb-6">
+            Configure how you receive emergency alerts and location sharing
+          </p>
+
+          <div className="space-y-4">
+            {/* GPS Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="font-medium text-gray-900">GPS Location Sharing</p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Share your real-time location when emergency mode is activated
+                </p>
+              </div>
+              <button
+                onClick={() => handleToggleSetting('gpsEnabled')}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                  settings.gpsEnabled ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                    settings.gpsEnabled ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Email Alerts Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="font-medium text-gray-900">Email Alerts</p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Receive emergency alerts via email
+                </p>
+              </div>
+              <button
+                onClick={() => handleToggleSetting('emailAlerts')}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                  settings.emailAlerts ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                    settings.emailAlerts ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* SMS Alerts Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="font-medium text-gray-900">SMS Alerts</p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Receive emergency alerts via SMS text message
+                </p>
+              </div>
+              <button
+                onClick={() => handleToggleSetting('smsAlerts')}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                  settings.smsAlerts ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                    settings.smsAlerts ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
+            </div>
+
+            {/* Push Alerts Toggle */}
+            <div className="flex items-center justify-between p-4 bg-gray-50 rounded-lg">
+              <div>
+                <p className="font-medium text-gray-900">Push Notifications</p>
+                <p className="text-xs text-gray-600 mt-1">
+                  Receive push notifications for emergency updates
+                </p>
+              </div>
+              <button
+                onClick={() => handleToggleSetting('pushAlerts')}
+                className={`relative inline-flex h-8 w-14 items-center rounded-full transition-colors ${
+                  settings.pushAlerts ? 'bg-green-500' : 'bg-gray-300'
+                }`}
+              >
+                <span
+                  className={`inline-block h-6 w-6 transform rounded-full bg-white transition-transform ${
+                    settings.pushAlerts ? 'translate-x-7' : 'translate-x-1'
+                  }`}
+                />
+              </button>
             </div>
           </div>
         </div>

@@ -3,7 +3,20 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
-import { FiUser, FiMail, FiLock } from 'react-icons/fi';
+import { FiUser, FiMail, FiLock, FiPhone } from 'react-icons/fi';
+import toast from 'react-hot-toast';
+import { validateName, validatePhone, validateEmail } from '../utils/emergencyContactValidation';
+
+const RELATIONSHIPS = [
+  { value: 'sister', label: 'Sister' },
+  { value: 'brother', label: 'Brother' },
+  { value: 'mother', label: 'Mother' },
+  { value: 'father', label: 'Father' },
+  { value: 'partner', label: 'Partner' },
+  { value: 'therapist', label: 'Therapist' },
+  { value: 'friend', label: 'Friend' },
+  { value: 'other', label: 'Other' },
+];
 
 const Register = () => {
   const navigate = useNavigate();
@@ -13,8 +26,16 @@ const Register = () => {
     email: '',
     password: '',
     confirmPassword: '',
+    initialEmergencyContact: {
+      fullName: '',
+      email: '',
+      phoneNumber: '',
+      relationship: 'friend',
+      enabled: false,
+    },
   });
   const [errors, setErrors] = useState({});
+  const [emergencyContactErrors, setEmergencyContactErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
   // Redirect if already authenticated
@@ -29,9 +50,34 @@ const Register = () => {
       ...prev,
       [name]: value,
     }));
-    // Clear error for this field
     if (errors[name]) {
       setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
+  };
+
+  const handleEmergencyContactChange = (e) => {
+    const { name, value, type, checked } = e.target;
+
+    if (type === 'checkbox') {
+      setFormData((prev) => ({
+        ...prev,
+        initialEmergencyContact: {
+          ...prev.initialEmergencyContact,
+          enabled: checked,
+        },
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        initialEmergencyContact: {
+          ...prev.initialEmergencyContact,
+          [name]: value,
+        },
+      }));
+    }
+
+    if (emergencyContactErrors[name]) {
+      setEmergencyContactErrors((prev) => ({ ...prev, [name]: '' }));
     }
   };
 
@@ -71,21 +117,54 @@ const Register = () => {
     return Object.keys(newErrors).length === 0;
   };
 
+  const validateEmergencyContact = () => {
+    if (!formData.initialEmergencyContact.enabled) {
+      return true;
+    }
+
+    const newErrors = {};
+    const ec = formData.initialEmergencyContact;
+
+    newErrors.fullName = validateName(ec.fullName);
+    newErrors.phoneNumber = validatePhone(ec.phoneNumber);
+    newErrors.email = validateEmail(ec.email);
+    if (!ec.relationship) newErrors.relationship = 'Relationship is required';
+
+    setEmergencyContactErrors(newErrors);
+    return !Object.values(newErrors).some(err => err !== null);
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) return;
+    if (!validateEmergencyContact()) return;
 
     setLoading(true);
-    const result = await register({
+
+    const registerData = {
       name: formData.name,
       email: formData.email,
       password: formData.password,
-    });
+    };
+
+    if (formData.initialEmergencyContact.enabled) {
+      registerData.initialEmergencyContact = {
+        fullName: formData.initialEmergencyContact.fullName,
+        email: formData.initialEmergencyContact.email,
+        phoneNumber: formData.initialEmergencyContact.phoneNumber,
+        relationship: formData.initialEmergencyContact.relationship,
+      };
+    }
+
+    const result = await register(registerData);
     setLoading(false);
 
     if (result.success) {
       navigate('/dashboard');
+    } else if (result.error?.invitationStatus?.failed) {
+      toast('Account created! Emergency contact invitation could not be sent right now.', { icon: 'ℹ️' });
+      setTimeout(() => navigate('/dashboard'), 1500);
     }
   };
 
@@ -104,65 +183,225 @@ const Register = () => {
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>
           <div className="space-y-4">
-            <div className="relative">
-              <FiUser className="absolute left-3 top-10 text-gray-400" />
-              <Input
-                label="Full Name"
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                error={errors.name}
-                required
-                className="pl-10"
-                placeholder="John Doe"
-              />
+            {/* Account Info */}
+            <div>
+              <h3 className="text-sm font-semibold text-gray-900 mb-3">Account Information</h3>
+              <div className="space-y-4">
+                <div className="relative">
+                  <FiUser className="absolute left-3 top-10 text-gray-400" />
+                  <Input
+                    label="Full Name"
+                    type="text"
+                    name="name"
+                    value={formData.name}
+                    onChange={handleChange}
+                    error={errors.name}
+                    required
+                    className="pl-10"
+                    placeholder="John Doe"
+                  />
+                </div>
+
+                <div className="relative">
+                  <FiMail className="absolute left-3 top-10 text-gray-400" />
+                  <Input
+                    label="Email Address"
+                    type="email"
+                    name="email"
+                    value={formData.email}
+                    onChange={handleChange}
+                    error={errors.email}
+                    required
+                    className="pl-10"
+                    placeholder="you@example.com"
+                  />
+                </div>
+
+                <div className="relative">
+                  <FiLock className="absolute left-3 top-10 text-gray-400" />
+                  <Input
+                    label="Password"
+                    type="password"
+                    name="password"
+                    value={formData.password}
+                    onChange={handleChange}
+                    error={errors.password}
+                    required
+                    className="pl-10"
+                    placeholder="••••••••"
+                    helperText="Min 8 chars, with uppercase, lowercase & number"
+                  />
+                </div>
+
+                <div className="relative">
+                  <FiLock className="absolute left-3 top-10 text-gray-400" />
+                  <Input
+                    label="Confirm Password"
+                    type="password"
+                    name="confirmPassword"
+                    value={formData.confirmPassword}
+                    onChange={handleChange}
+                    error={errors.confirmPassword}
+                    required
+                    className="pl-10"
+                    placeholder="••••••••"
+                  />
+                </div>
+              </div>
             </div>
 
-            <div className="relative">
-              <FiMail className="absolute left-3 top-10 text-gray-400" />
-              <Input
-                label="Email Address"
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                error={errors.email}
-                required
-                className="pl-10"
-                placeholder="you@example.com"
-              />
-            </div>
+            {/* Emergency Contact Section */}
+            <div className="pt-4 border-t border-gray-200">
+              <label className="flex items-center space-x-3 cursor-pointer mb-4">
+                <input
+                  type="checkbox"
+                  checked={formData.initialEmergencyContact.enabled}
+                  onChange={handleEmergencyContactChange}
+                  className="w-4 h-4 border border-gray-300 rounded focus:ring-2 focus:ring-primary-500"
+                />
+                <span className="text-sm font-semibold text-gray-900">Add an Emergency Contact</span>
+              </label>
 
-            <div className="relative">
-              <FiLock className="absolute left-3 top-10 text-gray-400" />
-              <Input
-                label="Password"
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                error={errors.password}
-                required
-                className="pl-10"
-                placeholder="••••••••"
-                helperText="Min 8 chars, with uppercase, lowercase & number"
-              />
-            </div>
+              {formData.initialEmergencyContact.enabled && (
+                <div className="space-y-4 bg-blue-50 p-4 rounded-lg border border-blue-200">
+                  <p className="text-xs text-blue-800 mb-3">
+                    Add a trusted person who will be notified during emergencies. You can add more contacts later.
+                  </p>
 
-            <div className="relative">
-              <FiLock className="absolute left-3 top-10 text-gray-400" />
-              <Input
-                label="Confirm Password"
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                error={errors.confirmPassword}
-                required
-                className="pl-10"
-                placeholder="••••••••"
-              />
+                  {/* Full Name Field */}
+                  <div className="relative">
+                    <FiUser className="absolute left-3 top-10 text-gray-400" />
+                    <Input
+                      label="Contact Full Name"
+                      type="text"
+                      name="fullName"
+                      value={formData.initialEmergencyContact.fullName}
+                      onChange={handleEmergencyContactChange}
+                      error={emergencyContactErrors.fullName}
+                      required={formData.initialEmergencyContact.enabled}
+                      className={`pl-10 ${
+                        emergencyContactErrors.fullName
+                          ? 'border-red-500 focus:ring-red-500'
+                          : formData.initialEmergencyContact.fullName && !emergencyContactErrors.fullName
+                          ? 'border-green-500 focus:ring-green-500'
+                          : ''
+                      }`}
+                      placeholder="Jane Doe"
+                      maxLength="30"
+                    />
+                    {emergencyContactErrors.fullName && (
+                      <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                        <span>⚠️</span> {emergencyContactErrors.fullName}
+                      </p>
+                    )}
+                    {formData.initialEmergencyContact.fullName && !emergencyContactErrors.fullName && (
+                      <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                        <span>✓</span> Valid name
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      {formData.initialEmergencyContact.fullName.length}/30 characters
+                    </p>
+                  </div>
+
+                  {/* Email Field */}
+                  <div className="relative">
+                    <FiMail className="absolute left-3 top-10 text-gray-400" />
+                    <Input
+                      label="Contact Email"
+                      type="email"
+                      name="email"
+                      value={formData.initialEmergencyContact.email}
+                      onChange={handleEmergencyContactChange}
+                      error={emergencyContactErrors.email}
+                      required={formData.initialEmergencyContact.enabled}
+                      className={`pl-10 ${
+                        emergencyContactErrors.email
+                          ? 'border-red-500 focus:ring-red-500'
+                          : formData.initialEmergencyContact.email && !emergencyContactErrors.email
+                          ? 'border-green-500 focus:ring-green-500'
+                          : ''
+                      }`}
+                      placeholder="jane@example.com"
+                      maxLength="50"
+                    />
+                    {emergencyContactErrors.email && (
+                      <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                        <span>⚠️</span> {emergencyContactErrors.email}
+                      </p>
+                    )}
+                    {formData.initialEmergencyContact.email && !emergencyContactErrors.email && (
+                      <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                        <span>✓</span> Valid email
+                      </p>
+                    )}
+                    <p className="mt-1 text-xs text-gray-500">
+                      {formData.initialEmergencyContact.email.length}/50 characters
+                    </p>
+                  </div>
+
+                  {/* Phone Field */}
+                  <div className="relative">
+                    <FiPhone className="absolute left-3 top-10 text-gray-400" />
+                    <Input
+                      label="Contact Phone"
+                      type="tel"
+                      name="phoneNumber"
+                      value={formData.initialEmergencyContact.phoneNumber}
+                      onChange={handleEmergencyContactChange}
+                      error={emergencyContactErrors.phoneNumber}
+                      required={formData.initialEmergencyContact.enabled}
+                      className={`pl-10 ${
+                        emergencyContactErrors.phoneNumber
+                          ? 'border-red-500 focus:ring-red-500'
+                          : formData.initialEmergencyContact.phoneNumber && !emergencyContactErrors.phoneNumber
+                          ? 'border-green-500 focus:ring-green-500'
+                          : ''
+                      }`}
+                      placeholder="+94701234567"
+                      helperText="Sri Lankan format: +94XXXXXXXXX or 0XXXXXXXXX"
+                    />
+                    {emergencyContactErrors.phoneNumber && (
+                      <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                        <span>⚠️</span> {emergencyContactErrors.phoneNumber}
+                      </p>
+                    )}
+                    {formData.initialEmergencyContact.phoneNumber && !emergencyContactErrors.phoneNumber && (
+                      <p className="mt-1 text-xs text-green-600 flex items-center gap-1">
+                        <span>✓</span> Valid phone number
+                      </p>
+                    )}
+                  </div>
+
+                  {/* Relationship Field */}
+                  <div>
+                    <label className="block text-sm font-medium text-gray-700 mb-1">
+                      Relationship <span className="text-red-500">*</span>
+                    </label>
+                    <select
+                      name="relationship"
+                      value={formData.initialEmergencyContact.relationship}
+                      onChange={handleEmergencyContactChange}
+                      className={`w-full px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 transition-colors ${
+                        emergencyContactErrors.relationship
+                          ? 'border-red-500 focus:ring-red-500'
+                          : 'border-gray-300'
+                      }`}
+                    >
+                      {RELATIONSHIPS.map((rel) => (
+                        <option key={rel.value} value={rel.value}>
+                          {rel.label}
+                        </option>
+                      ))}
+                    </select>
+                    {emergencyContactErrors.relationship && (
+                      <p className="mt-1 text-xs text-red-600 flex items-center gap-1">
+                        <span>⚠️</span> {emergencyContactErrors.relationship}
+                      </p>
+                    )}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -170,7 +409,14 @@ const Register = () => {
             type="submit"
             fullWidth
             loading={loading}
-            disabled={loading}
+            disabled={
+              loading ||
+              (formData.initialEmergencyContact.enabled &&
+                (Object.values(emergencyContactErrors).some(err => err !== null) ||
+                  !formData.initialEmergencyContact.fullName ||
+                  !formData.initialEmergencyContact.email ||
+                  !formData.initialEmergencyContact.phoneNumber))
+            }
           >
             Create Account
           </Button>

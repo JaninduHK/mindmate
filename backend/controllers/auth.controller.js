@@ -1,11 +1,17 @@
 import User from '../models/User.model.js';
 import RefreshToken from '../models/RefreshToken.model.js';
+import EmergencyContact from '../models/EmergencyContact.model.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.util.js';
 import { generateUsername } from '../utils/username.util.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { HTTP_STATUS, JWT_CONFIG } from '../config/constants.js';
+import invitationService from '../services/invitationService.js';
+import { sendEmail } from '../utils/email.util.js';
+import { composeInvitationEmail } from '../utils/invitationMailer.js';
+import { composeInvitationSMS } from '../utils/smsBodies.js';
+import { generateInvitationUrl, verifyTokenHash } from '../utils/tokenGenerator.js';
 
 // Helper function to set refresh token cookie
 const setRefreshTokenCookie = (res, token) => {
@@ -19,7 +25,7 @@ const setRefreshTokenCookie = (res, token) => {
 
 // Register new user
 export const register = asyncHandler(async (req, res) => {
-  const { name, email, password } = req.body;
+  const { name, email, password, initialEmergencyContact } = req.body;
 
   // Check if user already exists
   const existingUser = await User.findOne({ email });
@@ -60,13 +66,79 @@ export const register = asyncHandler(async (req, res) => {
   // Set refresh token cookie
   setRefreshTokenCookie(res, refreshToken);
 
+  // Handle initial emergency contact if provided
+  let invitationStatus = null;
+  if (initialEmergencyContact && initialEmergencyContact.fullName) {
+    try {
+      // Create emergency contact
+      const emergencyContact = await EmergencyContact.create({
+        ownerUserId: user._id,
+        fullName: initialEmergencyContact.fullName,
+        email: initialEmergencyContact.email,
+        phoneNumber: initialEmergencyContact.phoneNumber,
+        relationship: initialEmergencyContact.relationship,
+        inviteStatus: 'pending',
+      });
+
+      // Create invitation
+      const { token: invitationToken, expiresAt: tokenExpiresAt } = await invitationService.createInvitation(
+        user._id,
+        emergencyContact._id,
+        initialEmergencyContact.email
+      );
+
+      // Generate invitation URL
+      const frontendUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+      const invitationUrl = generateInvitationUrl(invitationToken, frontendUrl);
+
+      // Compose and send email
+      const emailContent = composeInvitationEmail(
+        initialEmergencyContact.fullName,
+        user.name,
+        invitationUrl,
+        initialEmergencyContact.relationship
+      );
+
+      await sendEmail({
+        to: initialEmergencyContact.email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      });
+
+      // Compose and send SMS (if SMS service is available)
+      const smsContent = composeInvitationSMS(user.name, invitationUrl);
+      console.log(`[SMS] Would send to ${initialEmergencyContact.phoneNumber}: ${smsContent.body}`);
+      // TODO: Integrate actual SMS service (Twilio, etc.) when available
+
+      invitationStatus = {
+        success: true,
+        message: 'Invitation sent successfully via email and SMS',
+        expiresAt: tokenExpiresAt,
+      };
+    } catch (error) {
+      console.error('Error creating emergency contact invitation:', error);
+      // Don't fail the registration if invitation fails
+      invitationStatus = {
+        success: false,
+        message: `Failed to send invitation: ${error.message}`,
+      };
+    }
+  }
+
+  const responseData = {
+    user: user.toPublicJSON(),
+    accessToken,
+  };
+
+  if (invitationStatus) {
+    responseData.invitationStatus = invitationStatus;
+  }
+
   res.status(HTTP_STATUS.CREATED).json(
     new ApiResponse(
       HTTP_STATUS.CREATED,
-      {
-        user: user.toPublicJSON(),
-        accessToken,
-      },
+      responseData,
       'User registered successfully'
     )
   );
@@ -271,6 +343,107 @@ export const registerPeerSupporter = asyncHandler(async (req, res) => {
       HTTP_STATUS.CREATED,
       { user: user.toPublicJSON(), accessToken },
       'Peer supporter registered successfully'
+    )
+  );
+});
+
+// Register as guardian/emergency contact using invitation token (optional)
+export const guardianSignup = asyncHandler(async (req, res) => {
+  const { name, email, password, invitationToken } = req.body;
+
+  // Validate required fields
+  if (!name || !email || !password) {
+    throw new ApiError(
+      HTTP_STATUS.BAD_REQUEST,
+      'Name, email, and password are required'
+    );
+  }
+
+  // Check if user already exists
+  const existingUser = await User.findOne({ email });
+  if (existingUser) {
+    throw new ApiError(HTTP_STATUS.CONFLICT, 'Email already registered');
+  }
+
+  // If invitation token is provided, verify it
+  let emergencyContact = null;
+  if (invitationToken) {
+    // Find the emergency contact invitation record
+    emergencyContact = await EmergencyContact.findOne({
+      email,
+      inviteStatus: 'pending',
+    }).select('+inviteTokenHash inviteExpiresAt');
+
+    if (!emergencyContact) {
+      throw new ApiError(
+        HTTP_STATUS.BAD_REQUEST,
+        'Invalid or expired invitation. Please contact the person who invited you.'
+      );
+    }
+
+    // Verify the token hash
+    const isTokenValid = verifyTokenHash(invitationToken, emergencyContact.inviteTokenHash);
+    if (!isTokenValid) {
+      throw new ApiError(HTTP_STATUS.UNAUTHORIZED, 'Invalid invitation token');
+    }
+
+    // Check if token has expired
+    if (emergencyContact.inviteExpiresAt && new Date() > emergencyContact.inviteExpiresAt) {
+      throw new ApiError(HTTP_STATUS.UNAUTHORIZED, 'Invitation token has expired');
+    }
+  }
+
+  // Generate a unique friendly username
+  let username;
+  for (let i = 0; i < 5; i++) {
+    const candidate = generateUsername();
+    const exists = await User.findOne({ username: candidate }).select('_id');
+    if (!exists) {
+      username = candidate;
+      break;
+    }
+  }
+  if (!username) username = generateUsername();
+
+  // Create the new user as emergency_contact
+  const user = await User.create({
+    name,
+    email,
+    password,
+    username,
+    role: 'emergency_contact',
+  });
+
+  // If this is from an invitation, link the emergency contact record
+  if (emergencyContact) {
+    emergencyContact.contactUserId = user._id;
+    emergencyContact.inviteStatus = 'accepted';
+    emergencyContact.inviteTokenHash = null; // Clear the token after use
+    await emergencyContact.save();
+  }
+
+  // Generate tokens
+  const accessToken = generateAccessToken({ userId: user._id });
+  const refreshToken = generateRefreshToken({ userId: user._id });
+
+  // Store refresh token
+  await RefreshToken.create({
+    userId: user._id,
+    token: refreshToken,
+    expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+  });
+
+  // Set refresh token cookie
+  setRefreshTokenCookie(res, refreshToken);
+
+  res.status(HTTP_STATUS.CREATED).json(
+    new ApiResponse(
+      HTTP_STATUS.CREATED,
+      {
+        user: user.toPublicJSON(),
+        accessToken,
+      },
+      'Guardian account created successfully'
     )
   );
 });

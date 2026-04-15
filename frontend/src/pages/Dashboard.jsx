@@ -74,10 +74,16 @@ const Dashboard = () => {
             Quick Actions
           </h2>
           <div className="grid md:grid-cols-3 gap-4">
-            <Link to="/events" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
-              <h3 className="font-semibold text-gray-900">Browse Events</h3>
+            <Link to="/content-library" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">📚 Content Library</h3>
               <p className="text-gray-600 text-sm mt-1">
-                Find sessions and workshops near you
+                Explore expert-curated mental health resources
+              </p>
+            </Link>
+            <Link to="/emergency-contacts" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">🚨 Emergency Contacts</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                Manage your emergency contacts
               </p>
             </Link>
             <Link to="/booking/my" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
@@ -89,7 +95,19 @@ const Dashboard = () => {
             <Link to="/personal-tracking" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
               <h3 className="font-semibold text-gray-900">Personal Tracker</h3>
               <p className="text-gray-600 text-sm mt-1">
-                Manage your mood history and daily goals.
+                Manage your mood history and daily goals
+              </p>
+            </Link>
+            <Link to="/events" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">Browse Events</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                Find sessions and workshops near you
+              </p>
+            </Link>
+            <Link to="/profile" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">⚙️ Settings</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                Manage GPS and alert preferences
               </p>
             </Link>
           </div>

@@ -35,11 +35,13 @@ import moodRoutes from './routes/moodRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
 import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
 import moodConfigRoutes from './routes/moodConfig.routes.js';
+import guardianRoutes from './routes/guardian.routes.js';
+import emergencyContactRoutes from './routes/emergencyContact.routes.js';
 
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
-const PORT = process.env.PORT || 5000;
+const PORT = process.env.PORT || 5001;
 
 // Configure Cloudinary
 configureCloudinary();
@@ -48,8 +50,28 @@ configureCloudinary();
 // ===============================
 // CORS CONFIGURATION
 // ===============================
+const allowedOrigins = [
+  process.env.CLIENT_URL,
+  'http://localhost:5173',
+  'http://localhost:5174',
+  'http://127.0.0.1:5173',
+  'http://127.0.0.1:5174',
+].filter(Boolean);
+
 const corsOptions = {
-  origin: process.env.CLIENT_URL || 'http://localhost:5173',
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // Allow if the origin is in our list
+    if (allowedOrigins.some(allowedOrigin => origin.startsWith(allowedOrigin))) {
+      return callback(null, true);
+    }
+
+    // Block if not in the list
+    const msg = `The CORS policy for this site does not allow access from the specified Origin: ${origin}`;
+    return callback(new Error(msg), false);
+  },
   credentials: true,
   optionsSuccessStatus: 200,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
@@ -148,6 +170,8 @@ app.use('/api/moods', moodRoutes);
 app.use('/api/personal-tracking/goals', goalRoutes);
 app.use('/api/personal-tracking/analytics', personalTrackingAnalyticsRoutes);
 app.use('/api/mood-config', moodConfigRoutes);
+app.use('/api/guardian', guardianRoutes);
+app.use('/api/emergency-contacts', emergencyContactRoutes);
 
 
 // ===============================

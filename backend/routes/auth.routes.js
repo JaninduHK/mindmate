@@ -2,6 +2,7 @@ import express from 'express';
 import {
   register,
   registerPeerSupporter,
+  guardianSignup,
   login,
   refreshAccessToken,
   logout,
@@ -28,6 +29,7 @@ const authLimiter = rateLimit({
 // Public routes
 router.post('/register', authLimiter, validate(registerSchema), register);
 router.post('/register/peer-supporter', authLimiter, validate(registerSchema), registerPeerSupporter);
+router.post('/guardian-signup', authLimiter, validate(registerSchema), guardianSignup);
 router.post('/login', authLimiter, validate(loginSchema), login);
 router.post('/refresh', refreshAccessToken);
 router.post('/logout', logout);

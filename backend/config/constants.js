@@ -21,6 +21,7 @@ export const USER_ROLES = {
   USER: 'user',
   COUNSELOR: 'counselor',
   PEER_SUPPORTER: 'peer_supporter',
+  EMERGENCY_CONTACT: 'emergency_contact',
   ADMIN: 'admin',
 };
 

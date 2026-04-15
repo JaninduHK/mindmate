@@ -2,6 +2,7 @@ import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../../hooks/useAuth';
 import Button from '../common/Button';
 import NotificationBell from '../notifications/NotificationBell';
+import EmergencyButton from '../emergency/emergency/EmergencyButton.jsx';
 import { FiUser, FiLogOut, FiMenu } from 'react-icons/fi';
 import { useState } from 'react';
 
@@ -18,6 +19,7 @@ const Header = () => {
   const isCounselor = user?.role === 'counselor';
   const isAdmin = user?.role === 'admin';
   const isPeerSupporter = user?.role === 'peer_supporter';
+  const isEmergencyContact = user?.role === 'emergency_contact';
 
   return (
     <header className="bg-white shadow-sm">
@@ -48,6 +50,12 @@ const Header = () => {
                   </Link>
                 )}
 
+                {isEmergencyContact && (
+                  <Link to="/guardian/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
+                    Dashboard
+                  </Link>
+                )}
+
                 {isCounselor && (
                   <Link to="/counselor/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
                     My Studio
@@ -68,22 +76,21 @@ const Header = () => {
 
                 <NotificationBell />
 
-                <Link
-                  to="/profile"
-                  className="text-gray-700 hover:text-primary-600 transition-colors flex items-center space-x-1 text-sm"
-                >
-                  <FiUser />
-                  <span>{user?.username || user?.name}</span>
-                </Link>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={handleLogout}
-                  className="flex items-center space-x-1"
-                >
-                  <FiLogOut />
-                  <span>Logout</span>
-                </Button>
+                <div className="flex items-center space-x-2">
+                  {/* Emergency button for regular users */}
+                  {user?.role === 'user' && (
+                    <EmergencyButton />
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={handleLogout}
+                    className="flex items-center space-x-1"
+                  >
+                    <FiLogOut />
+                    <span>Logout</span>
+                  </Button>
+                </div>
               </>
             ) : (
               <>
@@ -115,6 +122,10 @@ const Header = () => {
                   <Link to="/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Dashboard</Link>
                 )}
 
+                {isEmergencyContact && (
+                  <Link to="/guardian/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Dashboard</Link>
+                )}
+
                 {isCounselor && (
                   <Link to="/counselor/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>My Studio</Link>
                 )}
@@ -123,6 +134,10 @@ const Header = () => {
                 )}
                 {isAdmin && (
                   <Link to="/admin" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Admin</Link>
+                )}
+
+                {user?.role === 'user' && (
+                  <Link to="/emergency-contacts" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>Emergency Contacts</Link>
                 )}
 
                 {!isAdmin && (

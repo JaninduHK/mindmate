@@ -68,6 +68,44 @@ const userSchema = new mongoose.Schema(
     lastAvailableToggle: {
       type: Date,
     },
+    // Crisis Detection & Emergency Response fields
+    phoneNumber: {
+      type: String,
+      sparse: true,
+      trim: true,
+    },
+    linkedUsers: {
+      type: [mongoose.Schema.Types.ObjectId],
+      ref: 'User',
+      default: [],
+    },
+    preferences: {
+      gpsEnabled: {
+        type: Boolean,
+        default: false,
+      },
+      alertChannels: {
+        email: {
+          type: Boolean,
+          default: true,
+        },
+        sms: {
+          type: Boolean,
+          default: false,
+        },
+      },
+    },
+    lastActiveAt: {
+      type: Date,
+      default: () => new Date(),
+    },
+    isEmergencyModeActive: {
+      type: Boolean,
+      default: false,
+    },
+    emergencyModeActivatedAt: {
+      type: Date,
+    },
   },
   {
     timestamps: true,
