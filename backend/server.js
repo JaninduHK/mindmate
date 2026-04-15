@@ -38,6 +38,10 @@ import moodConfigRoutes from './routes/moodConfig.routes.js';
 import guardianRoutes from './routes/guardian.routes.js';
 import emergencyContactRoutes from './routes/emergencyContact.routes.js';
 
+// Import models to ensure they are created in MongoDB
+import GuardianSignup from './models/GuardianSignup.model.js';
+import GuardianSignin from './models/GuardianSignin.model.js';
+
 // Initialize Express app
 const app = express();
 const server = http.createServer(app);
@@ -52,10 +56,20 @@ configureCloudinary();
 // ===============================
 const allowedOrigins = [
   process.env.CLIENT_URL,
+  'http://localhost:3000',
+  'http://localhost:3001',
   'http://localhost:5173',
   'http://localhost:5174',
+  'http://localhost:5175',
+  'http://localhost:5176',
+  'http://localhost:5177',
+  'http://127.0.0.1:3000',
+  'http://127.0.0.1:3001',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
+  'http://127.0.0.1:5175',
+  'http://127.0.0.1:5176',
+  'http://127.0.0.1:5177',
 ].filter(Boolean);
 
 const corsOptions = {

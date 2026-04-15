@@ -36,4 +36,10 @@ export const contactsAPI = {
     const response = await axiosInstance.post(`/emergency-contacts/${id}/resend-invite`);
     return response.data;
   },
+
+  // Get all monitored users (for guardians/emergency_contact role)
+  getMonitoredUsers: async () => {
+    const response = await axiosInstance.get('/emergency-contacts/guardian/monitored');
+    return response.data;
+  },
 };

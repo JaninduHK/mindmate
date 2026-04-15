@@ -3,7 +3,7 @@ import axiosInstance from '../../api/axios.config';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
 
-import AnalyticsCards from '../../components/personalTracking/AnalyticsCards';
+import AnalyticsSummary from '../../components/personalTracking/AnalyticsSummary';
 import AdminWellnessDashboard from '../../components/personalTracking/AdminWellnessDashboard';
 
 export default function AnalyticsPage() {
@@ -32,7 +32,7 @@ export default function AnalyticsPage() {
     <div className="space-y-8">
       {/* Header Section */}
       <div className="text-center">
-        <p className="text-xs font-bold uppercase tracking-wider text-primary-600">
+        <p className="text-4xs font-bold uppercase tracking-wider text-primary-600">
           Analytics & Insights
         </p>
         <h2 className="text-2xl font-bold text-gray-900 mt-1">
@@ -56,7 +56,7 @@ export default function AnalyticsPage() {
       ) : (
         <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-shadow hover:shadow-md">
           <div className="p-6">
-            <AnalyticsCards summary={summary} />
+            <AnalyticsSummary analytics={summary} />
           </div>
         </div>
       )}

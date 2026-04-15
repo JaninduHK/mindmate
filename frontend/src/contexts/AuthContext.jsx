@@ -1,4 +1,4 @@
-import { createContext, useState, useEffect } from 'react';
+import { createContext, useState, useEffect, useMemo } from 'react';
 import { authAPI } from '../api/auth.api';
 import { setAccessToken, clearAccessToken } from '../api/axios.config';
 import toast from 'react-hot-toast';
@@ -75,16 +75,28 @@ export const AuthProvider = ({ children }) => {
   const login = async (credentials) => {
     try {
       const response = await authAPI.login(credentials);
-      if (response.success) {
-        setUser(response.data.user);
-        setAccessToken(response.data.accessToken);
+      
+      // Handle response - it could be nested as response.data or response
+      const loginData = response.data || response;
+      
+      if (response.success || response.statusCode === 200) {
+        const userData = loginData.user;
+        const token = loginData.accessToken;
+        
+        // Validate we have required data
+        if (!userData || !token) {
+          throw new Error('Invalid response from server - missing user or token data');
+        }
+        
+        setUser(userData);
+        setAccessToken(token);
         setIsAuthenticated(true);
         toast.success(response.message || 'Login successful!');
-        return { success: true, user: response.data.user };
+        return { success: true, user: userData };
       }
       return { success: false, error: 'Login failed' };
     } catch (error) {
-      const message = error.response?.data?.message || 'Login failed';
+      const message = error.response?.data?.message || error.message || 'Login failed';
       toast.error(message);
       return { success: false, error: message };
     }
@@ -112,7 +124,8 @@ export const AuthProvider = ({ children }) => {
     setUser((prev) => ({ ...prev, ...userData }));
   };
 
-  const value = {
+  // Memoize the context value to prevent unnecessary re-renders
+  const value = useMemo(() => ({
     user,
     loading,
     isAuthenticated,
@@ -121,7 +134,7 @@ export const AuthProvider = ({ children }) => {
     login,
     logout,
     updateUser,
-  };
+  }), [user, loading, isAuthenticated]);
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 };

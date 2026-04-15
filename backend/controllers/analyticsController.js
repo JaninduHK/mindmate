@@ -29,7 +29,7 @@ export const getAnalyticsSummary = asyncHandler(async (req, res) => {
     Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
   );
 
-  const [mostCommonMoodAgg, stressCount, moodCounts, missingGoalsCount] = await Promise.all([
+  const [mostCommonMoodAgg, stressCount, moodCounts, missingGoalsCount, goalCounts] = await Promise.all([
     Mood.aggregate([
       { $match: { userId } },
       { $group: { _id: '$mood', count: { $sum: 1 } } },
@@ -43,6 +43,10 @@ export const getAnalyticsSummary = asyncHandler(async (req, res) => {
     ]),
     // Missing = incomplete AND strictly before today (UTC)
     Goal.countDocuments({ userId, status: 'incomplete', date: { $lt: startOfTodayUTC } }),
+    Goal.aggregate([
+      { $match: { userId } },
+      { $group: { _id: '$status', count: { $sum: 1 } } },
+    ]),
   ]);
 
   const mostCommonMood = mostCommonMoodAgg?.[0]?._id ?? null;
@@ -56,6 +60,8 @@ export const getAnalyticsSummary = asyncHandler(async (req, res) => {
     return { mood, count, percent };
   });
 
+  const goalSummary = goalCounts ?? [];
+
   res.json(
     new ApiResponse(
       HTTP_STATUS.OK,
@@ -64,6 +70,7 @@ export const getAnalyticsSummary = asyncHandler(async (req, res) => {
         stressCount,
         missingGoalsCount,
         moodDistribution,
+        goalSummary,
       },
       'Analytics summary retrieved'
     )

@@ -106,6 +106,26 @@ const userSchema = new mongoose.Schema(
     emergencyModeActivatedAt: {
       type: Date,
     },
+    emergencyMode: {
+      type: Boolean,
+      default: false,
+    },
+    emergencyActivatedAt: {
+      type: Date,
+    },
+    emergencyDeactivatedAt: {
+      type: Date,
+    },
+    emergencyLocation: {
+      type: {
+        type: String,
+        enum: ['Point'],
+        default: 'Point',
+      },
+      coordinates: {
+        type: [Number], // [longitude, latitude]
+      },
+    },
   },
   {
     timestamps: true,

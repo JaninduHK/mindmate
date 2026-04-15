@@ -1,11 +1,12 @@
+import React from 'react';
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
-import { EmergencyProvider } from './context/EmergencyContext';
+import { AppProvider } from './context/AppContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
+import EmergencyBanner from './components/emergency/EmergencyBanner';
 import ProtectedRoute from './components/common/ProtectedRoute';
-import EmergencyModeBanner from './components/emergency/EmergencyModeBanner';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -19,14 +20,6 @@ import ContentLibrary from './pages/ContentLibrary';
 import EmergencyContacts from './pages/EmergencyContacts';
 import NotFound from './pages/NotFound';
 import ChatPage from './pages/chat/ChatPage';
-
-// Crisis System Pages
-import EmergencyContactsPage from './pages/emergency/contacts/EmergencyContactsPage';
-import ContentLibraryPage from './pages/emergency/content/ContentLibraryPage';
-import NotificationsPage from './pages/emergency/notifications/NotificationsPage';
-import ProfileSettingsPage from './pages/emergency/settings/ProfileSettingsPage';
-import InvitationAcceptPage from './pages/emergency/invitation/InvitationAcceptPage';
-import GuardianDashboardPage from './pages/emergency/guardian/GuardianDashboardPage';
 
 // Events
 import EventList from './pages/Events/EventList';
@@ -67,9 +60,9 @@ function App() {
   return (
     <BrowserRouter>
       <AuthProvider>
-        <EmergencyProvider>
+        <AppProvider>
           <AppContent />
-        </EmergencyProvider>
+        </AppProvider>
       </AuthProvider>
     </BrowserRouter>
   );
@@ -77,6 +70,27 @@ function App() {
 
 function AppContent() {
   const { user } = useAuth();
+  const [emergencyActive, setEmergencyActive] = React.useState(false);
+
+  // Check emergency status and listen for changes
+  React.useEffect(() => {
+    const checkEmergencyStatus = () => {
+      const isActive = localStorage.getItem('emergencyModeActive') === 'true';
+      setEmergencyActive(isActive);
+    };
+
+    checkEmergencyStatus();
+
+    window.addEventListener('emergencyActivated', checkEmergencyStatus);
+    window.addEventListener('emergencyDeactivated', checkEmergencyStatus);
+    window.addEventListener('storage', checkEmergencyStatus);
+
+    return () => {
+      window.removeEventListener('emergencyActivated', checkEmergencyStatus);
+      window.removeEventListener('emergencyDeactivated', checkEmergencyStatus);
+      window.removeEventListener('storage', checkEmergencyStatus);
+    };
+  }, []);
 
   return (
     <div className="flex flex-col min-h-screen">
@@ -89,9 +103,9 @@ function AppContent() {
                 error: { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
               }}
             />
-            {user?.role !== 'emergency_contact' && <EmergencyModeBanner />}
-            {user?.role !== 'emergency_contact' && <Header />}
-            <main className="flex-1">
+            <EmergencyBanner />
+            <Header />
+            <main className={`flex-1 ${emergencyActive ? 'pt-40' : ''}`}>
             <Routes>
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
@@ -100,7 +114,6 @@ function AppContent() {
               <Route path="/register/guardian" element={<GuardianSignup />} />
               <Route path="/register" element={<Register />} />
               <Route path="/register/peer-supporter" element={<PeerSupporterRegister />} />
-              <Route path="/invitation/:token" element={<InvitationAcceptPage />} />
               <Route path="/events" element={<EventList />} />
               <Route path="/events/:id" element={<EventDetail />} />
               <Route path="/counselors" element={<CounselorList />} />
@@ -113,8 +126,6 @@ function AppContent() {
                 <Route path="/dashboard" element={<Dashboard />} />
                 <Route path="/emergency-contacts" element={<EmergencyContacts />} />
                 <Route path="/content-library" element={<ContentLibrary />} />
-                <Route path="/notifications" element={<NotificationsPage />} />
-                <Route path="/profile/settings" element={<ProfileSettingsPage />} />
               </Route>
 
               {/* Protected — user + admin */}

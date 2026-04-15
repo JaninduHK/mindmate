@@ -14,11 +14,16 @@ const CounselorList = () => {
       setLoading(true);
       try {
         const res = await counselorAPI.list({ page, limit: 12 });
-        if (res.success) {
-          setCounselors(res.data.counselors);
-          setTotalPages(res.data.pages);
+        if (res && res.counselors) {
+          setCounselors(res.counselors);
+          setTotalPages(res.pages || 1);
+        } else {
+          setCounselors([]);
         }
-      } catch {}
+      } catch (error) {
+        console.error('Error fetching counselors:', error);
+        setCounselors([]);
+      }
       setLoading(false);
     };
     fetch();

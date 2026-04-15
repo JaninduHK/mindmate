@@ -3,6 +3,10 @@ import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
 import Mood from '../models/Mood.js';
 import { HTTP_STATUS } from '../config/constants.js';
+import { analyzeRiskLevel } from '../services/riskDetection.service.js';
+import Notification from '../models/Notification.model.js';
+import EmergencyContact from '../models/EmergencyContact.model.js';
+import User from '../models/User.model.js';
 
 const toUTCDateOnly = (input) => {
   if (!input) return null;
@@ -47,11 +51,75 @@ export const addMood = asyncHandler(async (req, res) => {
     description,
   });
 
+  // ========================================
+  // RISK DETECTION & GUARDIAN NOTIFICATION
+  // ========================================
+  const riskAnalysis = analyzeRiskLevel(description, mood);
+  
+  if (riskAnalysis.level === 'HIGH_RISK') {
+    try {
+      // Get all accepted emergency contacts
+      const emergencyContacts = await EmergencyContact.find({
+        ownerUserId: userId,
+        inviteStatus: 'accepted',
+      });
+
+      // Get current user info
+      const user = await User.findById(userId).select('name email');
+
+      // Create notifications for all emergency contacts
+      if (emergencyContacts.length > 0) {
+        const notifications = emergencyContacts.map((contact) => ({
+          recipientUserId: contact.contactUserId,
+          relatedUserId: userId,
+          type: 'HIGH_RISK_ALERT',
+          severity: 'critical',
+          title: `⚠️ HIGH RISK ALERT: ${user.name} needs attention`,
+          message: `User is showing signs of severe distress. Keyword: "${riskAnalysis.triggerKeyword}". Last mood: ${mood}`,
+          metadata: {
+            riskScore: 'HIGH',
+            triggerKeyword: riskAnalysis.triggerKeyword,
+            moodType: mood,
+            moodDescription: description,
+          },
+          isRead: false,
+        }));
+
+        await Notification.insertMany(notifications);
+      }
+
+      // Emit socket event to notify guardians in real-time
+      if (global.io) {
+        emergencyContacts.forEach((contact) => {
+          global.io.to(`user_${contact.contactUserId}`).emit('HIGH_RISK_ALERT', {
+            userId,
+            userName: user.name,
+            moodType: mood,
+            triggerKeyword: riskAnalysis.triggerKeyword,
+            timestamp: new Date(),
+          });
+        });
+      }
+    } catch (error) {
+      console.error('Error creating risk notifications:', error);
+      // Don't fail the mood creation if notification fails
+    }
+  }
+
   const response = moodEntry.toObject();
   response.date = formatDateOnly(response.date);
+  response.riskLevel = riskAnalysis.level;
   delete response.userId;
 
-  res.status(HTTP_STATUS.CREATED).json(new ApiResponse(HTTP_STATUS.CREATED, { mood: response }, 'Mood added'));
+  res.status(HTTP_STATUS.CREATED).json(
+    new ApiResponse(
+      HTTP_STATUS.CREATED,
+      { mood: response },
+      riskAnalysis.level === 'HIGH_RISK' 
+        ? 'Mood added. Emergency contacts have been notified.'
+        : 'Mood added'
+    )
+  );
 });
 
 export const getMoodHistory = asyncHandler(async (req, res) => {

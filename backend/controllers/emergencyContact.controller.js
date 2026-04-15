@@ -80,6 +80,12 @@ export const addEmergencyContact = asyncHandler(async (req, res) => {
   const tokenHash = hashToken(invitationToken);
   const tokenExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000); // 7 days
 
+  console.log('[ADD_CONTACT] Creating new emergency contact invitation:', {
+    ownerUserId: userId,
+    email: email.toLowerCase(),
+    fullName,
+  });
+
   // Create emergency contact record
   const contact = await EmergencyContact.create({
     ownerUserId: userId,
@@ -91,6 +97,12 @@ export const addEmergencyContact = asyncHandler(async (req, res) => {
     inviteTokenHash: tokenHash,
     inviteExpiresAt: tokenExpiresAt,
     lastInvitedAt: new Date(),
+  });
+
+  console.log('[ADD_CONTACT] Contact created:', {
+    id: contact._id,
+    inviteStatus: contact.inviteStatus,
+    email: contact.email,
   });
 
   // Get user name for email
@@ -143,7 +155,7 @@ export const addEmergencyContact = asyncHandler(async (req, res) => {
 // Update emergency contact
 export const updateEmergencyContact = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { fullName, phoneNumber, relationship } = req.body;
+  const { fullName, phoneNumber, relationship, email } = req.body;
   const userId = req.user._id;
 
   const contact = await EmergencyContact.findOne({
@@ -159,6 +171,7 @@ export const updateEmergencyContact = asyncHandler(async (req, res) => {
   if (fullName) contact.fullName = fullName;
   if (phoneNumber !== undefined) contact.phoneNumber = phoneNumber;
   if (relationship) contact.relationship = relationship;
+  if (email) contact.email = email.toLowerCase();
 
   await contact.save();
 
@@ -254,6 +267,92 @@ export const resendEmergencyInvite = asyncHandler(async (req, res) => {
       HTTP_STATUS.OK,
       { data: contact },
       'Invitation resent successfully'
+    )
+  );
+});
+
+// Get all monitored users for a guardian (emergency_contact)
+export const getMonitoredUsers = asyncHandler(async (req, res) => {
+  const guardianId = req.user._id;
+
+  // Find all emergency contacts where this user is the contactUserId (accepted invitations)
+  const monitoredUsers = await EmergencyContact.find({
+    contactUserId: guardianId,
+    inviteStatus: 'accepted',
+  })
+    .populate('ownerUserId', 'name email role emergencyMode emergencyActivatedAt emergencyLocation lastActiveAt')
+    .sort({ createdAt: -1 });
+
+  // Transform to include user details and emergency status
+  const usersWithStatus = monitoredUsers.map((contact) => ({
+    relationshipId: contact._id,
+    relationship: contact.relationship,
+    user: contact.ownerUserId,
+    emergencyActive: contact.ownerUserId?.emergencyMode || false,
+    emergencyActivatedAt: contact.ownerUserId?.emergencyActivatedAt,
+    lastActiveAt: contact.ownerUserId?.lastActiveAt,
+  }));
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(
+      HTTP_STATUS.OK,
+      { data: usersWithStatus },
+      'Monitored users retrieved successfully'
+    )
+  );
+});
+// Accept emergency contact invitation (using token)
+export const acceptEmergencyContactInvitation = asyncHandler(async (req, res) => {
+  const { token } = req.body;
+  const userId = req.user._id;
+
+  if (!token) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invitation token is required');
+  }
+
+  // Find the emergency contact record by token hash
+  const tokenHash = hashToken(token);
+  const contact = await EmergencyContact.findOne({
+    inviteTokenHash: tokenHash,
+    email: req.user.email,
+  }).populate('ownerUserId', 'name email');
+
+  if (!contact) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Invalid or expired invitation');
+  }
+
+  // Check if token is expired
+  if (contact.inviteExpiresAt && new Date() > contact.inviteExpiresAt) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invitation has expired');
+  }
+
+  // Check if already accepted
+  if (contact.inviteStatus === 'accepted') {
+    return res.status(HTTP_STATUS.OK).json(
+      new ApiResponse(
+        HTTP_STATUS.OK,
+        { data: contact },
+        'Invitation already accepted'
+      )
+    );
+  }
+
+  // Update invitation status to accepted
+  contact.contactUserId = userId;
+  contact.inviteStatus = 'accepted';
+  contact.acceptedAt = new Date();
+  contact.inviteTokenHash = null; // Clear token for security
+  contact.inviteExpiresAt = null;
+  await contact.save();
+
+  // Populate for response
+  await contact.populate('ownerUserId', 'name email');
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(
+      HTTP_STATUS.OK,
+      { data: contact },
+      'Invitation accepted successfully'
     )
   );
 });

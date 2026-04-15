@@ -38,8 +38,8 @@ export const verifyTokenHash = (token, hash) => {
  */
 export const generateInvitationUrl = (token, baseUrl, invitationType = 'new-account') => {
   const path = invitationType === 'existing-account' 
-    ? `/accept-emergency-invitation/${token}`
-    : `/guardian-signup/${token}`;
+    ? `/accept-emergency-invitation`
+    : `/guardian-signup`;
   
-  return `${baseUrl}${path}`;
+  return `${baseUrl}${path}?token=${token}`;
 };

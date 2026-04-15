@@ -19,11 +19,16 @@ const EventList = () => {
       const params = { ...filters, page, limit: 12 };
       if (search) params.search = search;
       const res = await eventAPI.list(params);
-      if (res.success) {
-        setEvents(res.data.events);
-        setTotalPages(res.data.pages);
+      if (res && res.events) {
+        setEvents(res.events);
+        setTotalPages(res.pages || 1);
+      } else {
+        setEvents([]);
       }
-    } catch {}
+    } catch (error) {
+      console.error('Error fetching events:', error);
+      setEvents([]);
+    }
     setLoading(false);
   }, [filters, search, page]);
 

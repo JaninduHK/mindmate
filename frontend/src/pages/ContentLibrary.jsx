@@ -1,13 +1,31 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Search, Filter, ExternalLink } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
 
 const ContentLibrary = () => {
+  const { user } = useAuth();
   const [searchTerm, setSearchTerm] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
+  const [userMoodCategory, setUserMoodCategory] = useState(null);
 
   const categories = ['all', 'Mental Health', 'Anxiety', 'Depression', 'Sleep', 'Stress'];
   const types = ['all', 'Article', 'Video', 'Podcast', 'Guide'];
+
+  // Map user mood to content category
+  useEffect(() => {
+    if (user?.recentMood) {
+      const moodMap = {
+        'Positive': 'Mental Health',
+        'Stable': 'Mental Health',
+        'Pressure': 'Stress',
+        'Low': 'Depression',
+        'Anxious': 'Anxiety',
+        'Stressed': 'Stress',
+      };
+      setUserMoodCategory(moodMap[user.recentMood] || null);
+    }
+  }, [user?.recentMood]);
 
   const contentData = [
     {
@@ -17,7 +35,7 @@ const ContentLibrary = () => {
       category: 'Anxiety',
       type: 'Article',
       duration: '15 min read',
-      image: 'https://images.pexels.com/photos/3807517/pexels-photo-3807517.jpeg?w=400&h=250&fit=crop',
+      image: 'https://images.pexels.com/photos/3807509/pexels-photo-3807509.jpeg?w=400&h=250&fit=crop',
       external_link: 'https://www.verywellmind.com/how-to-cope-with-anxiety-3024335',
       featured: true,
     },
@@ -28,7 +46,7 @@ const ContentLibrary = () => {
       category: 'Mental Health',
       type: 'Video',
       duration: '10 min',
-      image: 'https://images.pexels.com/photos/3823517/pexels-photo-3823517.jpeg?w=400&h=250&fit=crop',
+      image: 'https://images.pexels.com/photos/3769747/pexels-photo-3769747.jpeg?w=400&h=250&fit=crop',
       external_link: 'https://www.youtube.com/watch?v=inpok4MKVLM',
       featured: true,
     },
@@ -39,7 +57,7 @@ const ContentLibrary = () => {
       category: 'Sleep',
       type: 'Article',
       duration: '12 min read',
-      image: 'https://images.pexels.com/photos/6667696/pexels-photo-6667696.jpeg?w=400&h=250&fit=crop',
+      image: 'https://images.pexels.com/photos/4550745/pexels-photo-4550745.jpeg?w=400&h=250&fit=crop',
       external_link: 'https://www.sleepfoundation.org/sleep-tips',
       featured: false,
     },
@@ -50,8 +68,8 @@ const ContentLibrary = () => {
       category: 'Stress',
       type: 'Article',
       duration: '14 min read',
-      image: 'https://images.pexels.com/photos/3808174/pexels-photo-3808174.jpeg?w=400&h=250&fit=crop',
-      external_link: 'https://www.mindhealth.com/workplace-stress-management',
+      image: 'https://images.pexels.com/photos/3862632/pexels-photo-3862632.jpeg?w=400&h=250&fit=crop',
+      external_link: 'https://www.apa.org/topics/healthy-workplaces/work-stress?utm_source=chatgpt.com',
       featured: false,
     },
     {
@@ -61,7 +79,7 @@ const ContentLibrary = () => {
       category: 'Depression',
       type: 'Guide',
       duration: '20 min read',
-      image: 'https://images.pexels.com/photos/3807512/pexels-photo-3807512.jpeg?w=400&h=250&fit=crop',
+      image: 'https://images.pexels.com/photos/3807626/pexels-photo-3807626.jpeg?w=400&h=250&fit=crop',
       external_link: 'https://www.psychologytoday.com/us/basics/depression',
       featured: false,
     },
@@ -72,8 +90,8 @@ const ContentLibrary = () => {
       category: 'Anxiety',
       type: 'Video',
       duration: '5 min',
-      image: 'https://images.pexels.com/photos/3945683/pexels-photo-3945683.jpeg?w=400&h=250&fit=crop',
-      external_link: 'https://www.youtube.com/watch?v=YvkLXe3BCHU',
+      image: 'https://images.pexels.com/photos/3807517/pexels-photo-3807517.jpeg?w=400&h=250&fit=crop',
+      external_link: 'https://youtu.be/LiUnFJ8P4gM?si=NLYPrVtTjBzGDeQW',
       featured: true,
     },
     {
@@ -83,9 +101,9 @@ const ContentLibrary = () => {
       category: 'Depression',
       type: 'Guide',
       duration: '18 min read',
-      image: 'https://images.pexels.com/photos/3998212/pexels-photo-3998212.jpeg?w=400&h=250&fit=crop',
+      image: 'https://images.pexels.com/photos/3957993/pexels-photo-3957993.jpeg?w=400&h=250&fit=crop',
       external_link: 'https://www.psychologytoday.com/us/therapy-types/cognitive-behavioral-therapy',
-      featured: false,
+      featured: true,
     },
     {
       id: 8,
@@ -94,8 +112,8 @@ const ContentLibrary = () => {
       category: 'Sleep',
       type: 'Article',
       duration: '16 min read',
-      image: 'https://images.pexels.com/photos/5235901/pexels-photo-5235901.jpeg?w=400&h=250&fit=crop',
-      external_link: 'https://www.healthline.com/health/sleep/sleep-stages',
+      image: 'https://images.pexels.com/photos/3807512/pexels-photo-3807512.jpeg?w=400&h=250&fit=crop',
+      external_link: 'https://www.healthline.com/health/deep-sleep',
       featured: false,
     }
   ];
@@ -123,9 +141,21 @@ const ContentLibrary = () => {
 
         {/* Featured Resources Section */}
         <div className="mb-12">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">✨ Featured Resources</h2>
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">✨ Featured Resources</h2>
+          {userMoodCategory && (
+            <p className="text-sm text-gray-600 mb-6">
+              Based on your current mood: <span className="font-semibold text-primary-600">{user?.recentMood}</span> - Here are resources to help you
+            </p>
+          )}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
-            {contentData.filter(item => item.featured).map((item) => (
+            {(userMoodCategory
+              ? contentData.filter(
+                  (item) =>
+                    item.category === userMoodCategory ||
+                    (item.featured && item.category === 'Mental Health')
+                )
+              : contentData.filter((item) => item.featured)
+            ).map((item) => (
               <div
                 key={item.id}
                 className="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden border-2 border-primary-100"

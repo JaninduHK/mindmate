@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/common/Button';
@@ -15,14 +15,15 @@ const Login = () => {
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
 
-  // Redirect if already authenticated
-  if (isAuthenticated) {
-    if (user?.role === 'peer_supporter') navigate('/peer-supporter/dashboard');
-    else if (user?.role === 'counselor') navigate('/counselor/dashboard');
-    else if (user?.role === 'admin') navigate('/admin');
-    else navigate('/dashboard');
-    return null;
-  }
+  // Redirect if already authenticated - use useEffect, not render
+  useEffect(() => {
+    if (isAuthenticated && user?.role) {
+      if (user.role === 'peer_supporter') navigate('/peer-supporter/dashboard');
+      else if (user.role === 'counselor') navigate('/counselor/dashboard');
+      else if (user.role === 'admin') navigate('/admin');
+      else navigate('/dashboard');
+    }
+  }, [isAuthenticated, user, navigate]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;

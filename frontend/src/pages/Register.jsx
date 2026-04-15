@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
@@ -20,7 +20,10 @@ const RELATIONSHIPS = [
 
 const Register = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { register, isAuthenticated } = useAuth();
+  const [invitationToken, setInvitationToken] = useState(null);
+  const [isAcceptingInvitation, setIsAcceptingInvitation] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     email: '',
@@ -37,6 +40,15 @@ const Register = () => {
   const [errors, setErrors] = useState({});
   const [emergencyContactErrors, setEmergencyContactErrors] = useState({});
   const [loading, setLoading] = useState(false);
+
+  // Extract invitation token from URL
+  useEffect(() => {
+    const token = searchParams.get('token');
+    if (token) {
+      setInvitationToken(token);
+      setIsAcceptingInvitation(true);
+    }
+  }, [searchParams]);
 
   // Redirect if already authenticated
   if (isAuthenticated) {
@@ -148,6 +160,11 @@ const Register = () => {
       password: formData.password,
     };
 
+    // Include invitation token if accepting an emergency contact invitation
+    if (invitationToken) {
+      registerData.invitationToken = invitationToken;
+    }
+
     if (formData.initialEmergencyContact.enabled) {
       registerData.initialEmergencyContact = {
         fullName: formData.initialEmergencyContact.fullName,
@@ -161,6 +178,9 @@ const Register = () => {
     setLoading(false);
 
     if (result.success) {
+      if (result.data?.invitationAccepted?.success) {
+        toast.success(`✅ Welcome! You're now a guardian for ${result.data.invitationAccepted.monitoredUser}`);
+      }
       navigate('/dashboard');
     } else if (result.error?.invitationStatus?.failed) {
       toast('Account created! Emergency contact invitation could not be sent right now.', { icon: 'ℹ️' });
@@ -177,8 +197,21 @@ const Register = () => {
               <span className="text-white font-bold text-3xl">M</span>
             </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Create your account</h2>
-          <p className="mt-2 text-gray-600">Start your mental wellness journey</p>
+          <h2 className="text-3xl font-bold text-gray-900">
+            {isAcceptingInvitation ? 'Accept Guardian Invitation' : 'Create your account'}
+          </h2>
+          <p className="mt-2 text-gray-600">
+            {isAcceptingInvitation 
+              ? 'Sign up to accept the emergency contact invitation and monitor user wellness'
+              : 'Start your mental wellness journey'}
+          </p>
+          {isAcceptingInvitation && (
+            <div className="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-lg">
+              <p className="text-sm text-blue-800">
+                ✅ You've been invited to be an emergency contact. Complete your registration to accept.
+              </p>
+            </div>
+          )}
         </div>
 
         <form className="mt-8 space-y-6" onSubmit={handleSubmit}>

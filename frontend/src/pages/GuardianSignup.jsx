@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useNavigate, useSearchParams, Link } from 'react-router-dom';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { FiUser, FiMail, FiLock, FiAlertCircle } from 'react-icons/fi';
@@ -8,7 +8,8 @@ import axiosInstance, { setAccessToken } from '../api/axios.config';
 
 const GuardianSignup = () => {
   const navigate = useNavigate();
-  const { token } = useParams();
+  const [searchParams] = useSearchParams();
+  const invitationToken = searchParams.get('token');
   
   const [formData, setFormData] = useState({
     fullName: '',
@@ -18,12 +19,12 @@ const GuardianSignup = () => {
   });
   const [errors, setErrors] = useState({});
   const [loading, setLoading] = useState(false);
-  const [isInvitationFlow, setIsInvitationFlow] = useState(!!token);
+  const [isInvitationFlow, setIsInvitationFlow] = useState(!!invitationToken);
 
   // Determine if this is invitation-based or direct signup
   useEffect(() => {
-    setIsInvitationFlow(!!token);
-  }, [token]);
+    setIsInvitationFlow(!!invitationToken);
+  }, [invitationToken]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -83,7 +84,7 @@ const GuardianSignup = () => {
     if (!validateForm()) return;
     
     // If invitation flow, must have token
-    if (isInvitationFlow && !token) {
+    if (isInvitationFlow && !invitationToken) {
       toast.error('Invalid invitation. Please use the link from the email.');
       return;
     }
@@ -98,8 +99,8 @@ const GuardianSignup = () => {
       };
 
       // Only add invitation token if it exists
-      if (token) {
-        payload.invitationToken = token;
+      if (invitationToken) {
+        payload.invitationToken = invitationToken;
       }
 
       const response = await axiosInstance.post('/auth/guardian-signup', payload);
@@ -108,12 +109,18 @@ const GuardianSignup = () => {
         toast.success('Account created successfully!');
         
         // Store the access token from signup response
-        const { accessToken } = response.data.data;
+        const { accessToken, monitoredUserId } = response.data.data;
         if (accessToken) {
           // Store token to localStorage and axios headers
           setAccessToken(accessToken);
-          // Navigate immediately - the AuthContext will verify on next app load
-          navigate('/guardian-dashboard');
+          
+          // Redirect to guardian dashboard with monitored user ID
+          if (monitoredUserId) {
+            navigate(`/guardian-dashboard/${monitoredUserId}`);
+          } else {
+            // Fallback if no monitored user (shouldn't happen in invitation flow)
+            navigate('/guardian-dashboard');
+          }
         }
       }
     } catch (error) {
@@ -127,7 +134,7 @@ const GuardianSignup = () => {
     }
   };
 
-  if (!isInvitationFlow && token) {
+  if (!isInvitationFlow && invitationToken) {
     // Redirect if somehow has token but shouldn't use it
     return null;
   }

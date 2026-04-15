@@ -2,25 +2,14 @@ import { useNavigate } from 'react-router-dom';
 import { Helmet } from 'react-helmet';
 import { TrendingUp, AlertCircle, BookOpen, Users, Zap, MessageCircle, Award, BarChart3 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth.js';
-import { useEmergency } from '../context/EmergencyContext.jsx';
 import Button from '../components/common/Button.jsx';
 
 const DashboardPage = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const { isEmergencyActive } = useEmergency();
 
   // Quick action items
   const quickActions = [
-    {
-      id: 'emergency-contacts',
-      title: 'Emergency Contacts',
-      description: 'Manage people to notify',
-      icon: Users,
-      color: 'bg-red-50 text-red-600',
-      borderColor: 'border-red-200',
-      action: () => navigate('/emergency-contacts'),
-    },
     {
       id: 'content-library',
       title: 'Content Library',
@@ -29,15 +18,6 @@ const DashboardPage = () => {
       color: 'bg-blue-50 text-blue-600',
       borderColor: 'border-blue-200',
       action: () => navigate('/content-library'),
-    },
-    {
-      id: 'notifications',
-      title: 'Notifications',
-      description: 'Check updates',
-      icon: AlertCircle,
-      color: 'bg-yellow-50 text-yellow-600',
-      borderColor: 'border-yellow-200',
-      action: () => navigate('/notifications'),
     },
   ];
 
@@ -58,19 +38,6 @@ const DashboardPage = () => {
               Here's your wellness summary for today
             </p>
           </div>
-
-          {/* Emergency Status Alert */}
-          {isEmergencyActive && (
-            <div className="mb-8 bg-red-50 border-2 border-red-200 rounded-2xl p-6 flex items-start gap-4">
-              <AlertCircle className="w-6 h-6 text-red-600 flex-shrink-0 mt-1" />
-              <div>
-                <h3 className="font-semibold text-red-900">Emergency Mode Active</h3>
-                <p className="text-sm text-red-800 mt-1">
-                  Your emergency contacts have been notified. Support is on the way.
-                </p>
-              </div>
-            </div>
-          )}
 
           {/* Main Dashboard Grid */}
           <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">

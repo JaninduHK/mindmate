@@ -1,294 +1,433 @@
-import { useState } from 'react';
-import { Plus, Edit2, Trash2, Send, Phone, Mail } from 'lucide-react';
-import Button from '../components/common/Button.jsx';
+import React, { useState } from 'react';
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
+import { contactsAPI } from '../api/contactsApi.js';
+import { Plus, Edit2, Trash2, Phone, Mail, X, RefreshCw } from 'lucide-react';
 import toast from 'react-hot-toast';
 
-const EmergencyContacts = () => {
-  const [contacts, setContacts] = useState([
-    {
-      id: 1,
-      fullName: 'John Doe',
-      email: 'john@example.com',
-      phone: '+1-234-567-8900',
-      relationship: 'Brother',
-      status: 'accepted',
-    },
-    {
-      id: 2,
-      fullName: 'Jane Smith',
-      email: 'jane@example.com',
-      phone: '+1-234-567-8901',
-      relationship: 'Sister',
-      status: 'pending',
-    },
-  ]);
+const RELATIONSHIPS = [
+  { value: 'sister', label: 'Sister' },
+  { value: 'brother', label: 'Brother' },
+  { value: 'mother', label: 'Mother' },
+  { value: 'father', label: 'Father' },
+  { value: 'partner', label: 'Partner' },
+  { value: 'therapist', label: 'Therapist' },
+  { value: 'friend', label: 'Friend' },
+  { value: 'other', label: 'Other' },
+];
 
-  const [showForm, setShowForm] = useState(false);
-  const [editingId, setEditingId] = useState(null);
+function EmergencyContacts() {
+  const [showAddModal, setShowAddModal] = useState(false);
+  const [editingContactId, setEditingContactId] = useState(null);
   const [formData, setFormData] = useState({
     fullName: '',
     email: '',
-    phone: '',
-    relationship: '',
+    phoneNumber: '',
+    relationship: 'friend',
+  });
+  const [errors, setErrors] = useState({});
+  const [formLoading, setFormLoading] = useState(false);
+  const queryClient = useQueryClient();
+
+  const { data: contactsResponse = {}, isLoading } = useQuery({
+    queryKey: ['emergency-contacts'],
+    queryFn: contactsAPI.getContacts,
   });
 
-  const handleOpenForm = (contact = null) => {
-    if (contact) {
-      setFormData(contact);
-      setEditingId(contact.id);
-    } else {
-      setFormData({ fullName: '', email: '', phone: '', relationship: '' });
-      setEditingId(null);
-    }
-    setShowForm(true);
+  const contacts = contactsResponse?.data?.data || [];
+
+  const addContactMutation = useMutation({
+    mutationFn: contactsAPI.addContact,
+    onSuccess: () => {
+      toast.success('Contact added and invitation sent via email and SMS');
+      queryClient.invalidateQueries(['emergency-contacts']);
+      resetForm();
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to add contact');
+    },
+  });
+
+  const updateContactMutation = useMutation({
+    mutationFn: ({ id, data }) => contactsAPI.updateContact(id, data),
+    onSuccess: () => {
+      toast.success('Contact updated successfully');
+      queryClient.invalidateQueries(['emergency-contacts']);
+      resetForm();
+    },
+    onError: (err) => {
+      toast.error(err.response?.data?.message || 'Failed to update contact');
+    },
+  });
+
+  const deleteContactMutation = useMutation({
+    mutationFn: contactsAPI.deleteContact,
+    onSuccess: () => {
+      toast.success('Contact removed successfully');
+      queryClient.invalidateQueries(['emergency-contacts']);
+    },
+    onError: () => {
+      toast.error('Failed to remove contact');
+    },
+  });
+
+  const resetForm = () => {
+    setFormData({
+      fullName: '',
+      email: '',
+      phoneNumber: '',
+      relationship: 'friend',
+    });
+    setErrors({});
+    setShowAddModal(false);
+    setEditingContactId(null);
   };
 
-  const handleCloseForm = () => {
-    setShowForm(false);
-    setEditingId(null);
-    setFormData({ fullName: '', email: '', phone: '', relationship: '' });
+  const openEditModal = (contact) => {
+    setFormData({
+      fullName: contact.fullName,
+      email: contact.email,
+      phoneNumber: contact.phoneNumber,
+      relationship: contact.relationship,
+    });
+    setEditingContactId(contact._id);
+    setShowAddModal(true);
   };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
     setFormData((prev) => ({ ...prev, [name]: value }));
+    if (errors[name]) {
+      setErrors((prev) => ({ ...prev, [name]: '' }));
+    }
   };
 
-  const handleSubmit = (e) => {
-    e.preventDefault();
+  const validateForm = () => {
+    const newErrors = {};
 
-    if (!formData.fullName || !formData.email || !formData.phone || !formData.relationship) {
-      toast.error('All fields are required');
+    if (!formData.fullName.trim()) {
+      newErrors.fullName = 'Name is required';
+    } else if (formData.fullName.trim().length < 2) {
+      newErrors.fullName = 'Name must be at least 2 characters';
+    }
+
+    if (!formData.email) {
+      newErrors.email = 'Email is required';
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/.test(formData.email)) {
+      newErrors.email = 'Enter a valid email address';
+    }
+
+    if (!formData.phoneNumber) {
+      newErrors.phoneNumber = 'Phone number is required';
+    } else if (!/^(\+94|0)[0-9]{9,10}$/.test(formData.phoneNumber.replace(/\s/g, ''))) {
+      newErrors.phoneNumber = 'Enter a valid phone number';
+    }
+
+    return newErrors;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    const newErrors = validateForm();
+    
+    if (Object.keys(newErrors).length > 0) {
+      setErrors(newErrors);
       return;
     }
 
-    if (editingId) {
-      setContacts((prev) =>
-        prev.map((c) => (c.id === editingId ? { ...c, ...formData } : c))
-      );
-      toast.success('Contact updated successfully');
-    } else {
-      setContacts((prev) => [
-        ...prev,
-        {
-          ...formData,
-          id: Date.now(),
-          status: 'pending',
-        },
-      ]);
-      toast.success('Contact added successfully');
+    setFormLoading(true);
+    try {
+      if (editingContactId) {
+        await updateContactMutation.mutateAsync({
+          id: editingContactId,
+          data: formData,
+        });
+      } else {
+        await addContactMutation.mutateAsync(formData);
+      }
+    } finally {
+      setFormLoading(false);
     }
-
-    handleCloseForm();
   };
 
   const handleDelete = (id) => {
-    if (confirm('Are you sure you want to delete this contact?')) {
-      setContacts((prev) => prev.filter((c) => c.id !== id));
-      toast.success('Contact deleted');
+    if (window.confirm('Are you sure you want to remove this emergency contact?')) {
+      deleteContactMutation.mutate(id);
     }
   };
 
-  const handleResendInvite = (id) => {
-    toast.success('Invitation resent');
+  const handleResend = (id) => {
+    toast.success('Invitation resent successfully via email and SMS');
+  };
+
+  const getStatusBadge = (contact) => {
+    const status = contact.inviteStatus || (contact.verified ? 'Accepted' : 'Pending');
+    
+    switch (status) {
+      case 'Accepted':
+      case true:
+        return (
+          <span className="px-2 py-1 bg-blue-100 text-blue-700 text-xs rounded-full font-medium">
+            Accepted
+          </span>
+        );
+      case 'Pending':
+      case false:
+        return (
+          <span className="px-2 py-1 bg-yellow-100 text-yellow-700 text-xs rounded-full font-medium">
+            Pending
+          </span>
+        );
+      case 'Expired':
+        return (
+          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-medium">
+            Expired
+          </span>
+        );
+      case 'Failed':
+        return (
+          <span className="px-2 py-1 bg-red-100 text-red-700 text-xs rounded-full font-medium">
+            Failed
+          </span>
+        );
+      default:
+        return null;
+    }
+  };
+
+  const getInitials = (name) => {
+    return name
+      .split(' ')
+      .map((n) => n[0])
+      .join('')
+      .toUpperCase();
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 py-8">
-      <div className="container-custom">
-        {/* Header */}
-        <div className="mb-8 flex items-center justify-between">
-          <div>
-            <h1 className="text-3xl font-bold text-gray-900">Emergency Contacts</h1>
-            <p className="text-gray-600 mt-2">
-              Manage the people who will be notified in case of emergency
-            </p>
-          </div>
-          <Button onClick={() => handleOpenForm()} variant="primary">
-            <Plus className="w-4 h-4" />
-            Add Contact
-          </Button>
+    <div className="max-w-4xl mx-auto">
+      <div className="mb-8">
+        <h1 className="text-2xl font-bold text-gray-900">Contacts</h1>
+      </div>
+
+      <div className="flex justify-between items-start mb-8">
+        <div>
+          <h2 className="text-xl font-bold text-gray-900 mb-1">
+            Emergency Contacts
+          </h2>
+          <p className="text-gray-500 text-sm">
+            People we'll notify if you activate an emergency alert.
+          </p>
         </div>
+        <button
+          onClick={() => setShowAddModal(true)}
+          className="bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg font-medium flex items-center gap-2 transition-colors shadow-sm"
+        >
+          <Plus className="w-4 h-4" />
+          Add Contact
+        </button>
+      </div>
 
-        {/* Form Modal */}
-        {showForm && (
-          <div className="fixed inset-0 bg-black/50 z-50 flex items-center justify-center p-4">
-            <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
-              <h2 className="text-xl font-bold text-gray-900 mb-4">
-                {editingId ? 'Edit Contact' : 'Add Emergency Contact'}
-              </h2>
-
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    placeholder="Enter full name"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Email
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleChange}
-                    placeholder="Enter email address"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    name="phone"
-                    value={formData.phone}
-                    onChange={handleChange}
-                    placeholder="Enter phone number"
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">
-                    Relationship
-                  </label>
-                  <select
-                    name="relationship"
-                    value={formData.relationship}
-                    onChange={handleChange}
-                    className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:border-primary-500 focus:ring-2 focus:ring-primary-200"
-                  >
-                    <option value="">Select relationship</option>
-                    <option value="Parent">Parent</option>
-                    <option value="Sibling">Sibling</option>
-                    <option value="Friend">Friend</option>
-                    <option value="Doctor">Doctor</option>
-                    <option value="Other">Other</option>
-                  </select>
-                </div>
-
-                <div className="flex gap-3 pt-4">
-                  <Button variant="outline" onClick={handleCloseForm} fullWidth>
-                    Cancel
-                  </Button>
-                  <Button type="submit" variant="primary" fullWidth>
-                    {editingId ? 'Update' : 'Add'} Contact
-                  </Button>
-                </div>
-              </form>
-            </div>
-          </div>
-        )}
-
-        {/* Contacts List */}
-        {contacts.length > 0 ? (
-          <div className="space-y-4">
-            {contacts.map((contact) => (
-              <div
-                key={contact.id}
-                className="bg-white rounded-lg shadow p-6 flex items-center justify-between"
-              >
-                <div className="flex-1">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center">
-                      <span className="text-lg font-semibold text-primary-600">
-                        {contact.fullName.charAt(0)}
-                      </span>
+      {isLoading ? (
+        <div className="p-8 text-center text-gray-500">Loading contacts...</div>
+      ) : contacts.length === 0 ? (
+        <div className="bg-gray-50 rounded-xl p-12 text-center border border-gray-200">
+          <h3 className="text-lg font-semibold text-gray-900 mb-2">No Emergency Contacts Yet</h3>
+          <p className="text-gray-600 mb-6">Add at least one emergency contact to ensure help is available when you need it.</p>
+          <button
+            onClick={() => setShowAddModal(true)}
+            className="bg-blue-600 hover:bg-blue-700 text-white px-6 py-2 rounded-lg font-medium inline-flex items-center gap-2 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Add Your First Contact
+          </button>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          {contacts.map((contact) => (
+            <div
+              key={contact._id}
+              className="bg-white rounded-xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow"
+            >
+              <div className="flex justify-between items-start mb-6">
+                <div className="flex items-center gap-4">
+                  <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
+                    {getInitials(contact.fullName)}
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900">{contact.fullName}</h3>
+                      {getStatusBadge(contact)}
                     </div>
-                    <div className="flex-1">
-                      <h3 className="text-lg font-semibold text-gray-900">{contact.fullName}</h3>
-                      <p className="text-sm text-gray-600">{contact.relationship}</p>
-                      <div className="flex items-center gap-4 mt-2 text-sm text-gray-600">
-                        <a href={`mailto:${contact.email}`} className="flex items-center gap-1 hover:text-primary-600">
-                          <Mail className="w-4 h-4" />
-                          {contact.email}
-                        </a>
-                        <a href={`tel:${contact.phone}`} className="flex items-center gap-1 hover:text-primary-600">
-                          <Phone className="w-4 h-4" />
-                          {contact.phone}
-                        </a>
-                      </div>
-                    </div>
+                    <span className="inline-block px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full mt-1">
+                      {RELATIONSHIPS.find(r => r.value === contact.relationship)?.label || contact.relationship}
+                    </span>
                   </div>
                 </div>
-
-                {/* Status Badge */}
-                <div className="mr-4">
-                  <span
-                    className={`inline-block px-3 py-1 text-xs font-semibold rounded-full ${
-                      contact.status === 'accepted'
-                        ? 'bg-green-100 text-green-800'
-                        : 'bg-yellow-100 text-yellow-800'
-                    }`}
-                  >
-                    {contact.status === 'accepted' ? '✓ Accepted' : 'Pending'}
-                  </span>
-                </div>
-
-                {/* Actions */}
-                <div className="flex items-center gap-2">
-                  {contact.status === 'pending' && (
+                <div className="flex gap-1">
+                  {(contact.inviteStatus === 'Pending' ||
+                    contact.inviteStatus === 'Expired' ||
+                    contact.inviteStatus === 'Failed') && (
                     <button
-                      onClick={() => handleResendInvite(contact.id)}
-                      className="p-2 text-blue-600 hover:bg-blue-50 rounded transition-colors"
-                      title="Resend invitation"
+                      onClick={() => handleResend(contact._id)}
+                      className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                      title="Resend Invite"
                     >
-                      <Send className="w-4 h-4" />
+                      <RefreshCw className="w-4 h-4" />
                     </button>
                   )}
                   <button
-                    onClick={() => handleOpenForm(contact)}
-                    className="p-2 text-gray-600 hover:bg-gray-100 rounded transition-colors"
-                    title="Edit contact"
+                    onClick={() => openEditModal(contact)}
+                    className="p-1.5 text-gray-400 hover:text-blue-600 transition-colors"
+                    title="Edit Contact"
                   >
                     <Edit2 className="w-4 h-4" />
                   </button>
                   <button
-                    onClick={() => handleDelete(contact.id)}
-                    className="p-2 text-red-600 hover:bg-red-50 rounded transition-colors"
-                    title="Delete contact"
+                    onClick={() => handleDelete(contact._id)}
+                    className="p-1.5 text-gray-400 hover:text-red-600 transition-colors"
+                    title="Delete Contact"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
                 </div>
               </div>
-            ))}
-          </div>
-        ) : (
-          <div className="text-center py-12 bg-white rounded-lg">
-            <p className="text-gray-600 mb-4">No emergency contacts added yet</p>
-            <Button onClick={() => handleOpenForm()} variant="primary">
-              <Plus className="w-4 h-4" />
-              Add Your First Contact
-            </Button>
-          </div>
-        )}
 
-        {/* Info Card */}
-        <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-          <h3 className="text-lg font-semibold text-blue-900 mb-2">📌 Important</h3>
-          <p className="text-blue-800 text-sm">
-            Your emergency contacts will receive notifications via email and SMS when you activate
-            emergency mode. Make sure to add trusted people who can respond quickly in times of
-            crisis.
-          </p>
+              <div className="space-y-3">
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <Phone className="w-4 h-4 text-gray-400" />
+                  {contact.phoneNumber}
+                </div>
+                <div className="flex items-center gap-3 text-sm text-gray-600">
+                  <Mail className="w-4 h-4 text-gray-400" />
+                  {contact.email}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
-      </div>
+      )}
+
+      {/* Add Contact Modal */}
+      {showAddModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-gray-900/50 backdrop-blur-sm p-4">
+          <div className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden">
+            <div className="flex justify-between items-center p-6 border-b border-gray-100">
+              <h2 className="text-xl font-bold text-gray-900">
+                {editingContactId ? 'Edit Emergency Contact' : 'Add Emergency Contact'}
+              </h2>
+              <button
+                onClick={resetForm}
+                className="text-gray-400 hover:text-gray-600"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <form
+              className="p-6 space-y-4"
+              onSubmit={handleSubmit}
+            >
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Full Name
+                </label>
+                <input
+                  type="text"
+                  name="fullName"
+                  value={formData.fullName}
+                  onChange={handleChange}
+                  required
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${
+                    errors.fullName
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                  placeholder="Jane Doe"
+                />
+                {errors.fullName && <p className="mt-1 text-xs text-red-600">{errors.fullName}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Relationship
+                </label>
+                <select
+                  name="relationship"
+                  value={formData.relationship}
+                  onChange={handleChange}
+                  required
+                  className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none bg-white"
+                >
+                  {RELATIONSHIPS.map((rel) => (
+                    <option key={rel.value} value={rel.value}>
+                      {rel.label}
+                    </option>
+                  ))}
+                </select>
+                {errors.relationship && <p className="mt-1 text-xs text-red-600">{errors.relationship}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Phone Number
+                </label>
+                <input
+                  type="tel"
+                  name="phoneNumber"
+                  value={formData.phoneNumber}
+                  onChange={handleChange}
+                  required
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${
+                    errors.phoneNumber
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                  placeholder="+94701234567"
+                />
+                {errors.phoneNumber && <p className="mt-1 text-xs text-red-600">{errors.phoneNumber}</p>}
+              </div>
+
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-1">
+                  Email Address
+                </label>
+                <input
+                  type="email"
+                  name="email"
+                  value={formData.email}
+                  onChange={handleChange}
+                  required
+                  className={`w-full px-3 py-2 border rounded-lg focus:ring-2 focus:outline-none transition-colors ${
+                    errors.email
+                      ? 'border-red-500 focus:ring-red-500'
+                      : 'border-gray-300 focus:ring-blue-500 focus:border-blue-500'
+                  }`}
+                  placeholder="jane@example.com"
+                />
+                {errors.email && <p className="mt-1 text-xs text-red-600">{errors.email}</p>}
+              </div>
+
+              <div className="pt-4 flex gap-3">
+                <button
+                  type="button"
+                  onClick={resetForm}
+                  className="flex-1 py-2.5 px-4 bg-gray-100 text-gray-700 rounded-lg font-medium hover:bg-gray-200 transition-colors"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={formLoading}
+                  className="flex-1 py-2.5 px-4 bg-blue-600 text-white rounded-lg font-medium hover:bg-blue-700 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {formLoading ? (editingContactId ? 'Saving...' : 'Sending...') : (editingContactId ? 'Save Changes' : 'Send Invitation')}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
-};
+}
 
 export default EmergencyContacts;

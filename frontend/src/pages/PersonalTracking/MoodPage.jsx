@@ -41,7 +41,7 @@ export default function MoodPage() {
     setLoadingMonth(true);
     try {
       const { from, to } = toMonthRange(cursor);
-      const res = await axiosInstance.get('/personal-tracking/moods', { params: { from, to } });
+      const res = await axiosInstance.get('/moods', { params: { from, to } });
       setMonthMoods(res.data?.data?.moods ?? []);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load mood history');
@@ -57,7 +57,7 @@ export default function MoodPage() {
   const refreshTodayMood = useCallback(async () => {
     setLoadingToday(true);
     try {
-      const res = await axiosInstance.get('/personal-tracking/moods', {
+      const res = await axiosInstance.get('/moods', {
         params: { from: todayISO, to: todayISO },
       });
       setTodayMood(res.data?.data?.moods?.[0] ?? null);
@@ -92,7 +92,7 @@ export default function MoodPage() {
       }
 
       if (todayMood) {
-        await axiosInstance.put(`/personal-tracking/moods/${todayISO}`, {
+        await axiosInstance.put(`/moods/${todayISO}`, {
           mood,
           keyword,
           description: descriptionTrimmed,

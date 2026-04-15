@@ -51,12 +51,23 @@ const GuardianLogin = () => {
     if (!validateForm()) return;
 
     setLoading(true);
-    const result = await login(formData);
-    setLoading(false);
-
-    if (result.success) {
-      // Navigate to guardian dashboard
-      navigate('/guardian-dashboard');
+    try {
+      const result = await login(formData);
+      
+      if (result.success) {
+        // Successfully logged in
+        setTimeout(() => {
+          navigate('/guardian-dashboard');
+        }, 300);
+      } else {
+        // Login failed - error toast already shown by AuthContext
+        console.error('Login failed:', result.error);
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+      // Error already handled by AuthContext toast
+    } finally {
+      setLoading(false);
     }
   };
 
