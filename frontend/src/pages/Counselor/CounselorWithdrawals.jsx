@@ -21,6 +21,10 @@ const RequestForm = ({ available, onSuccess }) => {
   });
   const [submitting, setSubmitting] = useState(false);
 
+  const parsedAmount = parseFloat(form.amount);
+  const amountExceedsBalance = form.amount !== '' && !isNaN(parsedAmount) && parsedAmount > available;
+  const amountIsInvalid = form.amount !== '' && (!parsedAmount || parsedAmount <= 0);
+
   const handleChange = (e) => setForm((p) => ({ ...p, [e.target.name]: e.target.value }));
 
   const handleSubmit = async (e) => {
@@ -74,8 +78,14 @@ const RequestForm = ({ available, onSuccess }) => {
             onChange={handleChange}
             placeholder="0.00"
             required
-            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+            className={`w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 ${amountExceedsBalance || amountIsInvalid ? 'border-red-400 bg-red-50' : 'border-gray-200'}`}
           />
+          {amountExceedsBalance && (
+            <p className="text-xs text-red-600 mt-1">Amount exceeds your available balance of Rs. {available.toFixed(2)}</p>
+          )}
+          {amountIsInvalid && !amountExceedsBalance && (
+            <p className="text-xs text-red-600 mt-1">Enter a valid amount greater than 0</p>
+          )}
         </div>
 
         <div>
@@ -111,7 +121,7 @@ const RequestForm = ({ available, onSuccess }) => {
             name="bankName"
             value={form.bankName}
             onChange={handleChange}
-            placeholder="e.g. Chase, Barclays"
+            placeholder="e.g. Bank of Ceylon"
             required
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
@@ -126,7 +136,7 @@ const RequestForm = ({ available, onSuccess }) => {
             name="swiftCode"
             value={form.swiftCode}
             onChange={handleChange}
-            placeholder="e.g. CHASUS33"
+            placeholder="e.g. BCEYLKLX"
             className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
           />
         </div>
@@ -138,7 +148,7 @@ const RequestForm = ({ available, onSuccess }) => {
 
       <button
         type="submit"
-        disabled={submitting || available <= 0}
+        disabled={submitting || available <= 0 || amountExceedsBalance || amountIsInvalid}
         className="bg-primary-600 hover:bg-primary-700 disabled:bg-gray-300 text-white font-semibold px-6 py-2.5 rounded-xl text-sm transition-colors"
       >
         {submitting ? 'Submitting…' : 'Request Withdrawal'}

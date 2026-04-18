@@ -5,6 +5,7 @@ import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import { FiUser, FiMail, FiLock, FiPhone } from 'react-icons/fi';
 import toast from 'react-hot-toast';
+import logo from '../assets/MindMate Logo.png';
 import { validateName, validatePhone, validateEmail } from '../utils/emergencyContactValidation';
 
 const RELATIONSHIPS = [
@@ -193,9 +194,7 @@ const Register = () => {
       <div className="max-w-md w-full space-y-8">
         <div className="text-center">
           <div className="flex justify-center mb-4">
-            <div className="w-16 h-16 bg-primary-600 rounded-xl flex items-center justify-center">
-              <span className="text-white font-bold text-3xl">M</span>
-            </div>
+            <img src={logo} alt="MindMate" className="h-12" />
           </div>
           <h2 className="text-3xl font-bold text-gray-900">
             {isAcceptingInvitation ? 'Accept Guardian Invitation' : 'Create your account'}

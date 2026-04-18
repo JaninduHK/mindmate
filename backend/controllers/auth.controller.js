@@ -3,6 +3,7 @@ import RefreshToken from '../models/RefreshToken.model.js';
 import EmergencyContact from '../models/EmergencyContact.model.js';
 import GuardianSignup from '../models/GuardianSignup.model.js';
 import GuardianSignin from '../models/GuardianSignin.model.js';
+import PeerSupporterProfile from '../models/PeerSupporterProfile.model.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.util.js';
 import { generateUsername } from '../utils/username.util.js';
 import ApiError from '../utils/ApiError.js';
@@ -52,6 +53,8 @@ export const register = asyncHandler(async (req, res) => {
     // Verify and process invitation
     try {
       console.log('[REGISTER] Processing invitation token for email:', email.toLowerCase());
+      console.log('[REGISTER] Token received:', invitationToken);
+      console.log('[REGISTER] Token length:', invitationToken.length);
 
       // Find pending contact by email (don't try to hash match - use verifyTokenHash instead)
       const pendingContact = await EmergencyContact.findOne({
@@ -61,7 +64,12 @@ export const register = asyncHandler(async (req, res) => {
         .select('+inviteTokenHash')
         .populate('ownerUserId', 'name email');
 
-      console.log('[REGISTER] Found pending contact:', pendingContact ? `Yes (owner: ${pendingContact.ownerUserId?.name})` : 'No');
+      console.log('[REGISTER] Found pending contact:', pendingContact ? `Yes (owner: ${pendingContact.ownerUserId?.name}, email: ${pendingContact.email})` : 'No');
+      
+      if (pendingContact) {
+        console.log('[REGISTER] Pending contact found, token hash exists:', !!pendingContact.inviteTokenHash);
+        console.log('[REGISTER] Token hash length:', pendingContact.inviteTokenHash?.length);
+      }
 
       if (pendingContact) {
         // Now verify the token against the stored hash
@@ -301,23 +309,30 @@ export const login = asyncHandler(async (req, res) => {
   
   console.log('[LOGIN] User logged in:', { email: user.email, role: user.role, userId: user._id });
   
-  // If this is a guardian/emergency contact, create signin record
+  // If this is a guardian/emergency contact, create/verify signin records for ALL monitored users
   if (user.role === USER_ROLES.EMERGENCY_CONTACT || user.role === 'emergency_contact') {
     console.log('[LOGIN] Guardian login detected for user:', user._id);
-    let guardianSignup = await GuardianSignup.findOne({ userId: user._id });
     
-    console.log('[LOGIN] GuardianSignup lookup:', guardianSignup ? `Found - monitoring ${guardianSignup.monitoredUserId}` : 'Not found');
+    // Find ALL emergency contacts for this guardian
+    const emergencyContacts = await EmergencyContact.find({
+      contactUserId: user._id,
+      inviteStatus: 'accepted',
+    }).populate('ownerUserId', '_id name email');
     
-    // If GuardianSignup doesn't exist, create it from EmergencyContact
-    if (!guardianSignup) {
-      console.log('[LOGIN] GuardianSignup not found - checking EmergencyContact...');
-      const emergencyContact = await EmergencyContact.findOne({
-        contactUserId: user._id,
-        inviteStatus: 'accepted',
-      }).populate('ownerUserId', '_id name email');
+    console.log('[LOGIN] Found', emergencyContacts.length, 'monitored users for guardian');
+    
+    // For each monitored user, ensure GuardianSignup exists
+    for (const emergencyContact of emergencyContacts) {
+      let guardianSignup = await GuardianSignup.findOne({
+        userId: user._id,
+        monitoredUserId: emergencyContact.ownerUserId._id,
+      });
       
-      if (emergencyContact) {
-        console.log('[LOGIN] Found EmergencyContact - creating GuardianSignup record...');
+      console.log('[LOGIN] GuardianSignup lookup for monitored user', emergencyContact.ownerUserId._id, ':', guardianSignup ? 'Found' : 'Not found');
+      
+      // If GuardianSignup doesn't exist, create it
+      if (!guardianSignup) {
+        console.log('[LOGIN] Creating GuardianSignup record for monitored user:', emergencyContact.ownerUserId._id);
         try {
           guardianSignup = await GuardianSignup.create({
             userId: user._id,
@@ -327,52 +342,71 @@ export const login = asyncHandler(async (req, res) => {
             email: user.email,
             phoneNumber: emergencyContact.phoneNumber || null,
             relationship: emergencyContact.relationship,
-            invitationToken: 'login-signup-' + user._id,
-            inviteTokenHash: 'login-signup-' + user._id,
+            invitationToken: 'login-signup-' + user._id + '-' + emergencyContact.ownerUserId._id,
+            inviteTokenHash: 'login-signup-' + user._id + '-' + emergencyContact.ownerUserId._id,
             tokenVerifiedAt: emergencyContact.acceptedAt || new Date(),
             signupStatus: 'verified',
             emailVerified: true,
             signupCompletedAt: emergencyContact.acceptedAt || new Date(),
             consentsToMonitoring: true,
           });
-          console.log('[LOGIN] GuardianSignup created from EmergencyContact:', guardianSignup._id);
+          console.log('[LOGIN] GuardianSignup created:', guardianSignup._id);
         } catch (error) {
-          console.error('[LOGIN] Error creating GuardianSignup:', error);
+          if (error.code === 11000) {
+            console.log('[LOGIN] GuardianSignup already exists (unique constraint)');
+          } else {
+            console.error('[LOGIN] Error creating GuardianSignup:', error);
+          }
+        }
+      } else {
+        // Verify existing record has signupStatus = 'verified'
+        if (guardianSignup.signupStatus !== 'verified') {
+          console.log('[LOGIN] Updating GuardianSignup status to verified');
+          guardianSignup.signupStatus = 'verified';
+          await guardianSignup.save();
+        }
+      }
+      
+      // Create signin record for this monitored user
+      if (guardianSignup || (await GuardianSignup.findOne({ userId: user._id, monitoredUserId: emergencyContact.ownerUserId._id }))) {
+        const finalSignup = guardianSignup || (await GuardianSignup.findOne({ userId: user._id, monitoredUserId: emergencyContact.ownerUserId._id }));
+        const sessionId = `session_${user._id}_${finalSignup.monitoredUserId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+        
+        try {
+          const guardianSigninRecord = await GuardianSignin.create({
+            userId: user._id,
+            monitoredUserId: finalSignup.monitoredUserId,
+            guardianEmail: user.email,
+            sessionId: sessionId,
+            accessToken: accessToken,
+            refreshToken: refreshToken,
+            signinAt: new Date(),
+            lastActivityAt: new Date(),
+            status: 'active',
+            deviceInfo: {
+              userAgent: req.get('user-agent'),
+              ipAddress: req.ip || req.connection.remoteAddress,
+              browser: extractBrowserInfo(req.get('user-agent')),
+              operatingSystem: extractOSInfo(req.get('user-agent')),
+            },
+            authMethod: 'email_password',
+            requestCount: 0,
+            accessTokenExpiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
+            refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
+          });
+          console.log('[LOGIN] GuardianSignin record created:', {
+            id: guardianSigninRecord._id,
+            sessionId: sessionId,
+            monitoredUserId: finalSignup.monitoredUserId,
+          });
+        } catch (error) {
+          console.error('[LOGIN] Error creating GuardianSignin:', error);
         }
       }
     }
     
-    if (guardianSignup) {
-      const sessionId = `session_${user._id}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
-      
-      const guardianSigninRecord = await GuardianSignin.create({
-        userId: user._id,
-        monitoredUserId: guardianSignup.monitoredUserId,
-        guardianEmail: user.email,
-        sessionId: sessionId,
-        accessToken: accessToken,
-        refreshToken: refreshToken,
-        signinAt: new Date(),
-        lastActivityAt: new Date(),
-        status: 'active',
-        deviceInfo: {
-          userAgent: req.get('user-agent'),
-          ipAddress: req.ip || req.connection.remoteAddress,
-          browser: extractBrowserInfo(req.get('user-agent')),
-          operatingSystem: extractOSInfo(req.get('user-agent')),
-        },
-        authMethod: 'email_password',
-        requestCount: 0,
-        accessTokenExpiresAt: new Date(Date.now() + 15 * 60 * 1000), // 15 minutes
-        refreshTokenExpiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000), // 7 days
-      });
-      console.log('[LOGIN] GuardianSignin record created:', {
-        id: guardianSigninRecord._id,
-        sessionId: sessionId,
-        monitoredUserId: guardianSignup.monitoredUserId,
-      });
-    } else {
-      console.log('[LOGIN] GuardianSignup still not found - guardian may not be properly linked to any users');
+    if (emergencyContacts.length === 0) {
+      console.log('[LOGIN] Guardian not linked to any users');
     }
   }
 
@@ -517,6 +551,12 @@ export const registerPeerSupporter = asyncHandler(async (req, res) => {
     role: 'peer_supporter',
   });
 
+  // Create peer supporter profile (starts as unverified/pending)
+  await PeerSupporterProfile.create({
+    userId: user._id,
+    isVerified: false,
+  });
+
   const accessToken = generateAccessToken({ userId: user._id });
   const refreshToken = generateRefreshToken({ userId: user._id });
 
@@ -543,6 +583,13 @@ export const registerPeerSupporter = asyncHandler(async (req, res) => {
 export const guardianSignup = asyncHandler(async (req, res) => {
   const { name, email, password, invitationToken } = req.body;
 
+  console.log('[GUARDIAN_SIGNUP] Signup attempt:', {
+    name,
+    email,
+    hasToken: !!invitationToken,
+    tokenLength: invitationToken?.length,
+  });
+
   // Validate required fields
   if (!name || !email || !password) {
     throw new ApiError(
@@ -560,13 +607,28 @@ export const guardianSignup = asyncHandler(async (req, res) => {
   // If invitation token is provided, verify it
   let emergencyContact = null;
   if (invitationToken) {
+    console.log('[GUARDIAN_SIGNUP] Processing invitation token');
+    console.log('[GUARDIAN_SIGNUP] Looking for EmergencyContact with email:', email.toLowerCase());
+    
     // Find the emergency contact invitation record
+    const allContacts = await EmergencyContact.find({ inviteStatus: 'pending' }).select('email inviteStatus');
+    console.log('[GUARDIAN_SIGNUP] All pending contacts in DB:', allContacts.map(c => ({ email: c.email, status: c.inviteStatus })));
+    
     emergencyContact = await EmergencyContact.findOne({
-      email,
+      email: email.toLowerCase(),
       inviteStatus: 'pending',
-    }).select('+inviteTokenHash inviteExpiresAt');
+    }).select('+inviteTokenHash inviteExpiresAt').populate('ownerUserId', '_id name email');
 
+    console.log('[GUARDIAN_SIGNUP] Found emergency contact:', !!emergencyContact);
+    console.log('[GUARDIAN_SIGNUP] Emergency contact details:', emergencyContact ? {
+      id: emergencyContact._id,
+      email: emergencyContact.email,
+      ownerUserId: emergencyContact.ownerUserId?._id,
+      inviteStatus: emergencyContact.inviteStatus,
+    } : 'NOT FOUND');
+    
     if (!emergencyContact) {
+      console.log('[GUARDIAN_SIGNUP] No pending emergency contact found for email:', email);
       throw new ApiError(
         HTTP_STATUS.BAD_REQUEST,
         'Invalid or expired invitation. Please contact the person who invited you.'
@@ -575,6 +637,8 @@ export const guardianSignup = asyncHandler(async (req, res) => {
 
     // Verify the token hash
     const isTokenValid = verifyTokenHash(invitationToken, emergencyContact.inviteTokenHash);
+    console.log('[GUARDIAN_SIGNUP] Token verification:', isTokenValid ? 'VALID' : 'INVALID');
+    
     if (!isTokenValid) {
       throw new ApiError(HTTP_STATUS.UNAUTHORIZED, 'Invalid invitation token');
     }
@@ -583,6 +647,25 @@ export const guardianSignup = asyncHandler(async (req, res) => {
     if (emergencyContact.inviteExpiresAt && new Date() > emergencyContact.inviteExpiresAt) {
       throw new ApiError(HTTP_STATUS.UNAUTHORIZED, 'Invitation token has expired');
     }
+  } else {
+    console.log('[GUARDIAN_SIGNUP] No invitation token provided - checking if pending invite exists');
+    
+    // Check if there's a pending invite for this email
+    const pendingInvite = await EmergencyContact.findOne({
+      email: email.toLowerCase(),
+      inviteStatus: 'pending',
+    });
+    
+    if (pendingInvite) {
+      console.log('[GUARDIAN_SIGNUP] ERROR: Found pending invite but no token provided!');
+      console.log('[GUARDIAN_SIGNUP] User must use the invitation link with the token');
+      throw new ApiError(
+        HTTP_STATUS.BAD_REQUEST,
+        'You have a pending invitation. Please use the invitation link from your email to sign up.'
+      );
+    }
+    
+    console.log('[GUARDIAN_SIGNUP] No pending invitation for this email - standard guardian signup allowed');
   }
 
   // Generate a unique friendly username
@@ -609,34 +692,82 @@ export const guardianSignup = asyncHandler(async (req, res) => {
   // If this is from an invitation, link the emergency contact record
   let monitoredUserId = null;
   if (emergencyContact) {
+    console.log('[GUARDIAN_SIGNUP] BEFORE save - EmergencyContact state:', {
+      id: emergencyContact._id,
+      email: emergencyContact.email,
+      ownerUserId: emergencyContact.ownerUserId,
+      contactUserId: emergencyContact.contactUserId,
+      inviteStatus: emergencyContact.inviteStatus,
+    });
+    
+    console.log('[GUARDIAN_SIGNUP] Setting contactUserId to:', user._id);
+    console.log('[GUARDIAN_SIGNUP] Setting monitoredUserId to:', emergencyContact.ownerUserId?._id);
+    
     emergencyContact.contactUserId = user._id;
     emergencyContact.inviteStatus = 'accepted';
-    monitoredUserId = emergencyContact.ownerUserId; // Get the person being monitored
-    await emergencyContact.save();
+    
+    // Get monitoredUserId before save
+    monitoredUserId = emergencyContact.ownerUserId?._id;
+    
+    if (!monitoredUserId) {
+      console.error('[GUARDIAN_SIGNUP] ERROR: ownerUserId is null/undefined!');
+      console.error('[GUARDIAN_SIGNUP] emergencyContact.ownerUserId:', emergencyContact.ownerUserId);
+      throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Emergency contact data is invalid');
+    }
+    
+    const savedContact = await emergencyContact.save();
+    console.log('[GUARDIAN_SIGNUP] AFTER save - EmergencyContact state:', {
+      id: savedContact._id,
+      email: savedContact.email,
+      contactUserId: savedContact.contactUserId,
+      inviteStatus: savedContact.inviteStatus,
+    });
     
     // Create GuardianSignup details record
-    await GuardianSignup.create({
-      userId: user._id,
-      emergencyContactId: emergencyContact._id,
-      monitoredUserId: monitoredUserId,
-      fullName: name,
-      email: email,
-      relationship: emergencyContact.relationship || 'Other',
-      invitationToken: invitationToken,
-      inviteTokenHash: emergencyContact.inviteTokenHash,
-      tokenVerifiedAt: new Date(),
-      signupStatus: 'verified',
-      emailVerified: true,
-      signupCompletedAt: new Date(),
-      signupIpAddress: req.ip || req.connection.remoteAddress,
-      signupUserAgent: req.get('user-agent'),
-      consentsToMonitoring: true,
-      consentGivenAt: new Date(),
-      termsAccepted: true,
-      termsAcceptedAt: new Date(),
-      privacyPolicyAccepted: true,
-      privacyPolicyAcceptedAt: new Date(),
-    });
+    try {
+      console.log('[GUARDIAN_SIGNUP] Creating GuardianSignup with:', {
+        userId: user._id,
+        monitoredUserId: monitoredUserId,
+        emergencyContactId: emergencyContact._id,
+      });
+      
+      const guardianSignup = await GuardianSignup.create({
+        userId: user._id,
+        emergencyContactId: emergencyContact._id,
+        monitoredUserId: monitoredUserId,
+        fullName: name,
+        email: email,
+        relationship: emergencyContact.relationship || 'Other',
+        invitationToken: invitationToken,
+        inviteTokenHash: emergencyContact.inviteTokenHash,
+        tokenVerifiedAt: new Date(),
+        signupStatus: 'verified',
+        emailVerified: true,
+        signupCompletedAt: new Date(),
+        signupIpAddress: req.ip || req.connection.remoteAddress,
+        signupUserAgent: req.get('user-agent'),
+        consentsToMonitoring: true,
+        consentGivenAt: new Date(),
+        termsAccepted: true,
+        termsAcceptedAt: new Date(),
+        privacyPolicyAccepted: true,
+        privacyPolicyAcceptedAt: new Date(),
+      });
+      console.log('[GUARDIAN_SIGNUP] GuardianSignup created successfully:', {
+        id: guardianSignup._id,
+        userId: guardianSignup.userId,
+        monitoredUserId: guardianSignup.monitoredUserId,
+      });
+    } catch (gsError) {
+      console.error('[GUARDIAN_SIGNUP] Error creating GuardianSignup:', {
+        message: gsError.message,
+        code: gsError.code,
+        details: gsError.errors,
+      });
+      // Still allow registration even if GuardianSignup creation fails
+    }
+  } else {
+    console.log('[GUARDIAN_SIGNUP] No emergency contact to link');
   }
 
   // Generate tokens

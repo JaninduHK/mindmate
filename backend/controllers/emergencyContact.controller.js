@@ -5,6 +5,7 @@ import ApiResponse from '../utils/ApiResponse.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { generateInvitationToken, hashToken } from '../utils/tokenGenerator.js';
 import { sendEmail } from '../utils/email.util.js';
+import { sendSMS, normalizePhoneNumber } from '../utils/smsService.js';
 import { composeInvitationEmail } from '../utils/invitationMailer.js';
 import { composeInvitationSMS } from '../utils/smsBodies.js';
 import { generateInvitationUrl } from '../utils/tokenGenerator.js';
@@ -128,19 +129,28 @@ export const addEmergencyContact = asyncHandler(async (req, res) => {
       text: emailContent.text,
     });
 
-    // Log that we would send SMS (integrate with Twilio when available)
-    if (phoneNumber) {
+    console.log(`[INVITATION] Email sent to ${email}`);
+
+    // Send invitation SMS
+    if (phoneNumber && phoneNumber.trim()) {
+      const normalizedPhone = normalizePhoneNumber(phoneNumber);
       const smsContent = composeInvitationSMS(user.name, invitationUrl);
-      console.log(`[SMS] Would send to ${phoneNumber}: ${smsContent.body}`);
+      
+      const smsResult = await sendSMS(normalizedPhone, smsContent.body);
+      console.log(`[INVITATION] SMS result for ${normalizedPhone}:`, smsResult);
+    } else {
+      console.log(`[INVITATION] No phone number provided for SMS`);
     }
 
     // Update delivery status
     contact.deliveryStatus.email = 'sent';
     if (phoneNumber) contact.deliveryStatus.sms = 'sent';
     await contact.save();
+
+    console.log(`[INVITATION] Contact record updated with delivery status`);
   } catch (error) {
     console.error('Error sending invitation:', error);
-    // Continue anyway - contact is created, just email failed
+    // Continue anyway - contact is created, just email/SMS failed
   }
 
   res.status(HTTP_STATUS.CREATED).json(
@@ -252,8 +262,22 @@ export const resendEmergencyInvite = asyncHandler(async (req, res) => {
       text: emailContent.text,
     });
 
+    console.log(`[RESEND_INVITE] Email resent to ${contact.email}`);
+
+    // Resend SMS
+    if (contact.phoneNumber && contact.phoneNumber.trim()) {
+      const normalizedPhone = normalizePhoneNumber(contact.phoneNumber);
+      const smsContent = composeInvitationSMS(user.name, invitationUrl);
+      
+      const smsResult = await sendSMS(normalizedPhone, smsContent.body);
+      console.log(`[RESEND_INVITE] SMS result for ${normalizedPhone}:`, smsResult);
+    }
+
     contact.deliveryStatus.email = 'sent';
+    if (contact.phoneNumber) contact.deliveryStatus.sms = 'sent';
     await contact.save();
+
+    console.log(`[RESEND_INVITE] Contact record updated with delivery status`);
   } catch (error) {
     console.error('Error resending invitation:', error);
     throw new ApiError(

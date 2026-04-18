@@ -22,6 +22,37 @@ const getMoodScore = (moodString) => {
   return moodScores[moodString] || 5;
 };
 
+// DEBUG ENDPOINT: Check guardian's data in database
+export const debugGuardianData = asyncHandler(async (req, res) => {
+  const guardianId = req.user._id;
+  
+  console.log('[DEBUG] Checking data for guardian:', guardianId);
+  
+  // Check EmergencyContact records
+  const emergencyContacts = await EmergencyContact.find({
+    contactUserId: guardianId,
+  }).select('ownerUserId contactUserId inviteStatus relationship email');
+  
+  console.log('[DEBUG] EmergencyContact records:', emergencyContacts);
+  
+  // Check GuardianSignup records
+  const guardianSignups = await GuardianSignup.find({
+    userId: guardianId,
+  }).select('userId monitoredUserId signupStatus relationship');
+  
+  console.log('[DEBUG] GuardianSignup records:', guardianSignups);
+  
+  res.status(200).json(
+    new ApiResponse(200, {
+      guardianId,
+      emergencyContacts: emergencyContacts.length,
+      emergencyContactsData: emergencyContacts,
+      guardianSignups: guardianSignups.length,
+      guardianSignupsData: guardianSignups,
+    }, 'Debug data')
+  );
+});
+
 // Get all users that this emergency contact is monitoring
 export const getGuardianUsersStatus = asyncHandler(async (req, res) => {
   const guardianId = req.user._id;
@@ -187,85 +218,147 @@ export const getGuardianUserDetail = asyncHandler(async (req, res) => {
   );
 });
 
-// Get all monitored users (from GuardianSignup table)
+// Get all monitored users (from GuardianSignup table, with EmergencyContact fallback)
 export const getMonitoredUsers = asyncHandler(async (req, res) => {
   const guardianId = req.user._id;
 
   console.log('[MONITORED_USERS] Fetching for guardian ID:', guardianId);
 
-  // Query GuardianSignup to find all monitored users
-  const guardianSignups = await GuardianSignup.find({
+  // First, try to get from GuardianSignup
+  let guardianSignups = await GuardianSignup.find({
     userId: guardianId,
     signupStatus: 'verified',
   }).select('monitoredUserId userId relationship');
 
   console.log('[MONITORED_USERS] Found GuardianSignup records:', guardianSignups?.length || 0);
-  if (guardianSignups?.length > 0) {
-    guardianSignups.forEach((signup, i) => {
-      console.log(`  [${i}] Monitoring: ${signup.monitoredUserId}`);
-    });
-  }
 
+  // If no GuardianSignup records, fall back to EmergencyContact
+  let usersData = [];
+  
   if (!guardianSignups || guardianSignups.length === 0) {
-    return res
-      .status(200)
-      .json(
-        new ApiResponse(200, { data: [] }, 'No users under guardian care yet')
-      );
-  }
+    console.log('[MONITORED_USERS] No GuardianSignup records found - falling back to EmergencyContact...');
+    const emergencyContacts = await EmergencyContact.find({
+      contactUserId: guardianId,
+      inviteStatus: 'accepted',
+    }).select('ownerUserId contactUserId relationship phoneNumber').populate('ownerUserId', '_id name email updatedAt');
+    
+    console.log('[MONITORED_USERS] Found EmergencyContact records:', emergencyContacts?.length || 0);
+    
+    if (!emergencyContacts || emergencyContacts.length === 0) {
+      return res
+        .status(200)
+        .json(
+          new ApiResponse(200, { data: [] }, 'No users under guardian care yet')
+        );
+    }
 
-  const usersData = await Promise.all(
-    guardianSignups.map(async (guardianSignup) => {
-      const monitoredUserId = guardianSignup.monitoredUserId;
-      const user = await User.findById(monitoredUserId).select('name email _id updatedAt');
-      if (!user) return null;
+    // Convert EmergencyContact to user data format
+    usersData = await Promise.all(
+      emergencyContacts.map(async (contact) => {
+        const user = contact.ownerUserId;
+        if (!user) return null;
 
-      const latestMood = await Mood.findOne({ userId: user._id }).sort({
-        createdAt: -1,
-      });
+        const latestMood = await Mood.findOne({ userId: user._id }).sort({
+          createdAt: -1,
+        });
 
-      const goals = await Goal.find({ userId: user._id }).sort({
-        createdAt: -1,
-      });
+        const goals = await Goal.find({ userId: user._id }).sort({
+          createdAt: -1,
+        });
 
-      const emergencyAlerts = await NotificationModel.find({
-        userId: user._id,
-        type: { $in: ['emergency', 'high_risk', 'crisis'] },
+        const emergencyAlerts = await NotificationModel.find({
+          userId: user._id,
+          type: { $in: ['emergency', 'high_risk', 'crisis'] },
+        })
+          .sort({ createdAt: -1 })
+          .limit(5);
+
+        const moodScore = latestMood ? getMoodScore(latestMood.mood) : 0;
+
+        return {
+          userId: user._id,
+          name: user.name,
+          email: user.email,
+          currentMood: latestMood
+            ? {
+                score: moodScore,
+                title: latestMood.mood,
+                keyword: latestMood.keyword,
+                description: latestMood.description,
+                timestamp: latestMood.createdAt,
+              }
+            : null,
+          goals: goals.map((goal) => ({
+            _id: goal._id,
+            title: goal.goalName,
+            type: goal.goalType,
+            progress: goal.status === 'complete' ? 100 : 0,
+            status: goal.status,
+          })),
+          emergencyAlerts: emergencyAlerts.map((alert) => ({
+            type: alert.type,
+            title: alert.title,
+            timestamp: alert.createdAt,
+          })),
+          lastCheckIn: user.updatedAt,
+        };
       })
-        .sort({ createdAt: -1 })
-        .limit(5);
+    );
+  } else {
+    // Use GuardianSignup records
+    usersData = await Promise.all(
+      guardianSignups.map(async (guardianSignup) => {
+        const monitoredUserId = guardianSignup.monitoredUserId;
+        const user = await User.findById(monitoredUserId).select('name email _id updatedAt');
+        if (!user) return null;
 
-      const moodScore = latestMood ? getMoodScore(latestMood.mood) : 0;
+        const latestMood = await Mood.findOne({ userId: user._id }).sort({
+          createdAt: -1,
+        });
 
-      return {
-        userId: user._id,
-        name: user.name,
-        email: user.email,
-        currentMood: latestMood
-          ? {
-              score: moodScore,
-              title: latestMood.mood,
-              keyword: latestMood.keyword,
-              description: latestMood.description,
-              timestamp: latestMood.createdAt,
-            }
-          : null,
-        goals: goals.map((goal) => ({
-          _id: goal._id,
-          title: goal.goalName,
-          type: goal.goalType,
-          progress: goal.status === 'complete' ? 100 : 0,
-          status: goal.status,
-        })),
-        emergencyAlerts: emergencyAlerts.map((alert) => ({
-          type: alert.type,
-          title: alert.title,
-          timestamp: alert.createdAt,
-        })),
-        lastCheckIn: user.updatedAt,
-      };
-    })
-  );
+        const goals = await Goal.find({ userId: user._id }).sort({
+          createdAt: -1,
+        });
+
+        const emergencyAlerts = await NotificationModel.find({
+          userId: user._id,
+          type: { $in: ['emergency', 'high_risk', 'crisis'] },
+        })
+          .sort({ createdAt: -1 })
+          .limit(5);
+
+        const moodScore = latestMood ? getMoodScore(latestMood.mood) : 0;
+
+        return {
+          userId: user._id,
+          name: user.name,
+          email: user.email,
+          currentMood: latestMood
+            ? {
+                score: moodScore,
+                title: latestMood.mood,
+                keyword: latestMood.keyword,
+                description: latestMood.description,
+                timestamp: latestMood.createdAt,
+              }
+            : null,
+          goals: goals.map((goal) => ({
+            _id: goal._id,
+            title: goal.goalName,
+            type: goal.goalType,
+            progress: goal.status === 'complete' ? 100 : 0,
+            status: goal.status,
+          })),
+          emergencyAlerts: emergencyAlerts.map((alert) => ({
+            type: alert.type,
+            title: alert.title,
+            timestamp: alert.createdAt,
+          })),
+          lastCheckIn: user.updatedAt,
+        };
+      })
+    );
+  }
 
   const validUsersData = usersData.filter((u) => u !== null);
 
@@ -288,19 +381,54 @@ export const getGuardianDashboard = asyncHandler(async (req, res) => {
 
   console.log('[GUARDIAN_DASHBOARD] Guardian ID:', guardianId, 'Monitoring User ID:', userObjectId);
 
-  // Verify authorization using GuardianSignup table
-  const guardianSignup = await GuardianSignup.findOne({
+  // Verify authorization using GuardianSignup table, with EmergencyContact fallback
+  let guardianSignup = await GuardianSignup.findOne({
     userId: guardianId,
     monitoredUserId: userObjectId,
     signupStatus: 'verified',
   });
 
   if (!guardianSignup) {
-    console.log('[GUARDIAN_DASHBOARD] Not authorized - GuardianSignup not found');
-    throw new ApiError(403, 'Not authorized to view this user');
-  }
+    console.log('[GUARDIAN_DASHBOARD] GuardianSignup not found - checking EmergencyContact...');
+    const emergencyContact = await EmergencyContact.findOne({
+      contactUserId: guardianId,
+      ownerUserId: userObjectId,
+      inviteStatus: 'accepted',
+    });
 
-  console.log('[GUARDIAN_DASHBOARD] Authorized - GuardianSignup found:', guardianSignup._id);
+    if (!emergencyContact) {
+      console.log('[GUARDIAN_DASHBOARD] Not authorized - neither GuardianSignup nor EmergencyContact found');
+      throw new ApiError(403, 'Not authorized to view this user');
+    }
+
+    console.log('[GUARDIAN_DASHBOARD] Authorized via EmergencyContact:', emergencyContact._id);
+    // Create GuardianSignup record for future use
+    try {
+      guardianSignup = await GuardianSignup.create({
+        userId: guardianId,
+        emergencyContactId: emergencyContact._id,
+        monitoredUserId: userObjectId,
+        fullName: req.user.name,
+        email: req.user.email,
+        phoneNumber: emergencyContact.phoneNumber || null,
+        relationship: emergencyContact.relationship,
+        invitationToken: 'dashboard-sync-' + guardianId + '-' + userObjectId,
+        inviteTokenHash: 'dashboard-sync-' + guardianId + '-' + userObjectId,
+        tokenVerifiedAt: emergencyContact.acceptedAt || new Date(),
+        signupStatus: 'verified',
+        emailVerified: true,
+        signupCompletedAt: emergencyContact.acceptedAt || new Date(),
+        consentsToMonitoring: true,
+      });
+      console.log('[GUARDIAN_DASHBOARD] GuardianSignup created:', guardianSignup._id);
+    } catch (error) {
+      if (error.code !== 11000) {
+        console.error('[GUARDIAN_DASHBOARD] Error creating GuardianSignup:', error);
+      }
+    }
+  } else {
+    console.log('[GUARDIAN_DASHBOARD] Authorized - GuardianSignup found:', guardianSignup._id);
+  }
 
   const user = await User.findById(userObjectId).select('name email lastActiveAt _id emergencyMode emergencyActivatedAt emergencyLocation');
   if (!user) {
@@ -928,6 +1056,90 @@ export const getDailyAnalytics = asyncHandler(async (req, res) => {
         activitySummary,
       },
       'Daily analytics retrieved successfully'
+    )
+  );
+});
+
+// Sync guardian records from EmergencyContact - creates missing GuardianSignup records
+export const syncGuardianRecords = asyncHandler(async (req, res) => {
+  const guardianId = req.user._id;
+
+  console.log('[SYNC_GUARDIAN] Starting sync for guardian:', guardianId);
+
+  // Find all emergency contacts for this guardian
+  const emergencyContacts = await EmergencyContact.find({
+    contactUserId: guardianId,
+    inviteStatus: 'accepted',
+  }).select('_id ownerUserId phoneNumber relationship acceptedAt').populate('ownerUserId', '_id name email');
+
+  console.log('[SYNC_GUARDIAN] Found', emergencyContacts.length, 'emergency contacts');
+
+  const syncResults = {
+    created: 0,
+    updated: 0,
+    failed: 0,
+    errors: [],
+  };
+
+  // For each emergency contact, ensure GuardianSignup exists and is verified
+  for (const emergencyContact of emergencyContacts) {
+    try {
+      const monitoredUserId = emergencyContact.ownerUserId._id;
+      
+      // Check if GuardianSignup exists
+      let guardianSignup = await GuardianSignup.findOne({
+        userId: guardianId,
+        monitoredUserId: monitoredUserId,
+      });
+
+      if (!guardianSignup) {
+        // Create new GuardianSignup record
+        guardianSignup = await GuardianSignup.create({
+          userId: guardianId,
+          emergencyContactId: emergencyContact._id,
+          monitoredUserId: monitoredUserId,
+          fullName: req.user.name,
+          email: req.user.email,
+          phoneNumber: emergencyContact.phoneNumber || null,
+          relationship: emergencyContact.relationship,
+          invitationToken: 'sync-' + guardianId + '-' + monitoredUserId + '-' + Date.now(),
+          inviteTokenHash: 'sync-' + guardianId + '-' + monitoredUserId + '-' + Date.now(),
+          tokenVerifiedAt: emergencyContact.acceptedAt || new Date(),
+          signupStatus: 'verified',
+          emailVerified: true,
+          signupCompletedAt: emergencyContact.acceptedAt || new Date(),
+          consentsToMonitoring: true,
+        });
+        console.log('[SYNC_GUARDIAN] Created GuardianSignup for', emergencyContact.ownerUserId.name);
+        syncResults.created++;
+      } else if (guardianSignup.signupStatus !== 'verified') {
+        // Update existing record to verified
+        guardianSignup.signupStatus = 'verified';
+        guardianSignup.tokenVerifiedAt = emergencyContact.acceptedAt || new Date();
+        guardianSignup.signupCompletedAt = emergencyContact.acceptedAt || new Date();
+        await guardianSignup.save();
+        console.log('[SYNC_GUARDIAN] Updated GuardianSignup status to verified for', emergencyContact.ownerUserId.name);
+        syncResults.updated++;
+      } else {
+        console.log('[SYNC_GUARDIAN] GuardianSignup already exists and verified for', emergencyContact.ownerUserId.name);
+      }
+    } catch (error) {
+      console.error('[SYNC_GUARDIAN] Error processing emergency contact:', error);
+      syncResults.failed++;
+      syncResults.errors.push({
+        contactId: emergencyContact._id,
+        error: error.message,
+      });
+    }
+  }
+
+  console.log('[SYNC_GUARDIAN] Sync complete:', syncResults);
+
+  return res.status(200).json(
+    new ApiResponse(
+      200,
+      syncResults,
+      `Guardian records sync completed. Created: ${syncResults.created}, Updated: ${syncResults.updated}, Failed: ${syncResults.failed}`
     )
   );
 });

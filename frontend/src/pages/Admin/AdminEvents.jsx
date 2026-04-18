@@ -52,7 +52,7 @@ const AdminEvents = () => {
               <div>
                 <p className="font-semibold text-gray-900">{e.title}</p>
                 <p className="text-sm text-gray-500 mt-0.5">
-                  {e.counselorId?.name} · {format(new Date(e.startDate), 'MMM d, yyyy')} · ${e.price.toFixed(2)}
+                  {e.counselorId?.name} · {format(new Date(e.startDate), 'MMM d, yyyy')} · LKR {e.price.toFixed(2)}
                 </p>
               </div>
               <select

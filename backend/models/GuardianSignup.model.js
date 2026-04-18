@@ -1,4 +1,5 @@
 import mongoose from 'mongoose';
+import { EMERGENCY_RELATIONSHIP } from '../config/crisis.config.js';
 
 /**
  * Guardian Signup Details Schema
@@ -11,7 +12,6 @@ const guardianSignupSchema = new mongoose.Schema(
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
       required: true,
-      unique: true,
       index: true,
     },
     
@@ -54,7 +54,7 @@ const guardianSignupSchema = new mongoose.Schema(
     
     relationship: {
       type: String,
-      enum: ['Family', 'Friend', 'Doctor', 'Therapist', 'Emergency', 'Other'],
+      enum: Object.values(EMERGENCY_RELATIONSHIP),
       required: true,
     },
     
@@ -188,6 +188,7 @@ const guardianSignupSchema = new mongoose.Schema(
   {
     timestamps: true, // createdAt, updatedAt
     indexes: [
+      { userId: 1, monitoredUserId: 1, unique: true },
       { userId: 1, emergencyContactId: 1 },
       { monitoredUserId: 1, signupStatus: 1 },
       { email: 1, signupStatus: 1 },
