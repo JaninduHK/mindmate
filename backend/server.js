@@ -37,6 +37,7 @@ import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
 import moodConfigRoutes from './routes/moodConfig.routes.js';
 import guardianRoutes from './routes/guardian.routes.js';
 import emergencyContactRoutes from './routes/emergencyContact.routes.js';
+import emergencyRoutes from './routes/emergency/emergency.routes.js';
 
 // Import models to ensure they are created in MongoDB
 import GuardianSignup from './models/GuardianSignup.model.js';
@@ -186,6 +187,7 @@ app.use('/api/personal-tracking/analytics', personalTrackingAnalyticsRoutes);
 app.use('/api/mood-config', moodConfigRoutes);
 app.use('/api/guardian', guardianRoutes);
 app.use('/api/emergency-contacts', emergencyContactRoutes);
+app.use('/api/emergency', emergencyRoutes);
 
 
 // ===============================

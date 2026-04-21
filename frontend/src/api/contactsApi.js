@@ -42,4 +42,22 @@ export const contactsAPI = {
     const response = await axiosInstance.get('/emergency-contacts/guardian/monitored');
     return response.data;
   },
+
+  // Trigger emergency alert (notify all accepted emergency contacts)
+  triggerEmergencyAlert: async (alertData) => {
+    const response = await axiosInstance.post('/emergency/trigger', alertData);
+    return response.data;
+  },
+
+  // Trigger crisis mode (detailed alert with severity)
+  triggerCrisisMode: async (crisisData) => {
+    const response = await axiosInstance.post('/emergency/crisis-mode', crisisData);
+    return response.data;
+  },
+
+  // Get emergency alert history
+  getAlertHistory: async (params = {}) => {
+    const response = await axiosInstance.get('/emergency/history', { params });
+    return response.data;
+  },
 };

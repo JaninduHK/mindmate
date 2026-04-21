@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { contactsAPI } from '../api/contactsApi.js';
 import { Plus, Edit2, Trash2, Phone, Mail, X, RefreshCw } from 'lucide-react';
@@ -27,6 +27,19 @@ function EmergencyContacts() {
   const [errors, setErrors] = useState({});
   const [formLoading, setFormLoading] = useState(false);
   const queryClient = useQueryClient();
+
+  // Prevent scrolling when modal is open
+  useEffect(() => {
+    if (showAddModal) {
+      document.body.classList.add('modal-open');
+    } else {
+      document.body.classList.remove('modal-open');
+    }
+
+    return () => {
+      document.body.classList.remove('modal-open');
+    };
+  }, [showAddModal]);
 
   const { data: contactsResponse = {}, isLoading } = useQuery({
     queryKey: ['emergency-contacts'],

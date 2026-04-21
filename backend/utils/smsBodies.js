@@ -17,9 +17,25 @@ export const composeInvitationSMS = (ownerName, invitationUrl) => {
 /**
  * Compose emergency alert SMS (short version for SMS, can be split)
  */
-export const composeEmergencyAlertSMS = (primaryUserName) => {
+export const composeEmergencyAlertSMS = (primaryUserName, location = null, message = null, severity = 'high') => {
+  let alertText = `🚨 EMERGENCY: ${primaryUserName} needs help`;
+  
+  if (severity === 'critical') {
+    alertText = `🚨🚨 CRITICAL: ${primaryUserName} needs IMMEDIATE help`;
+  }
+  
+  if (location) {
+    alertText += ` at ${location}`;
+  }
+  
+  if (message && message.length < 100) {
+    alertText += `. ${message}`;
+  }
+  
+  alertText += `. Call immediately or visit MindMate.`;
+  
   return {
-    body: `🚨 ALERT: ${primaryUserName} activated emergency mode on MindMate. Check if they need support. Visit dashboard for updates.`,
+    body: alertText,
     shortUrl: 'https://mindmate.com/emergency-contacts/dashboard',
   };
 };
