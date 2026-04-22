@@ -1,14 +1,17 @@
 import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { FiArrowLeft, FiSend, FiUsers } from 'react-icons/fi';
+import toast from 'react-hot-toast';
 import { axiosInstance } from '../../api/axios.config';
 import { useAuth } from '../../hooks/useAuth';
+import { useNotification } from '../../hooks/useNotification';
 import { socket } from '../../socket/socket';
 
 const GroupChatPage = () => {
   const { groupId } = useParams();
   const navigate = useNavigate();
   const { user } = useAuth();
+  const { clearMessageNotifications } = useNotification();
   
   const [group, setGroup] = useState(null);
   const [messages, setMessages] = useState([]);
@@ -45,6 +48,9 @@ const GroupChatPage = () => {
         // Check if user is a member
         const memberIds = groupRes.data.data.members.map(m => m._id || m);
         setIsMember(memberIds.includes(user._id));
+        
+        // Clear notification badge when opening group chat
+        clearMessageNotifications();
       } catch (error) {
         console.error('Failed to fetch group:', error.response?.data || error.message);
       } finally {
@@ -55,7 +61,7 @@ const GroupChatPage = () => {
     if (groupId) {
       fetchGroup();
     }
-  }, [groupId, user._id]);
+  }, [groupId, user._id, clearMessageNotifications]);
 
   // Join group room on socket connection
   useEffect(() => {
@@ -89,7 +95,7 @@ const GroupChatPage = () => {
     return () => {
       socket.off('receive_group_message', handleReceiveMessage);
     };
-  }, []);
+  }, [user]);
 
   const handleJoinGroup = async () => {
     try {

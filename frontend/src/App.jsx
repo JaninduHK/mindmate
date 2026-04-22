@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import GlobalMessageListener from './components/listeners/GlobalMessageListener';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -58,19 +60,21 @@ function App() {
   return (
     <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
-        <div className="flex flex-col min-h-screen">
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 3000,
-              style: { background: '#363636', color: '#fff' },
-              success: { duration: 3000, iconTheme: { primary: '#10b981', secondary: '#fff' } },
-              error: { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
-            }}
-          />
-          <Header />
-          <main className="flex-1">
-            <Routes>
+        <NotificationProvider>
+          <GlobalMessageListener />
+          <div className="flex flex-col min-h-screen">
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 3000,
+                style: { background: '#363636', color: '#fff' },
+                success: { duration: 3000, iconTheme: { primary: '#10b981', secondary: '#fff' } },
+                error: { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
+              }}
+            />
+            <Header />
+            <main className="flex-1">
+              <Routes>
               {/* Public */}
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
@@ -134,6 +138,7 @@ function App() {
           </main>
           <Footer />
         </div>
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   );

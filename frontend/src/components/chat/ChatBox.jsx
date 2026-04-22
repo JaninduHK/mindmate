@@ -4,8 +4,10 @@ import { chatAPI } from "../../api/chat.api";
 import MessageBubble from "./MessageBubble";
 import { FiSearch, FiX } from "react-icons/fi";
 import toast from "react-hot-toast";
+import { useNotification } from "../../hooks/useNotification";
 
 const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
+  const { clearMessageNotifications } = useNotification();
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
@@ -39,6 +41,8 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
           setMessages(response.data.messages);
           // Mark messages as read
           await chatAPI.markConversationAsRead(currentUserId, recipientId);
+          // Clear notification badge when opening chat
+          clearMessageNotifications();
         }
       } catch (error) {
         console.error('Error loading message history:', error);
@@ -49,7 +53,7 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
     };
 
     loadMessageHistory();
-  }, [currentUserId, recipientId]);
+  }, [currentUserId, recipientId, clearMessageNotifications]);
 
   // Socket listeners for real-time messages
   useEffect(() => {
@@ -66,6 +70,7 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
     socket.on("receive_message", (data) => {
       console.log("[Chat] Received message:", data);
       setMessages((prev) => [...prev, data]);
+      
       // Mark as read
       socket.emit("mark_read", {
         messageId: data._id,

@@ -1,13 +1,18 @@
 import { useState, useEffect, useRef } from 'react';
 import { FiBell } from 'react-icons/fi';
 import { notificationAPI } from '../../api/notification.api';
+import { useNotification } from '../../hooks/useNotification';
 import { formatDistanceToNow } from 'date-fns';
 
 const NotificationBell = () => {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
+  const { unreadMessages, clearMessageNotifications } = useNotification();
   const ref = useRef(null);
+
+  // Total unread count = system notifications + unread messages
+  const totalUnread = unreadCount + unreadMessages;
 
   const fetchNotifications = async () => {
     try {
@@ -36,6 +41,7 @@ const NotificationBell = () => {
     await notificationAPI.markAllAsRead();
     setUnreadCount(0);
     setNotifications((prev) => prev.map((n) => ({ ...n, isRead: true })));
+    clearMessageNotifications();
   };
 
   const handleMarkRead = async (id) => {
@@ -53,9 +59,9 @@ const NotificationBell = () => {
         className="relative p-2 text-gray-600 hover:text-primary-600 transition-colors"
       >
         <FiBell className="w-5 h-5" />
-        {unreadCount > 0 && (
-          <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center">
-            {unreadCount > 9 ? '9+' : unreadCount}
+        {totalUnread > 0 && (
+          <span className="absolute -top-0.5 -right-0.5 bg-red-500 text-white text-xs rounded-full w-4 h-4 flex items-center justify-center font-semibold">
+            {totalUnread > 9 ? '9+' : totalUnread}
           </span>
         )}
       </button>
@@ -64,7 +70,7 @@ const NotificationBell = () => {
         <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
             <span className="font-semibold text-sm text-gray-900">Notifications</span>
-            {unreadCount > 0 && (
+            {totalUnread > 0 && (
               <button onClick={handleMarkAllRead} className="text-xs text-primary-600 hover:underline">
                 Mark all read
               </button>
