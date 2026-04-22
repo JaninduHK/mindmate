@@ -1,6 +1,7 @@
 import { Link } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth';
 import { FiUser, FiActivity, FiCalendar, FiMessageSquare } from 'react-icons/fi';
+import GroupChatWidgets from '../components/Dashboard/GroupChatWidgets';
 
 const Dashboard = () => {
   const { user } = useAuth();
@@ -69,7 +70,7 @@ const Dashboard = () => {
         </div>
 
         {/* Quick Actions */}
-        <div className="bg-white rounded-lg shadow p-6">
+        <div className="bg-white rounded-lg shadow p-6 mb-8">
           <h2 className="text-xl font-semibold text-gray-900 mb-4">
             Quick Actions
           </h2>
@@ -96,6 +97,11 @@ const Dashboard = () => {
               </p>
             </Link>
           </div>
+        </div>
+
+        {/* Community Chat Groups */}
+        <div className="mb-8">
+          <GroupChatWidgets user={user} />
         </div>
 
         {/* Welcome Message */}

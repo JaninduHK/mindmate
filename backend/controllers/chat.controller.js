@@ -1,4 +1,5 @@
 import Message from '../models/message.model.js';
+import GroupChat from '../models/GroupChat.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
@@ -233,5 +234,59 @@ export const searchMessages = asyncHandler(async (req, res) => {
 
   res.status(HTTP_STATUS.OK).json(
     new ApiResponse(HTTP_STATUS.OK, { messages }, 'Messages searched successfully')
+  );
+});
+
+// ---- GROUP CHAT METHODS ---- //
+
+// Create group chat (peer counselors only)
+export const createGroupChat = asyncHandler(async (req, res) => {
+  const { name, description } = req.body;
+  const { _id: userId, role } = req.user;
+
+  if (!name) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Group name is required');
+  }
+
+  // Only peer_supporter role can create groups
+  if (role !== 'peer_supporter') {
+    throw new ApiError(HTTP_STATUS.FORBIDDEN, 'Only peer supporters can create group chats');
+  }
+
+  const newGroup = await GroupChat.create({
+    name,
+    description: description || '',
+    creatorId: userId,
+    members: [userId]
+  });
+
+  await newGroup.populate('creatorId', 'name avatar');
+
+  res.status(HTTP_STATUS.CREATED).json(
+    new ApiResponse(HTTP_STATUS.CREATED, newGroup, 'Group chat created successfully')
+  );
+});
+
+// Get all available group chats
+export const getAvailableGroupChats = asyncHandler(async (req, res) => {
+  const groups = await GroupChat.find({ isActive: true })
+    .populate('creatorId', 'name avatar')
+    .sort({ createdAt: -1 });
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(HTTP_STATUS.OK, groups, 'Available group chats retrieved')
+  );
+});
+
+// Get group chat messages
+export const getGroupChatMessages = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+
+  const messages = await Message.find({ recipientId: groupId })
+    .populate('senderId', 'name avatar')
+    .sort({ createdAt: 1 });
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(HTTP_STATUS.OK, messages, 'Group messages retrieved')
   );
 });

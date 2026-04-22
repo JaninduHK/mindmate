@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen, FiAward, FiArrowRight, FiActivity, FiClock, FiStar, FiCalendar } from 'react-icons/fi';
 import { useAuth } from '../../hooks/useAuth';
+import GroupChatWidgets from '../../components/Dashboard/GroupChatWidgets';
 import AvailabilityToggle from '../../components/peer/AvailabilityToggle';
 
 const getGreeting = () => {
@@ -260,6 +261,9 @@ const PeerSupporterDashboard = () => {
             </div>
           </div>
         </div>
+
+        {/* Community Chat Groups */}
+        <GroupChatWidgets user={user} />
 
         {/* Upgrade Banner */}
         <div 
