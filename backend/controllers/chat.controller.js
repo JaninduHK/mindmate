@@ -244,12 +244,15 @@ export const createGroupChat = asyncHandler(async (req, res) => {
   const { name, description } = req.body;
   const { _id: userId, role } = req.user;
 
+  console.log('Creating group chat:', { name, userId, userRole: role });
+
   if (!name) {
     throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Group name is required');
   }
 
   // Only peer_supporter role can create groups
   if (role !== 'peer_supporter') {
+    console.error('User role not peer_supporter:', { role });
     throw new ApiError(HTTP_STATUS.FORBIDDEN, 'Only peer supporters can create group chats');
   }
 
@@ -260,7 +263,11 @@ export const createGroupChat = asyncHandler(async (req, res) => {
     members: [userId]
   });
 
+  console.log('Group created successfully:', newGroup);
+
   await newGroup.populate('creatorId', 'name avatar');
+
+  console.log('Group populated:', newGroup);
 
   res.status(HTTP_STATUS.CREATED).json(
     new ApiResponse(HTTP_STATUS.CREATED, newGroup, 'Group chat created successfully')
@@ -269,9 +276,13 @@ export const createGroupChat = asyncHandler(async (req, res) => {
 
 // Get all available group chats
 export const getAvailableGroupChats = asyncHandler(async (req, res) => {
+  console.log('Fetching available group chats...');
+  
   const groups = await GroupChat.find({ isActive: true })
     .populate('creatorId', 'name avatar')
     .sort({ createdAt: -1 });
+
+  console.log('Available groups found:', groups.length);
 
   res.status(HTTP_STATUS.OK).json(
     new ApiResponse(HTTP_STATUS.OK, groups, 'Available group chats retrieved')

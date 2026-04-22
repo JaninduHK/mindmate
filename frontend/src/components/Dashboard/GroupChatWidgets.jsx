@@ -14,17 +14,33 @@ const GroupChatWidgets = ({ user }) => {
 
   const isPeerCounselor = user?.role === 'peer_supporter';
 
+  // Debug logging
+  useEffect(() => {
+    console.log('GroupChatWidgets - User:', user);
+    console.log('GroupChatWidgets - User role:', user?.role);
+    console.log('GroupChatWidgets - isPeerCounselor:', isPeerCounselor);
+  }, [user, isPeerCounselor]);
+
   useEffect(() => {
     fetchGroups();
+    
+    // Auto-refresh groups every 30 seconds
+    const interval = setInterval(() => {
+      fetchGroups();
+    }, 30000);
+
+    return () => clearInterval(interval);
   }, []);
 
   const fetchGroups = async () => {
     try {
       setLoading(true);
       const response = await axiosInstance.get('/chats/groups/available');
+      console.log('Fetched groups:', response.data);
       setGroups(response.data.data || []);
     } catch (error) {
-      console.error('Failed to fetch group chats:', error);
+      console.error('Failed to fetch group chats:', error.response?.data || error.message);
+      setGroups([]);
     } finally {
       setLoading(false);
     }
@@ -42,17 +58,22 @@ const GroupChatWidgets = ({ user }) => {
 
     try {
       setCreating(true);
-      await axiosInstance.post('/chats/groups', {
+      const response = await axiosInstance.post('/chats/groups', {
         name: groupName.trim()
       });
+      console.log('Group created successfully:', response.data);
       setSuccess('Group created successfully!');
       setGroupName('');
+      // Close modal and refresh groups after a short delay
       setTimeout(() => {
         setShowModal(false);
+        setSuccess('');
         fetchGroups();
       }, 1500);
     } catch (error) {
-      setError(error.response?.data?.message || 'Failed to create group');
+      console.error('Error creating group:', error.response?.data || error.message);
+      const errorMsg = error.response?.data?.message || error.response?.data?.error || error.message || 'Failed to create group';
+      setError(errorMsg);
     } finally {
       setCreating(false);
     }
@@ -77,7 +98,12 @@ const GroupChatWidgets = ({ user }) => {
       {loading ? (
         <p className="text-gray-500 text-center py-4">Loading groups...</p>
       ) : groups.length === 0 ? (
-        <p className="text-gray-500 text-center py-4 italic">No active community groups available right now.</p>
+        <div className="text-center py-8">
+          <p className="text-gray-500 italic">No active community groups available right now.</p>
+          {isPeerCounselor && (
+            <p className="text-sm text-primary-600 mt-2">Create one using the button above!</p>
+          )}
+        </div>
       ) : (
         <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
           {groups.map((group) => (
@@ -150,6 +176,7 @@ const GroupChatWidgets = ({ user }) => {
                   value={groupName}
                   onChange={(e) => setGroupName(e.target.value)}
                   disabled={creating}
+                  autoFocus
                 />
               </div>
 
@@ -160,6 +187,7 @@ const GroupChatWidgets = ({ user }) => {
                     setShowModal(false);
                     setGroupName('');
                     setError('');
+                    setSuccess('');
                   }}
                   className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition"
                   disabled={creating}
@@ -169,7 +197,7 @@ const GroupChatWidgets = ({ user }) => {
                 <button
                   type="submit"
                   className="px-4 py-2 bg-primary-600 text-white rounded-lg font-medium hover:bg-primary-700 transition disabled:bg-primary-400"
-                  disabled={creating}
+                  disabled={creating || !groupName.trim()}
                 >
                   {creating ? 'Creating...' : 'Create Group'}
                 </button>

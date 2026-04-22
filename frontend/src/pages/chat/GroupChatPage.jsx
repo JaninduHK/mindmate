@@ -36,6 +36,9 @@ const GroupChatPage = () => {
           axiosInstance.get(`/chats/groups/${groupId}/messages`)
         ]);
 
+        console.log('Group fetched:', groupRes.data);
+        console.log('Messages fetched:', messagesRes.data);
+
         setGroup(groupRes.data.data);
         setMessages(messagesRes.data.data || []);
 
@@ -43,7 +46,7 @@ const GroupChatPage = () => {
         const memberIds = groupRes.data.data.members.map(m => m._id || m);
         setIsMember(memberIds.includes(user._id));
       } catch (error) {
-        console.error('Failed to fetch group:', error);
+        console.error('Failed to fetch group:', error.response?.data || error.message);
       } finally {
         setLoading(false);
       }
@@ -71,6 +74,7 @@ const GroupChatPage = () => {
   // Listen for incoming group messages
   useEffect(() => {
     const handleReceiveMessage = (data) => {
+      console.log('Received message event:', data);
       setMessages(prev => [...prev, {
         _id: data._id,
         senderId: data.senderId,
@@ -90,10 +94,12 @@ const GroupChatPage = () => {
   const handleJoinGroup = async () => {
     try {
       setJoiningGroup(true);
-      await axiosInstance.post(`/chats/groups/${groupId}/join`);
+      console.log('Joining group:', groupId);
+      const response = await axiosInstance.post(`/chats/groups/${groupId}/join`);
+      console.log('Joined group:', response.data);
       setIsMember(true);
     } catch (error) {
-      console.error('Failed to join group:', error);
+      console.error('Failed to join group:', error.response?.data || error.message);
     } finally {
       setJoiningGroup(false);
     }
@@ -113,17 +119,21 @@ const GroupChatPage = () => {
         sender: { name: user.name, avatar: user.avatar },
       };
 
+      console.log('Sending message:', messageData);
+
       // Emit via socket for real-time delivery
       socket.emit('send_group_message', messageData);
+      console.log('Message emitted via socket');
       
       // Also save via API
-      await axiosInstance.post(`/chats/groups/${groupId}/send`, {
+      const response = await axiosInstance.post(`/chats/groups/${groupId}/send`, {
         message: messageInput,
       });
+      console.log('Message saved via API:', response.data);
 
       setMessageInput('');
     } catch (error) {
-      console.error('Failed to send message:', error);
+      console.error('Failed to send message:', error.response?.data || error.message);
     }
   };
 
@@ -203,43 +213,43 @@ const GroupChatPage = () => {
                   <p className="text-gray-500">No messages yet. Start the conversation!</p>
                 </div>
               ) : (
-                messages.map((msg) => (
-                  <div
-                    key={msg._id}
-                    className={`flex ${
-                      msg.senderId._id === user._id || msg.senderId === user._id
-                        ? 'justify-end'
-                        : 'justify-start'
-                    }`}
-                  >
+                messages.map((msg) => {
+                  const senderId = typeof msg.senderId === 'object' ? msg.senderId._id : msg.senderId;
+                  const senderName = typeof msg.senderId === 'object' ? msg.senderId.name : 'User';
+                  const isOwnMessage = senderId === user._id;
+
+                  return (
                     <div
-                      className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                        msg.senderId._id === user._id || msg.senderId === user._id
-                          ? 'bg-primary-600 text-white'
-                          : 'bg-white border border-gray-200 text-gray-900'
-                      }`}
+                      key={msg._id}
+                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
                     >
-                      {msg.senderId._id !== user._id && msg.senderId !== user._id && (
-                        <p className="text-xs font-semibold mb-1 opacity-75">
-                          {typeof msg.senderId === 'object' ? msg.senderId.name : 'User'}
-                        </p>
-                      )}
-                      <p className="break-words">{msg.message}</p>
-                      <p
-                        className={`text-xs mt-1 ${
-                          msg.senderId._id === user._id || msg.senderId === user._id
-                            ? 'text-white/70'
-                            : 'text-gray-500'
+                      <div
+                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
+                          isOwnMessage
+                            ? 'bg-primary-600 text-white'
+                            : 'bg-white border border-gray-200 text-gray-900'
                         }`}
                       >
-                        {new Date(msg.createdAt).toLocaleTimeString([], {
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
+                        {!isOwnMessage && (
+                          <p className="text-xs font-semibold mb-1 opacity-75">
+                            {senderName}
+                          </p>
+                        )}
+                        <p className="break-words">{msg.message}</p>
+                        <p
+                          className={`text-xs mt-1 ${
+                            isOwnMessage ? 'text-white/70' : 'text-gray-500'
+                          }`}
+                        >
+                          {new Date(msg.createdAt).toLocaleTimeString([], {
+                            hour: '2-digit',
+                            minute: '2-digit',
+                          })}
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                ))
+                  );
+                })
               )}
               <div ref={messagesEndRef} />
             </div>
