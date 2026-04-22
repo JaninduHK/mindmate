@@ -141,7 +141,8 @@ const GroupChatPage = () => {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
         <div className="text-center">
-          <p className="text-gray-600">Loading group chat...</p>
+          <div className="w-12 h-12 border-4 border-primary-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-600 font-medium">Loading group chat...</p>
         </div>
       </div>
     );
@@ -150,11 +151,13 @@ const GroupChatPage = () => {
   if (!group) {
     return (
       <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <p className="text-gray-600 mb-4">Group not found</p>
+        <div className="text-center max-w-md bg-white p-8 rounded-xl shadow-sm border border-gray-100">
+          <FiUsers className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">Group Not Found</h2>
+          <p className="text-gray-600 mb-6">The chat group you are looking for doesn't exist or has been removed.</p>
           <button
             onClick={() => navigate('/dashboard')}
-            className="text-primary-600 hover:text-primary-700"
+            className="w-full bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition"
           >
             Back to Dashboard
           </button>
@@ -164,22 +167,29 @@ const GroupChatPage = () => {
   }
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gray-50 lg:py-6 flex flex-col lg:items-center font-sans">
+      <div className="w-full lg:max-w-5xl flex flex-col flex-1 lg:max-h-[calc(100vh-3rem)] bg-white lg:rounded-2xl lg:shadow-md lg:border lg:border-gray-200 overflow-hidden relative">
       {/* Header */}
-      <div className="bg-white border-b border-gray-200 shadow-sm">
-        <div className="container-custom py-4 flex items-center justify-between">
-          <div className="flex items-center gap-3">
+      <div className="bg-white border-b border-gray-200 shadow-sm z-10 shrink-0">
+        <div className="container-custom mx-auto px-4 py-3 flex items-center justify-between">
+          <div className="flex items-center gap-4">
             <button
               onClick={() => navigate(-1)}
-              className="p-2 hover:bg-gray-100 rounded-lg transition"
+              className="p-2 text-gray-500 hover:text-gray-900 hover:bg-gray-100 rounded-full transition"
             >
-              <FiArrowLeft className="w-5 h-5" />
+              <FiArrowLeft className="w-6 h-6" />
             </button>
-            <div>
-              <h1 className="text-xl font-bold text-gray-900">{group.name}</h1>
-              <p className="text-sm text-gray-600 flex items-center gap-1 mt-1">
-                <FiUsers className="w-4 h-4" /> {group.members?.length || 0} members
-              </p>
+            <div className="flex items-center gap-3">
+              <div className="w-12 h-12 bg-primary-100 rounded-full flex items-center justify-center text-primary-600">
+                <FiUsers className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-lg md:text-xl font-bold text-gray-900 leading-tight">{group.name}</h1>
+                <p className="text-xs md:text-sm text-gray-500 flex items-center gap-1 font-medium">
+                  <span className="w-2 h-2 rounded-full bg-green-500"></span>
+                  {group.members?.length || 0} members
+                </p>
+              </div>
             </div>
           </div>
         </div>
@@ -187,65 +197,84 @@ const GroupChatPage = () => {
 
       {/* Not a member view */}
       {!isMember ? (
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-center max-w-md">
-            <FiUsers className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">Join Group Chat</h2>
-            <p className="text-gray-600 mb-6">
-              {group.description || 'Join this community group to start chatting with others.'}
+        <div className="flex-1 flex items-center justify-center p-4">
+          <div className="text-center max-w-md bg-white p-8 rounded-2xl shadow-sm border border-gray-100">
+            <div className="w-20 h-20 bg-primary-50 rounded-full flex items-center justify-center mx-auto mb-6 text-primary-600">
+              <FiUsers className="w-10 h-10" />
+            </div>
+            <h2 className="text-2xl font-bold text-gray-900 mb-3">Join {group.name}</h2>
+            <p className="text-gray-600 mb-8 leading-relaxed">
+              {group.description || 'Become a member of this community group to start sharing, supporting, and chatting with others.'}
             </p>
             <button
               onClick={handleJoinGroup}
               disabled={joiningGroup}
-              className="bg-primary-600 text-white px-6 py-3 rounded-lg hover:bg-primary-700 transition disabled:bg-primary-400"
+              className="w-full bg-primary-600 text-white font-medium px-6 py-3.5 rounded-xl hover:bg-primary-700 transition disabled:bg-primary-300 disabled:cursor-not-allowed shadow-md hover:shadow-lg flex justify-center items-center"
             >
-              {joiningGroup ? 'Joining...' : 'Join Group'}
+              {joiningGroup ? (
+                <>
+                  <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin mr-2"></div>
+                  Joining...
+                </>
+              ) : 'Join Community Group'}
             </button>
           </div>
         </div>
       ) : (
         <>
           {/* Messages Area */}
-          <div className="flex-1 overflow-y-auto bg-gray-50">
-            <div className="container-custom py-6 space-y-4">
+          <div className="flex-1 overflow-y-auto bg-[#F0F2F5] px-4 py-6">
+            <div className="max-w-4xl mx-auto space-y-6">
               {messages.length === 0 ? (
-                <div className="text-center py-12">
-                  <p className="text-gray-500">No messages yet. Start the conversation!</p>
+                <div className="text-center self-center my-12 bg-white/60 p-6 rounded-2xl border border-gray-100 max-w-sm mx-auto">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4 text-gray-400">
+                    <FiUsers className="w-8 h-8" />
+                  </div>
+                  <h3 className="text-lg font-semibold text-gray-800 mb-1">It's quiet here...</h3>
+                  <p className="text-gray-500 text-sm">Be the first to send a message and start the conversation!</p>
                 </div>
               ) : (
-                messages.map((msg) => {
+                messages.map((msg, index) => {
                   const senderId = typeof msg.senderId === 'object' ? msg.senderId._id : msg.senderId;
                   const senderName = typeof msg.senderId === 'object' ? msg.senderId.name : 'User';
                   const isOwnMessage = senderId === user._id;
 
+                  // Simple grouping logic (if consecutive messages from same user)
+                  const prevMsg = index > 0 ? messages[index - 1] : null;
+                  const prevSenderId = prevMsg ? (typeof prevMsg.senderId === 'object' ? prevMsg.senderId._id : prevMsg.senderId) : null;
+                  const isConsecutive = prevSenderId === senderId;
+
                   return (
                     <div
                       key={msg._id}
-                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'}`}
+                      className={`flex ${isOwnMessage ? 'justify-end' : 'justify-start'} ${isConsecutive ? 'mt-1' : 'mt-4'}`}
                     >
-                      <div
-                        className={`max-w-xs lg:max-w-md px-4 py-2 rounded-lg ${
-                          isOwnMessage
-                            ? 'bg-primary-600 text-white'
-                            : 'bg-white border border-gray-200 text-gray-900'
-                        }`}
-                      >
-                        {!isOwnMessage && (
-                          <p className="text-xs font-semibold mb-1 opacity-75">
+                      <div className={`flex flex-col ${isOwnMessage ? 'items-end' : 'items-start'} max-w-[80%] md:max-w-[70%]`}>
+                        
+                        {!isOwnMessage && !isConsecutive && (
+                          <span className="text-xs font-medium text-gray-500 ml-1 mb-1">
                             {senderName}
-                          </p>
+                          </span>
                         )}
-                        <p className="break-words">{msg.message}</p>
-                        <p
-                          className={`text-xs mt-1 ${
-                            isOwnMessage ? 'text-white/70' : 'text-gray-500'
-                          }`}
+                        
+                        <div
+                          className={`px-4 py-2.5 shadow-sm text-[15px] leading-relaxed relative
+                            ${isOwnMessage
+                              ? 'bg-primary-600 text-white rounded-2xl rounded-tr-sm'
+                              : 'bg-white text-gray-800 rounded-2xl rounded-tl-sm border border-gray-100'
+                            }`}
                         >
-                          {new Date(msg.createdAt).toLocaleTimeString([], {
-                            hour: '2-digit',
-                            minute: '2-digit',
-                          })}
-                        </p>
+                          <span className="break-words">{msg.message}</span>
+                          
+                          <div className={`mt-1 flex items-center justify-end gap-1 ${isOwnMessage ? 'text-primary-100' : 'text-gray-400'}`}>
+                            <span className="text-[10px] font-medium tracking-wide">
+                              {new Date(msg.createdAt).toLocaleTimeString([], {
+                                hour: '2-digit',
+                                minute: '2-digit',
+                              })}
+                            </span>
+                          </div>
+                        </div>
                       </div>
                     </div>
                   );
@@ -256,26 +285,29 @@ const GroupChatPage = () => {
           </div>
 
           {/* Message Input */}
-          <div className="bg-white border-t border-gray-200 p-4">
-            <form onSubmit={handleSendMessage} className="container-custom flex gap-3">
-              <input
-                type="text"
-                value={messageInput}
-                onChange={(e) => setMessageInput(e.target.value)}
-                placeholder="Type a message..."
-                className="flex-1 px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
+          <div className="bg-white border-t border-gray-200 p-4 shrink-0">
+            <form onSubmit={handleSendMessage} className="max-w-4xl mx-auto flex items-end gap-3">
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={messageInput}
+                  onChange={(e) => setMessageInput(e.target.value)}
+                  placeholder="Type a message..."
+                  className="w-full px-5 py-3.5 bg-gray-100/80 border-transparent rounded-full focus:bg-white focus:border-primary-500 focus:ring-2 focus:ring-primary-200 outline-none transition-all placeholder:text-gray-500"
+                />
+              </div>
               <button
                 type="submit"
                 disabled={!messageInput.trim()}
-                className="bg-primary-600 text-white p-2 rounded-lg hover:bg-primary-700 transition disabled:bg-gray-400 flex items-center justify-center w-10 h-10"
+                className="bg-primary-600 text-white p-3.5 rounded-full hover:bg-primary-700 transition-all disabled:bg-gray-300 disabled:text-gray-100 flex items-center justify-center shrink-0 shadow-md hover:shadow-lg disabled:shadow-none"
               >
-                <FiSend className="w-5 h-5" />
+                <FiSend className="w-5 h-5 ml-1" />
               </button>
             </form>
           </div>
         </>
       )}
+      </div>
     </div>
   );
 };
