@@ -11,11 +11,13 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
-import ChatPage from './pages/chat/ChatPage';
-
 // Events
 import EventList from './pages/Events/EventList';
 import EventDetail from './pages/Events/EventDetail';
+
+// Chat
+import ChatPage from './pages/chat/ChatPage';
+import GroupChatPage from './pages/chat/GroupChatPage';
 
 // Counselors (public)
 import CounselorList from './pages/Counselors/CounselorList';
@@ -82,6 +84,7 @@ function App() {
               <Route path="/book-session/:supporterId" element={<BookSessionPage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/chat/:recipientId" element={<ChatPage />} />
+              <Route path="/chat-group/:groupId" element={<GroupChatPage />} />
               {/* Protected — user role only */}
               <Route element={<ProtectedRoute allowedRoles={['user']} />}>
                 <Route path="/dashboard" element={<Dashboard />} />

@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { FiUsers, FiPlus, FiX } from 'react-icons/fi';
-import axios from 'axios';
+import { axiosInstance } from '../../api/axios.config';
 
 const GroupChatWidgets = ({ user }) => {
   const [groups, setGroups] = useState([]);
@@ -21,7 +21,7 @@ const GroupChatWidgets = ({ user }) => {
   const fetchGroups = async () => {
     try {
       setLoading(true);
-      const response = await axios.get('/api/chats/groups/available');
+      const response = await axiosInstance.get('/chats/groups/available');
       setGroups(response.data.data || []);
     } catch (error) {
       console.error('Failed to fetch group chats:', error);
@@ -42,7 +42,7 @@ const GroupChatWidgets = ({ user }) => {
 
     try {
       setCreating(true);
-      await axios.post('/api/chats/groups', {
+      await axiosInstance.post('/chats/groups', {
         name: groupName.trim()
       });
       setSuccess('Group created successfully!');
