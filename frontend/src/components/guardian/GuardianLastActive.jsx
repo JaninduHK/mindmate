@@ -68,24 +68,43 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     else if (diffDays < 30) lastActiveText = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     else lastActiveText = lastActivityTime.toLocaleDateString();
 
-    // Calculate inactive days - how many full days since last activity
+    // Calculate inactive days - count days this week with NO mood entries
+    // Get start of this week (Sunday)
     const today = new Date();
-    today.setHours(0, 0, 0, 0); // Start of today
+    const dayOfWeek = today.getDay();
+    const startOfWeekDate = new Date(today);
+    startOfWeekDate.setDate(today.getDate() - dayOfWeek); // 0 = Sunday
+    startOfWeekDate.setHours(0, 0, 0, 0);
+
+    // Count days from start of week until today that have NO mood entries
+    const moodDates = moods.map(m => {
+      if (m.createdAt) {
+        const moodDate = new Date(m.createdAt);
+        return moodDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      } else if (m.date) {
+        return m.date; // Already YYYY-MM-DD
+      }
+      return null;
+    }).filter(d => d !== null);
+
+    let inactiveDays = 0;
+    for (let i = 0; i <= dayOfWeek && i <= today.getDate() - startOfWeekDate.getDate(); i++) {
+      const checkDate = new Date(startOfWeekDate);
+      checkDate.setDate(startOfWeekDate.getDate() + i);
+      const checkDateStr = checkDate.toISOString().split('T')[0];
+      
+      if (!moodDates.includes(checkDateStr)) {
+        inactiveDays++;
+      }
+    }
     
-    const lastActivityDay = new Date(lastActivityTime);
-    lastActivityDay.setHours(0, 0, 0, 0); // Start of that day
-    
-    const timeDiff = today - lastActivityDay;
-    const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
-    
-    // Clamp between 0 and 7 for weekly view
-    let inactiveDays = Math.max(0, Math.min(daysDiff, 7));
-    
-    console.log('[GuardianLastActive] Inactive days calc:', {
-      today,
-      lastActivityDay,
-      timeDiff,
-      daysDiff,
+    inactiveDays = Math.max(0, Math.min(inactiveDays, 7));
+
+    console.log('[GuardianLastActive] Week analysis:', {
+      startOfWeek: startOfWeekDate.toISOString().split('T')[0],
+      today: today.toISOString().split('T')[0],
+      dayOfWeek,
+      moodDates,
       inactiveDays,
     });
 
