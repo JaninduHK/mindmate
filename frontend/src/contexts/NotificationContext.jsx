@@ -7,16 +7,29 @@ export const NotificationProvider = ({ children }) => {
   const [messageNotifications, setMessageNotifications] = useState([]);
 
   const addMessageNotification = useCallback((message) => {
-    setMessageNotifications((prev) => [
-      { id: Date.now(), ...message },
-      ...prev.slice(0, 9),
-    ]);
+    const notification = {
+      id: Date.now(),
+      senderId: message.senderId,
+      senderName: message.senderName,
+      message: message.message,
+      groupId: message.groupId,
+      groupName: message.groupName,
+      isGroupMessage: message.isGroupMessage || false,
+      timestamp: message.timestamp,
+    };
+    
+    setMessageNotifications((prev) => [notification, ...prev.slice(0, 19)]);
     setUnreadMessages((prev) => prev + 1);
   }, []);
 
   const clearMessageNotifications = useCallback(() => {
     setUnreadMessages(0);
     setMessageNotifications([]);
+  }, []);
+
+  const removeMessageNotification = useCallback((id) => {
+    setMessageNotifications((prev) => prev.filter((n) => n.id !== id));
+    setUnreadMessages((prev) => Math.max(0, prev - 1));
   }, []);
 
   const decrementUnreadMessages = useCallback(() => {
@@ -28,6 +41,7 @@ export const NotificationProvider = ({ children }) => {
     messageNotifications,
     addMessageNotification,
     clearMessageNotifications,
+    removeMessageNotification,
     decrementUnreadMessages,
   };
 

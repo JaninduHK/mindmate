@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { FiBell } from 'react-icons/fi';
 import { notificationAPI } from '../../api/notification.api';
 import { useNotification } from '../../hooks/useNotification';
@@ -8,7 +9,8 @@ const NotificationBell = () => {
   const [open, setOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
-  const { unreadMessages, clearMessageNotifications } = useNotification();
+  const { unreadMessages, messageNotifications, removeMessageNotification, clearMessageNotifications } = useNotification();
+  const navigate = useNavigate();
   const ref = useRef(null);
 
   // Total unread count = system notifications + unread messages
@@ -52,6 +54,16 @@ const NotificationBell = () => {
     setUnreadCount((c) => Math.max(0, c - 1));
   };
 
+  const handleMessageNotificationClick = (notification) => {
+    if (notification.isGroupMessage) {
+      navigate(`/chat-group/${notification.groupId}`);
+    } else {
+      navigate(`/chat/${notification.senderId}`);
+    }
+    removeMessageNotification(notification.id);
+    setOpen(false);
+  };
+
   return (
     <div className="relative" ref={ref}>
       <button
@@ -67,8 +79,8 @@ const NotificationBell = () => {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100">
+        <div className="absolute right-0 top-full mt-2 w-96 bg-white rounded-xl shadow-lg border border-gray-100 z-50 overflow-hidden max-h-[600px] flex flex-col">
+          <div className="flex items-center justify-between px-4 py-3 border-b border-gray-100 shrink-0">
             <span className="font-semibold text-sm text-gray-900">Notifications</span>
             {totalUnread > 0 && (
               <button onClick={handleMarkAllRead} className="text-xs text-primary-600 hover:underline">
@@ -76,8 +88,32 @@ const NotificationBell = () => {
               </button>
             )}
           </div>
-          <div className="max-h-96 overflow-y-auto divide-y divide-gray-50">
-            {notifications.length === 0 ? (
+
+          <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
+            {/* Message Notifications */}
+            {messageNotifications.length > 0 && (
+              <>
+                {messageNotifications.map((n) => (
+                  <div
+                    key={n.id}
+                    onClick={() => handleMessageNotificationClick(n)}
+                    className="px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-l-4 border-primary-300"
+                  >
+                    <p className="text-sm font-bold text-primary-900">{n.senderName}</p>
+                    {n.isGroupMessage && (
+                      <p className="text-xs text-primary-600 font-medium mt-0.5">
+                        in {n.groupName}
+                      </p>
+                    )}
+                    <p className="text-sm text-gray-700 mt-1 line-clamp-2 leading-relaxed">{n.message}</p>
+                    <p className="text-xs text-primary-600 mt-1 font-medium">Click to open chat</p>
+                  </div>
+                ))}
+              </>
+            )}
+
+            {/* System Notifications */}
+            {notifications.length === 0 && messageNotifications.length === 0 ? (
               <p className="p-4 text-sm text-gray-400 text-center">No notifications</p>
             ) : (
               notifications.map((n) => (

@@ -5,6 +5,7 @@ import MessageBubble from "./MessageBubble";
 import { FiSearch, FiX } from "react-icons/fi";
 import toast from "react-hot-toast";
 import { useNotification } from "../../hooks/useNotification";
+import { showMessageNotification } from "../notifications/MessageNotification";
 
 const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
   const { clearMessageNotifications } = useNotification();

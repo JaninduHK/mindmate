@@ -22,6 +22,7 @@ export const useGlobalMessageListener = () => {
           senderId: data.senderId,
           senderName: data.senderName || 'Unknown User',
           message: data.message,
+          recipientId: data.senderId,
           timestamp: new Date(),
         });
       }
@@ -35,6 +36,7 @@ export const useGlobalMessageListener = () => {
           senderId: data.senderId,
           senderName: data.senderName || 'Unknown User',
           message: data.message,
+          groupId: data.groupId,
           groupName: data.groupName,
           isGroupMessage: true,
           timestamp: new Date(),
