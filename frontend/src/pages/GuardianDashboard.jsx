@@ -261,7 +261,7 @@ const GuardianDashboard = () => {
           <div className="space-y-6">
             {/* Last Active */}
             <GuardianLastActive 
-              lastActiveTime={userData?.lastActiveTime}
+              lastActiveTime={userData?.lastActiveAt}
               isEmergencyActive={userData?.emergencyMode}
             />
 

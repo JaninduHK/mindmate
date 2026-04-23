@@ -457,6 +457,7 @@ export const getGuardianDashboard = asyncHandler(async (req, res) => {
           id: user._id,
           name: user.name,
           email: user.email,
+          lastActiveAt: user.lastActiveAt,
           emergencyMode: user.emergencyMode,
           emergencyActivatedAt: user.emergencyActivatedAt,
           emergencyLocation: user.emergencyLocation,
@@ -483,7 +484,6 @@ export const getGuardianDashboard = asyncHandler(async (req, res) => {
           relationship: c.relationship,
           inviteStatus: c.inviteStatus,
         })),
-        lastActiveTime: user.lastActiveAt,
         riskAlert: highRiskAlert ? {
           id: highRiskAlert._id,
           type: highRiskAlert.type,
