@@ -1,59 +1,86 @@
-import React from 'react';
+import React, { useMemo } from 'react';
 import { Activity, Clock } from 'lucide-react';
 
-const GuardianLastActive = ({ lastActiveTime, isEmergencyActive }) => {
-  const getLastActiveText = () => {
-    if (!lastActiveTime) return 'Never';
-    
-    const lastActive = new Date(lastActiveTime);
+const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
+  // Calculate last active time based on most recent mood or goal
+  const { lastActiveDate, lastActiveText, inactiveDays } = useMemo(() => {
+    if (!moods?.length && !goals?.length) {
+      return {
+        lastActiveDate: null,
+        lastActiveText: 'Never',
+        inactiveDays: 7,
+      };
+    }
+
+    // Get the most recent activity (mood or goal)
+    let lastActivityTime = null;
+
+    if (moods?.length > 0) {
+      // Moods have date as ISO string (YYYY-MM-DD)
+      const mostRecentMood = moods[0]; // Already sorted by most recent
+      if (mostRecentMood.date) {
+        // Parse date string to Date object (add time component)
+        const moodDate = new Date(mostRecentMood.date + 'T23:59:59');
+        lastActivityTime = moodDate;
+      }
+    }
+
+    if (goals?.length > 0 && goals[0].updatedAt) {
+      const goalTime = new Date(goals[0].updatedAt);
+      if (!lastActivityTime || goalTime > lastActivityTime) {
+        lastActivityTime = goalTime;
+      }
+    }
+
+    if (!lastActivityTime) {
+      return {
+        lastActiveDate: null,
+        lastActiveText: 'Never',
+        inactiveDays: 7,
+      };
+    }
+
+    // Calculate how long ago
     const now = new Date();
-    const diffMS = now - lastActive;
+    const diffMS = now - lastActivityTime;
     const diffMins = Math.floor(diffMS / (1000 * 60));
     const diffHours = Math.floor(diffMS / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMS / (1000 * 60 * 60 * 24));
 
-    if (diffMins < 1) return 'Just now';
-    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-    if (diffDays < 30) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-    return lastActive.toLocaleDateString();
-  };
+    let lastActiveText = '';
+    if (diffMins < 1) lastActiveText = 'Just now';
+    else if (diffMins < 60) lastActiveText = `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
+    else if (diffHours < 24) lastActiveText = `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
+    else if (diffDays < 30) lastActiveText = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
+    else lastActiveText = lastActivityTime.toLocaleDateString();
 
-  // Calculate inactivity days this week
-  const getInactivityDaysThisWeek = () => {
-    if (!lastActiveTime) return 7; // All days inactive if never active
-    
-    const lastActive = new Date(lastActiveTime);
-    const now = new Date();
-    const diffMS = now - lastActive;
-    const diffDays = Math.floor(diffMS / (1000 * 60 * 60 * 24));
-    
-    // Get start of this week (Monday)
+    // Calculate inactive days this week
     const today = new Date();
     const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
     const startOfWeek = new Date(today.setDate(diff));
     startOfWeek.setHours(0, 0, 0, 0);
-    
-    const lastActiveDate = new Date(lastActiveTime);
-    
-    if (lastActiveDate < startOfWeek) {
-      // No activity this week
-      return 7;
+
+    let inactiveDays = 0;
+    if (lastActivityTime < startOfWeek) {
+      inactiveDays = 7; // No activity this week
     } else {
-      // Had activity this week - calculate days since last activity
-      const daysInactive = Math.floor((now - lastActiveDate) / (1000 * 60 * 60 * 24));
-      return daysInactive;
+      inactiveDays = Math.floor((now - lastActivityTime) / (1000 * 60 * 60 * 24));
     }
-  };
+
+    return {
+      lastActiveDate: lastActivityTime,
+      lastActiveText,
+      inactiveDays: Math.min(inactiveDays, 7),
+    };
+  }, [moods, goals]);
 
   const getStatusColor = () => {
     if (isEmergencyActive) return 'bg-red-50 border-red-200';
-    if (!lastActiveTime) return 'bg-gray-50 border-gray-200';
+    if (!lastActiveDate) return 'bg-gray-50 border-gray-200';
     
-    const lastActive = new Date(lastActiveTime);
     const now = new Date();
-    const diffHours = (now - lastActive) / (1000 * 60 * 60);
+    const diffHours = (now - lastActiveDate) / (1000 * 60 * 60);
     
     if (diffHours < 1) return 'bg-emerald-50 border-emerald-200';
     if (diffHours < 24) return 'bg-blue-50 border-blue-200';
@@ -62,11 +89,10 @@ const GuardianLastActive = ({ lastActiveTime, isEmergencyActive }) => {
 
   const getStatusBadgeColor = () => {
     if (isEmergencyActive) return 'bg-red-100 text-red-700';
-    if (!lastActiveTime) return 'bg-gray-200 text-gray-700';
+    if (!lastActiveDate) return 'bg-gray-200 text-gray-700';
     
-    const lastActive = new Date(lastActiveTime);
     const now = new Date();
-    const diffHours = (now - lastActive) / (1000 * 60 * 60);
+    const diffHours = (now - lastActiveDate) / (1000 * 60 * 60);
     
     if (diffHours < 1) return 'bg-emerald-100 text-emerald-700';
     if (diffHours < 24) return 'bg-blue-100 text-blue-700';
@@ -75,18 +101,15 @@ const GuardianLastActive = ({ lastActiveTime, isEmergencyActive }) => {
 
   const getStatusText = () => {
     if (isEmergencyActive) return '🚨 In Emergency';
-    if (!lastActiveTime) return 'Never Active';
+    if (!lastActiveDate) return 'Never Active';
     
-    const lastActive = new Date(lastActiveTime);
     const now = new Date();
-    const diffHours = (now - lastActive) / (1000 * 60 * 60);
+    const diffHours = (now - lastActiveDate) / (1000 * 60 * 60);
     
     if (diffHours < 1) return '✓ Active Now';
     if (diffHours < 24) return '✓ Active Today';
     return '⚠️ Inactive';
   };
-
-  const inactiveDays = getInactivityDaysThisWeek();
 
   return (
     <div className={`border p-6 rounded-2xl ${getStatusColor()}`}>
@@ -101,16 +124,16 @@ const GuardianLastActive = ({ lastActiveTime, isEmergencyActive }) => {
           <p className="text-sm text-gray-600 mb-2">Last Active</p>
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-gray-400" />
-            <p className="text-sm font-semibold text-gray-900">{getLastActiveText()}</p>
+            <p className="text-sm font-semibold text-gray-900">{lastActiveText}</p>
           </div>
         </div>
         
         {/* Last Active Date & Time */}
-        {lastActiveTime && (
+        {lastActiveDate && (
           <div>
             <p className="text-xs text-gray-500 font-medium mb-1">Date & Time</p>
             <p className="text-xs text-gray-600 bg-white bg-opacity-50 px-2 py-1 rounded">
-              {new Date(lastActiveTime).toLocaleString('en-US', { 
+              {lastActiveDate.toLocaleString('en-US', { 
                 month: 'short', 
                 day: 'numeric', 
                 year: 'numeric',
@@ -118,6 +141,9 @@ const GuardianLastActive = ({ lastActiveTime, isEmergencyActive }) => {
                 minute: '2-digit',
                 second: '2-digit'
               })}
+            </p>
+            <p className="text-xs text-gray-500 mt-1">
+              Based on mood entries or goal updates
             </p>
           </div>
         )}
