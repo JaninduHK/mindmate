@@ -124,6 +124,17 @@ const PeerSupporterDashboard = () => {
     navigate(`/chat/${session.userId._id}`, { state: { session } });
   };
 
+  // Check if session time has arrived
+  const isSessionTimeAvailable = (sessionDate, sessionTime) => {
+    const now = new Date();
+    const [hours, minutes] = sessionTime.split(':').map(Number);
+    
+    const sessionDateTime = new Date(sessionDate);
+    sessionDateTime.setHours(hours, minutes, 0, 0);
+    
+    return now >= sessionDateTime;
+  };
+
   const handleAvailabilityChange = (newStatus) => {
     setIsAvailable(newStatus);
   };
@@ -252,20 +263,33 @@ const PeerSupporterDashboard = () => {
                 ) : upcomingSessions.length === 0 ? (
                   <div className="text-center py-4 text-gray-400 text-sm">No upcoming sessions scheduled</div>
                 ) : (
-                  upcomingSessions.map((session, idx) => (
-                    <button
-                      key={session._id}
-                      onClick={() => handleOpenChat(session)}
-                      className="w-full text-left hover:bg-gray-50 transition-colors"
-                    >
-                      <TimelineItem 
-                        icon={FiMessageCircle} 
-                        title={`Chat with ${session.userId?.name || 'User'}`}
-                        time={formatSessionDateTime(session.sessionDate, session.sessionTime)}
-                        isLast={idx === upcomingSessions.length - 1}
-                      />
-                    </button>
-                  ))
+                  upcomingSessions.map((session, idx) => {
+                    const isTimeAvailable = isSessionTimeAvailable(session.sessionDate, session.sessionTime);
+                    
+                    return (
+                      <button
+                        key={session._id}
+                        onClick={() => isTimeAvailable && handleOpenChat(session)}
+                        disabled={!isTimeAvailable}
+                        className={`w-full text-left transition-colors ${
+                          isTimeAvailable 
+                            ? 'hover:bg-gray-50 cursor-pointer' 
+                            : 'cursor-not-allowed opacity-60'
+                        }`}
+                        title={!isTimeAvailable ? 'Chat will be available at session time' : 'Click to open chat'}
+                      >
+                        <TimelineItem 
+                          icon={FiMessageCircle} 
+                          title={`Chat with ${session.userId?.name || 'User'}`}
+                          time={formatSessionDateTime(session.sessionDate, session.sessionTime)}
+                          isLast={idx === upcomingSessions.length - 1}
+                        />
+                        {!isTimeAvailable && (
+                          <p className="text-xs text-gray-400 ml-14 -mt-1">Available at {session.sessionTime}</p>
+                        )}
+                      </button>
+                    );
+                  })
                 )}
               </div>
 
