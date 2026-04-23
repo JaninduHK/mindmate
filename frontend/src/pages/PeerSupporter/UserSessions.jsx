@@ -4,6 +4,7 @@ import { useAuth } from '../../hooks/useAuth';
 import * as sessionApi from '../../api/session.api';
 import toast from 'react-hot-toast';
 import { FiArrowLeft, FiCalendar, FiClock, FiMessageSquare, FiTrash2, FiCheckCircle, FiSend } from 'react-icons/fi';
+import { socket } from '../../socket/socket';
 
 const UserSessions = () => {
   const navigate = useNavigate();
@@ -154,6 +155,40 @@ const UserSessions = () => {
       fetchSessions();
     }
   }, [user]);
+
+  // Listen for real-time session status changes
+  useEffect(() => {
+    if (!socket || !user?._id) return;
+
+    const handleSessionStatusChanged = (data) => {
+      const { sessionId, newStatus } = data;
+      console.log('📋 Session status changed:', data);
+
+      // Update the session in the list
+      setSessions((prev) =>
+        prev.map((session) =>
+          session._id === sessionId
+            ? { ...session, status: newStatus }
+            : session
+        )
+      );
+
+      // Show notification
+      if (newStatus === 'confirmed') {
+        toast.success('Your session has been confirmed!');
+      } else if (newStatus === 'cancelled') {
+        toast.error('Your session has been cancelled.');
+      }
+    };
+
+    socket.on('session_status_changed', handleSessionStatusChanged);
+    console.log('✅ Session status change listener registered for user:', user._id);
+
+    return () => {
+      socket.off('session_status_changed', handleSessionStatusChanged);
+      console.log('❌ Session status change listener unregistered');
+    };
+  }, [user?._id]);
 
   // Get count of sessions for a specific status
   const getSessionCount = (status) => {

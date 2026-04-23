@@ -49,6 +49,19 @@ const sessionBookingSchema = new mongoose.Schema(
         default: null,
       },
     },
+    confirmedAt: {
+      type: Date,
+      default: null,
+    },
+    cancelledBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    cancellationReason: {
+      type: String,
+      default: '',
+    },
   },
   { timestamps: true }
 );

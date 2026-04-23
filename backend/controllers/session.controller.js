@@ -2,6 +2,7 @@ import mongoose from 'mongoose';
 import SessionBooking from '../models/SessionBooking.model.js';
 import User from '../models/User.model.js';
 import Availability from '../models/Availability.model.js';
+import Notification from '../models/Notification.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
@@ -134,6 +135,42 @@ export const bookSession = asyncHandler(async (req, res) => {
       : duration,
   });
 
+  // Create notification for peer counselor
+  try {
+    await Notification.create({
+      userId: supporterObjectId,
+      type: 'session_booked',
+      title: 'New Session Booking',
+      message: `${req.user.name} has booked a session with you for ${topic}`,
+      relatedData: {
+        sessionId: sessionBooking._id,
+        userId: userId,
+        userName: req.user.name,
+      },
+    });
+
+    // Emit real-time notification via Socket.IO
+    if (req.app && req.app.io) {
+      const supporterIdStr = supporterObjectId.toString();
+      const eventData = {
+        sessionId: sessionBooking._id,
+        userId: userId,
+        userName: req.user.name,
+        topic,
+        sessionDate: dateStart,
+        sessionTime: bookingStartTime,
+      };
+      
+      req.app.io.to(supporterIdStr).emit('session_booked', eventData);
+      console.log(`✅ Emitted session_booked to room ${supporterIdStr}:`, eventData);
+    } else {
+      console.error('❌ io instance not available on req.app');
+    }
+  } catch (notifError) {
+    console.error('Error creating notification:', notifError);
+    // Don't fail the booking if notification fails
+  }
+
   return res
     .status(201)
     .json(
@@ -200,9 +237,10 @@ export const getSessionDetails = asyncHandler(async (req, res) => {
   return res.status(200).json(new ApiResponse(200, session, 'Session details retrieved'));
 });
 
-// Cancel a session
+// Cancel a session - both user and peer counselor can cancel
 export const cancelSession = asyncHandler(async (req, res) => {
   const { sessionId } = req.params;
+  const { reason = '' } = req.body;
   const userId = req.user._id;
 
   const session = await SessionBooking.findById(sessionId);
@@ -211,8 +249,11 @@ export const cancelSession = asyncHandler(async (req, res) => {
     throw new ApiError(404, 'Session not found');
   }
 
-  // Only user who booked can cancel
-  if (session.userId.toString() !== userId.toString()) {
+  // Both user and supporter can cancel
+  const isUser = session.userId.toString() === userId.toString();
+  const isSupporter = session.supporterId.toString() === userId.toString();
+
+  if (!isUser && !isSupporter) {
     throw new ApiError(403, 'You can only cancel your own sessions');
   }
 
@@ -221,9 +262,119 @@ export const cancelSession = asyncHandler(async (req, res) => {
   }
 
   session.status = 'cancelled';
+  session.cancelledBy = userId;
+  session.cancellationReason = reason;
   await session.save();
 
+  // Populate for response
+  await session.populate('userId', 'name email');
+  await session.populate('supporterId', 'name email');
+
+  // Create notification for the other party
+  try {
+    const recipientId = session.userId._id.toString() === userId.toString() 
+      ? session.supporterId._id 
+      : session.userId._id;
+    
+    await Notification.create({
+      userId: recipientId,
+      type: 'session_cancelled',
+      title: 'Session Cancelled',
+      message: `A session scheduled for ${new Date(session.sessionDate).toLocaleDateString()} has been cancelled`,
+      relatedData: {
+        sessionId: session._id,
+      },
+    });
+
+    // Emit real-time update to the other party
+    if (req.app && req.app.io) {
+      const recipientIdStr = recipientId.toString();
+      const eventData = {
+        sessionId: session._id,
+        newStatus: 'cancelled',
+        reason: reason,
+        cancelledAt: new Date(),
+      };
+      
+      req.app.io.to(recipientIdStr).emit('session_status_changed', eventData);
+      console.log(`✅ Emitted session_status_changed to room ${recipientIdStr}:`, eventData);
+    } else {
+      console.error('❌ io instance not available on req.app');
+    }
+  } catch (notifError) {
+    console.error('Error creating cancellation notification:', notifError);
+  }
+
   return res.status(200).json(new ApiResponse(200, session, 'Session cancelled successfully'));
+});
+
+// Accept a session - peer counselor accepts pending session
+export const acceptSession = asyncHandler(async (req, res) => {
+  const { sessionId } = req.params;
+  const supporterId = req.user._id;
+
+  // Only peer supporters can accept sessions
+  if (req.user.role !== 'peer_supporter') {
+    throw new ApiError(403, 'Only peer counselors can accept sessions');
+  }
+
+  const session = await SessionBooking.findById(sessionId);
+
+  if (!session) {
+    throw new ApiError(404, 'Session not found');
+  }
+
+  // Session must be for this supporter
+  if (session.supporterId.toString() !== supporterId.toString()) {
+    throw new ApiError(403, 'You can only accept sessions booked with you');
+  }
+
+  // Can only accept pending sessions
+  if (session.status !== 'pending') {
+    throw new ApiError(400, `Cannot accept a ${session.status} session`);
+  }
+
+  session.status = 'confirmed';
+  session.confirmedAt = new Date();
+  await session.save();
+
+  // Populate for response
+  await session.populate('userId', 'name email');
+  await session.populate('supporterId', 'name email');
+
+  // Create notification for the user
+  try {
+    await Notification.create({
+      userId: session.userId._id,
+      type: 'session_accepted',
+      title: 'Session Confirmed',
+      message: `${session.supporterId.name} has accepted your session request for ${session.topic}`,
+      relatedData: {
+        sessionId: session._id,
+        supporterId: session.supporterId._id,
+      },
+    });
+
+    // Emit real-time update to user's room
+    if (req.app && req.app.io) {
+      const userId = session.userId._id.toString();
+      const eventData = {
+        sessionId: session._id,
+        newStatus: 'confirmed',
+        supporterName: session.supporterId.name,
+        confirmedAt: session.confirmedAt,
+      };
+      
+      req.app.io.to(userId).emit('session_status_changed', eventData);
+      console.log(`✅ Emitted session_status_changed to room ${userId}:`, eventData);
+    } else {
+      console.error('❌ io instance not available on req.app');
+    }
+  } catch (notifError) {
+    console.error('Error creating acceptance notification:', notifError);
+  }
+
+  return res.status(200).json(new ApiResponse(200, session, 'Session accepted successfully'));
 });
 
 // Add feedback to a session

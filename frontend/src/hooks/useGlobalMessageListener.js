@@ -11,8 +11,14 @@ export const useGlobalMessageListener = () => {
     if (!user?._id) return;
 
     // Join user's personal room for real-time messages
-    socket.emit('join_room', user._id);
-    console.log('[Global] Joined room for user:', user._id);
+    const joinRoom = () => {
+      socket.emit('join_room', user._id);
+      console.log('✅ [Global] User joined socket room:', user._id, '| Socket ID:', socket.id);
+    };
+
+    // Join room initially and on every reconnect
+    joinRoom();
+    socket.on('connect', joinRoom);
 
     // Listen for incoming messages from any chat
     const handleReceiveMessage = (data) => {
@@ -48,6 +54,7 @@ export const useGlobalMessageListener = () => {
     socket.on('receive_group_message', handleReceiveGroupMessage);
 
     return () => {
+      socket.off('connect', joinRoom);
       socket.off('receive_message', handleReceiveMessage);
       socket.off('receive_group_message', handleReceiveGroupMessage);
     };

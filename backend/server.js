@@ -76,6 +76,9 @@ const io = new Server(server, {
 
 console.log('🔌 Socket.IO initialized with CORS:', corsOptions);
 
+// Make io available globally via app for use in controllers
+app.io = io;
+
 // Initialize socket events
 socketHandler(io);
 

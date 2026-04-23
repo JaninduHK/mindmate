@@ -5,6 +5,7 @@ import {
   getSupporterBookings,
   getSessionDetails,
   cancelSession,
+  acceptSession,
   addSessionFeedback,
   updateSessionDetails,
   getAvailableSlots,
@@ -33,6 +34,9 @@ router.get('/:sessionId', getSessionDetails);
 
 // Cancel a session
 router.post('/:sessionId/cancel', cancelSession);
+
+// Accept a session (peer counselor only)
+router.post('/:sessionId/accept', acceptSession);
 
 // Add feedback to session
 router.post('/:sessionId/feedback', addSessionFeedback);

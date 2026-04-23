@@ -4,6 +4,7 @@ import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen, FiAward, FiClock, FiStar
 import { useAuth } from '../../hooks/useAuth';
 import GroupChatWidgets from '../../components/Dashboard/GroupChatWidgets';
 import AvailabilityToggle from '../../components/peer/AvailabilityToggle';
+import PeerSessionManagement from '../../components/PeerSupporter/PeerSessionManagement';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -160,6 +161,9 @@ const PeerSupporterDashboard = () => {
                 />
               </div>
             </div>
+
+            {/* Session Bookings Management */}
+            <PeerSessionManagement />
 
             {/* Community Chat Groups */}
             <GroupChatWidgets user={user} />

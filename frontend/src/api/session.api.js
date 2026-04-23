@@ -114,18 +114,39 @@ export const getSessionDetails = async (sessionId) => {
 /**
  * Cancel a session
  */
-export const cancelSession = async (sessionId) => {
+export const cancelSession = async (sessionId, reason = '') => {
   try {
     const config = {
       headers: {
         Authorization: `Bearer ${getAccessToken()}`,
+        'Content-Type': 'application/json',
       },
     };
 
-    const response = await axios.post(`${API_BASE_URL}/${sessionId}/cancel`, {}, config);
+    const response = await axios.post(`${API_BASE_URL}/${sessionId}/cancel`, { reason }, config);
     return response.data;
   } catch (error) {
     console.error('Error canceling session:', error);
+    throw error;
+  }
+};
+
+/**
+ * Accept a session (peer counselor)
+ */
+export const acceptSession = async (sessionId) => {
+  try {
+    const config = {
+      headers: {
+        Authorization: `Bearer ${getAccessToken()}`,
+        'Content-Type': 'application/json',
+      },
+    };
+
+    const response = await axios.post(`${API_BASE_URL}/${sessionId}/accept`, {}, config);
+    return response.data;
+  } catch (error) {
+    console.error('Error accepting session:', error);
     throw error;
   }
 };
