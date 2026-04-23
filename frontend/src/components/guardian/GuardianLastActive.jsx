@@ -4,6 +4,9 @@ import { Activity, Clock } from 'lucide-react';
 const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
   // Calculate last active time based on most recent mood or goal
   const { lastActiveDate, lastActiveText, inactiveDays } = useMemo(() => {
+    console.log('[GuardianLastActive] Received moods:', moods);
+    console.log('[GuardianLastActive] Received goals:', goals);
+    
     if (!moods?.length && !goals?.length) {
       return {
         lastActiveDate: null,
@@ -16,11 +19,12 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     let lastActivityTime = null;
 
     if (moods?.length > 0) {
-      // Moods have date as ISO string (YYYY-MM-DD)
+      // Moods have date as string (YYYY-MM-DD)
       const mostRecentMood = moods[0]; // Already sorted by most recent
       if (mostRecentMood.date) {
-        // Parse date string to Date object (add time component)
-        const moodDate = new Date(mostRecentMood.date + 'T23:59:59');
+        // Parse date string safely without timezone issues
+        const [year, month, day] = mostRecentMood.date.split('-').map(Number);
+        const moodDate = new Date(year, month - 1, day, 0, 0, 0);
         lastActivityTime = moodDate;
       }
     }
@@ -47,6 +51,14 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     const diffHours = Math.floor(diffMS / (1000 * 60 * 60));
     const diffDays = Math.floor(diffMS / (1000 * 60 * 60 * 24));
 
+    console.log('[GuardianLastActive] Calculation:', {
+      lastActivityTime: lastActivityTime.toString(),
+      now: now.toString(),
+      diffMS,
+      diffDays,
+      diffHours,
+    });
+
     let lastActiveText = '';
     if (diffMins < 1) lastActiveText = 'Just now';
     else if (diffMins < 60) lastActiveText = `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`;
@@ -54,19 +66,26 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     else if (diffDays < 30) lastActiveText = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     else lastActiveText = lastActivityTime.toLocaleDateString();
 
-    // Calculate inactive days this week
+    // Calculate inactive days - how many full days since last activity
     const today = new Date();
-    const dayOfWeek = today.getDay();
-    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1);
-    const startOfWeek = new Date(today.setDate(diff));
-    startOfWeek.setHours(0, 0, 0, 0);
-
-    let inactiveDays = 0;
-    if (lastActivityTime < startOfWeek) {
-      inactiveDays = 7; // No activity this week
-    } else {
-      inactiveDays = Math.floor((now - lastActivityTime) / (1000 * 60 * 60 * 24));
-    }
+    today.setHours(0, 0, 0, 0); // Start of today
+    
+    const lastActivityDay = new Date(lastActivityTime);
+    lastActivityDay.setHours(0, 0, 0, 0); // Start of that day
+    
+    const timeDiff = today - lastActivityDay;
+    const daysDiff = Math.floor(timeDiff / (1000 * 60 * 60 * 24));
+    
+    // Clamp between 0 and 7 for weekly view
+    let inactiveDays = Math.max(0, Math.min(daysDiff, 7));
+    
+    console.log('[GuardianLastActive] Inactive days calc:', {
+      today,
+      lastActivityDay,
+      timeDiff,
+      daysDiff,
+      inactiveDays,
+    });
 
     return {
       lastActiveDate: lastActivityTime,
