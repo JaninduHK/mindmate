@@ -71,10 +71,22 @@ export const getAvailabilityByCounselor = async (supporterId, startDate = null, 
     if (startDate) params.startDate = startDate;
     if (endDate) params.endDate = endDate;
 
+    console.log(`🔍 Calling availability API:`, {
+      url: `${API_BASE_URL}/counselor/${supporterId}`,
+      params,
+    });
+
     const response = await axios.get(`${API_BASE_URL}/counselor/${supporterId}`, { params });
+    
+    console.log(`✅ Availability API response:`, {
+      success: response.data.success,
+      dataLength: response.data.data?.length || 0,
+      data: response.data.data,
+    });
+    
     return response.data;
   } catch (error) {
-    console.error('Error fetching counselor availability:', error);
+    console.error('❌ Error fetching counselor availability:', error.response?.data || error.message);
     throw error;
   }
 };

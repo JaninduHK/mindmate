@@ -60,6 +60,8 @@ export const addAvailability = asyncHandler(async (req, res) => {
   const [year, month, day] = date.split('-').map(Number);
   const availabilityDate = new Date(Date.UTC(year, month - 1, day));
 
+  console.log(`✅ Creating availability for ${supporterId}: date=${date} → UTC=${availabilityDate.toISOString()}, time=${startTime}-${endTime}`);
+
   // Check if slot already exists for this date and time
   const dateStart = new Date(Date.UTC(year, month - 1, day));
   const dateEnd = new Date(Date.UTC(year, month - 1, day + 1));
@@ -183,6 +185,8 @@ export const getAvailabilityByCounselor = asyncHandler(async (req, res) => {
         $gte: dateStart,
         $lt: dateEnd,
       };
+      
+      console.log(`✅ Availability query for ${supporterId}: date range ${startDate} to ${endDate} (UTC: ${dateStart} to ${dateEnd})`);
     } else {
       // Default: show next 90 days from today at midnight UTC
       const today = new Date();
@@ -196,6 +200,12 @@ export const getAvailabilityByCounselor = asyncHandler(async (req, res) => {
 
     const availability = await Availability.find(filter)
       .sort({ date: 1, startTime: 1 });
+
+    console.log(`✅ Found ${availability.length} availability slots for ${supporterId}:`, availability.map(av => ({
+      date: av.date.toISOString(),
+      startTime: av.startTime,
+      endTime: av.endTime
+    })));
 
     return res
       .status(200)

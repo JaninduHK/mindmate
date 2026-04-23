@@ -34,6 +34,26 @@ const BookSessionPage = () => {
     return `${year}-${month}-${day}`;
   };
 
+  // Helper: Convert MongoDB UTC date to YYYY-MM-DD string (using UTC getters)
+  const mongoDateToString = (dateObj) => {
+    if (typeof dateObj === 'string') {
+      return dateObj.split('T')[0]; // If already ISO string, extract date part
+    }
+    if (dateObj instanceof Date) {
+      // Use UTC getters to avoid timezone issues
+      const year = dateObj.getUTCFullYear();
+      const month = String(dateObj.getUTCMonth() + 1).padStart(2, '0');
+      const day = String(dateObj.getUTCDate()).padStart(2, '0');
+      return `${year}-${month}-${day}`;
+    }
+    // Fallback: try to parse as new Date and use UTC getters
+    const date = new Date(dateObj);
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(date.getUTCDate()).padStart(2, '0');
+    return `${year}-${month}-${day}`;
+  };
+
   // Fetch peer counselor details
   useEffect(() => {
     const fetchSupporter = async () => {
@@ -60,20 +80,36 @@ const BookSessionPage = () => {
   // Load availability data
   const loadAvailability = async () => {
     try {
-      const nextMonth = new Date();
+      const today = new Date();
+      const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+      
+      const nextMonth = new Date(today);
       nextMonth.setMonth(nextMonth.getMonth() + 1);
-      const res = await availabilityApi.getAvailabilityByCounselor(supporterId, dateToString(new Date()), dateToString(nextMonth));
+      const nextMonthStr = `${nextMonth.getFullYear()}-${String(nextMonth.getMonth() + 1).padStart(2, '0')}-${String(nextMonth.getDate()).padStart(2, '0')}`;
+      
+      console.log(`✅ Loading availability from ${todayStr} to ${nextMonthStr}`, { supporterId });
+      
+      const res = await availabilityApi.getAvailabilityByCounselor(supporterId, todayStr, nextMonthStr);
       if (res.success) {
-        // Use consistent date string format (YYYY-MM-DD)
+        console.log(`✅ Backend returned ${res.data.length} availability records:`, res.data);
+        
+        // Use consistent date string format (YYYY-MM-DD) with UTC getters
         const dates = res.data.map((av) => {
-          return av.date instanceof Date 
-            ? dateToString(av.date) 
-            : (typeof av.date === 'string' ? av.date.split('T')[0] : dateToString(new Date(av.date)));
+          const converted = mongoDateToString(av.date);
+          console.log(`  📅 Availability: ${av.date} → ${converted} (startTime: ${av.startTime})`);
+          return converted;
         });
-        setAvailabilityDates([...new Set(dates)]);
+        
+        const uniqueDates = [...new Set(dates)];
+        console.log('✅ Final availability dates set:', uniqueDates);
+        setAvailabilityDates(uniqueDates);
+      } else {
+        console.warn('❌ No availability returned from backend');
+        setAvailabilityDates([]);
       }
     } catch (error) {
-      console.error('Error loading availability:', error);
+      console.error('❌ Error loading availability:', error);
+      setAvailabilityDates([]);
     }
   };
 
@@ -170,11 +206,35 @@ const BookSessionPage = () => {
     return days;
   };
 
+  // Monitor availability changes
+  useEffect(() => {
+    if (availabilityDates.length > 0) {
+      console.log('🔄 Availability dates updated:', availabilityDates);
+    }
+  }, [availabilityDates]);
+
   const hasAvailability = (day) => {
     if (!day) return false;
-    const date = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
-    const dateStr = dateToString(date);
-    return availabilityDates.includes(dateStr);
+    
+    // Create a UTC date to match how backend stores availability
+    const year = currentMonth.getFullYear();
+    const month = currentMonth.getMonth() + 1;
+    // Use direct string construction to avoid timezone issues
+    const dateStr = `${year}-${String(month).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+    
+    const has = availabilityDates.includes(dateStr);
+    
+    // Detailed logging for today
+    if (day === new Date().getDate() && currentMonth.getMonth() === new Date().getMonth()) {
+      console.log(`📅 TODAY CHECK (${dateStr}):`, { 
+        has,
+        looking_for: dateStr,
+        available_list: availabilityDates,
+        match: availabilityDates.includes(dateStr)
+      });
+    }
+    
+    return has;
   };
 
   const handlePrevMonth = () => {
@@ -318,7 +378,28 @@ const BookSessionPage = () => {
                         selectedDate.getMonth() === currentMonth.getMonth();
                       const hasAv = hasAvailability(day);
                       const isToday = day && new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day).toDateString() === new Date().toDateString();
-                      const isPast = day && new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day) < new Date();
+                      
+                      // Check if date is before today (not including today)
+                      // Compare only the date portions, not the time
+                      const dateToCheck = new Date(currentMonth.getFullYear(), currentMonth.getMonth(), day);
+                      dateToCheck.setHours(0, 0, 0, 0); // Set to midnight
+                      
+                      const todayDate = new Date();
+                      todayDate.setHours(0, 0, 0, 0); // Set to midnight
+                      
+                      const isPast = day && dateToCheck < todayDate;
+
+                      if (day === new Date().getDate() && currentMonth.getMonth() === new Date().getMonth()) {
+                        console.log(`📅 CALENDAR RENDER - TODAY (${day}):`, {
+                          isToday,
+                          hasAv,
+                          isPast,
+                          dateToCheck: dateToCheck.toDateString(),
+                          todayDate: todayDate.toDateString(),
+                          disabled: !day || isPast || !hasAv,
+                          cssClass: isPast ? 'past' : hasAv ? 'available-green' : 'unavailable'
+                        });
+                      }
 
                       return (
                         <button
