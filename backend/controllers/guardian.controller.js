@@ -464,6 +464,7 @@ export const getGuardianDashboard = asyncHandler(async (req, res) => {
         },
         moods: moods.map(m => ({
           date: m.createdAt ? m.createdAt.toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
+          createdAt: m.createdAt ? m.createdAt.toISOString() : new Date().toISOString(),
           mood: m.mood,
           keyword: m.keyword,
           description: m.description,

@@ -19,13 +19,15 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     let lastActivityTime = null;
 
     if (moods?.length > 0) {
-      // Moods have date as string (YYYY-MM-DD)
+      // Moods have createdAt as full ISO timestamp
       const mostRecentMood = moods[0]; // Already sorted by most recent
-      if (mostRecentMood.date) {
-        // Parse date string safely without timezone issues
+      if (mostRecentMood.createdAt) {
+        // Use full ISO timestamp for accurate time calculation
+        lastActivityTime = new Date(mostRecentMood.createdAt);
+      } else if (mostRecentMood.date) {
+        // Fallback to date string if createdAt not available
         const [year, month, day] = mostRecentMood.date.split('-').map(Number);
-        const moodDate = new Date(year, month - 1, day, 0, 0, 0);
-        lastActivityTime = moodDate;
+        lastActivityTime = new Date(year, month - 1, day, 0, 0, 0);
       }
     }
 
