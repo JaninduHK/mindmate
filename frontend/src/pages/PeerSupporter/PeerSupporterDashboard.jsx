@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen, FiAward, FiClock, FiStar, FiCalendar, FiTrendingUp } from 'react-icons/fi';
 import { useAuth } from '../../hooks/useAuth';
 import GroupChatWidgets from '../../components/Dashboard/GroupChatWidgets';
 import AvailabilityToggle from '../../components/peer/AvailabilityToggle';
 import PeerSessionManagement from '../../components/PeerSupporter/PeerSessionManagement';
+import * as sessionApi from '../../api/session.api';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -57,7 +58,71 @@ const TimelineItem = ({ icon: Icon, title, time, isLast }) => (
 
 const PeerSupporterDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isAvailable, setIsAvailable] = useState(user?.isAvailableNow || false);
+  const [upcomingSessions, setUpcomingSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
+
+  // Fetch upcoming confirmed sessions
+  useEffect(() => {
+    const fetchUpcomingSessions = async () => {
+      try {
+        setLoadingSessions(true);
+        const res = await sessionApi.getSupporterBookings();
+        
+        if (res.success) {
+          // Filter for confirmed sessions that are today or in the future
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const upcoming = res.data
+            .filter(session => {
+              const sessionDate = new Date(session.sessionDate);
+              sessionDate.setHours(0, 0, 0, 0);
+              return session.status === 'confirmed' && sessionDate >= today;
+            })
+            .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate))
+            .slice(0, 3); // Only show top 3
+          
+          setUpcomingSessions(upcoming);
+        }
+      } catch (error) {
+        console.error('Error fetching upcoming sessions:', error);
+      } finally {
+        setLoadingSessions(false);
+      }
+    };
+
+    fetchUpcomingSessions();
+  }, []);
+
+  // Format session date and time for display
+  const formatSessionDateTime = (sessionDate, sessionTime) => {
+    const date = new Date(sessionDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+
+    const isToday = date.getTime() === today.getTime();
+    const isTomorrow = date.getTime() === new Date(today.getTime() + 86400000).getTime();
+
+    let dateStr = '';
+    if (isToday) {
+      dateStr = 'Today';
+    } else if (isTomorrow) {
+      dateStr = 'Tomorrow';
+    } else {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      dateStr = days[date.getDay()];
+    }
+
+    return `${dateStr}, ${sessionTime}`;
+  };
+
+  // Handle opening chat session
+  const handleOpenChat = (session) => {
+    navigate(`/chat/${session.userId._id}`, { state: { session } });
+  };
 
   const handleAvailabilityChange = (newStatus) => {
     setIsAvailable(newStatus);
@@ -182,9 +247,26 @@ const PeerSupporterDashboard = () => {
               </div>
               
               <div className="space-y-0">
-                <TimelineItem icon={FiMessageCircle} title="Chat with Alex M." time="Today, 2:00 PM" />
-                <TimelineItem icon={FiUsers} title="Group Support Module" time="Tomorrow, 10:00 AM" />
-                <TimelineItem icon={FiStar} title="Peer Review Meeting" time="Friday, 4:00 PM" isLast />
+                {loadingSessions ? (
+                  <div className="text-center py-4 text-gray-400 text-sm">Loading sessions...</div>
+                ) : upcomingSessions.length === 0 ? (
+                  <div className="text-center py-4 text-gray-400 text-sm">No upcoming sessions scheduled</div>
+                ) : (
+                  upcomingSessions.map((session, idx) => (
+                    <button
+                      key={session._id}
+                      onClick={() => handleOpenChat(session)}
+                      className="w-full text-left hover:bg-gray-50 transition-colors"
+                    >
+                      <TimelineItem 
+                        icon={FiMessageCircle} 
+                        title={`Chat with ${session.userId?.name || 'User'}`}
+                        time={formatSessionDateTime(session.sessionDate, session.sessionTime)}
+                        isLast={idx === upcomingSessions.length - 1}
+                      />
+                    </button>
+                  ))
+                )}
               </div>
 
               <div className="mt-8 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 flex gap-4">
