@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Search, Filter, ExternalLink } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
+import { contentAPI } from '../api/contentApi';
+import ContentUploadForm from '../components/content/ContentUploadForm';
 
 const ContentLibrary = () => {
   const { user } = useAuth();
@@ -8,6 +10,8 @@ const ContentLibrary = () => {
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedType, setSelectedType] = useState('all');
   const [userMoodCategory, setUserMoodCategory] = useState(null);
+  const [dbContent, setDbContent] = useState([]);
+  const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
 
   const categories = ['all', 'Mental Health', 'Anxiety', 'Depression', 'Sleep', 'Stress'];
   const types = ['all', 'Article', 'Video', 'Podcast', 'Guide'];
@@ -26,6 +30,26 @@ const ContentLibrary = () => {
       setUserMoodCategory(moodMap[user.recentMood] || null);
     }
   }, [user?.recentMood]);
+
+  const fetchContent = async () => {
+    try {
+      const res = await contentAPI.getContent();
+      // Handle both direct array response and nested data object
+      const content = Array.isArray(res) ? res : (Array.isArray(res?.data) ? res.data : []);
+      setDbContent(content);
+    } catch (error) {
+      console.error('Failed to fetch content records from database', error);
+      setDbContent([]);
+    }
+  };
+
+  useEffect(() => {
+    fetchContent();
+  }, []);
+
+  const handleContentAdded = (newContent) => {
+    setDbContent(prev => [newContent, ...prev]);
+  };
 
   const contentData = [
     {
@@ -118,7 +142,22 @@ const ContentLibrary = () => {
     }
   ];
 
-  const filteredContent = contentData.filter((item) => {
+  // Map dbContent to match hardcoded structure if needed
+  const mappedDbContent = (Array.isArray(dbContent) ? dbContent : []).map(item => ({
+    id: item._id,
+    title: item.title,
+    description: item.description,
+    category: item.moods && item.moods.length > 0 ? item.moods[0] : 'Mental Health',
+    type: item.type,
+    duration: item.durationText || '5 min',
+    image: item.thumbnailUrl || 'https://images.pexels.com/photos/4098157/pexels-photo-4098157.jpeg?auto=compress&cs=tinysrgb&w=400',
+    external_link: item.externalUrl,
+    featured: item.isCurated,
+  }));
+
+  const allContent = [...mappedDbContent, ...contentData];
+
+  const filteredContent = allContent.filter((item) => {
     const matchesSearch =
       item.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       item.description.toLowerCase().includes(searchTerm.toLowerCase());
@@ -137,6 +176,14 @@ const ContentLibrary = () => {
           <p className="text-gray-600 mt-2">
             Explore expert-curated resources for your mental wellness journey
           </p>
+          {(user?.role === 'counselor' || user?.role === 'admin' || user?.role === 'peer_supporter') && (
+            <button
+              onClick={() => setIsUploadModalOpen(true)}
+              className="mt-4 px-5 py-2 bg-emerald-600 text-white rounded-xl font-bold hover:bg-emerald-700 transition"
+            >
+              + Upload Resource
+            </button>
+          )}
         </div>
 
         {/* Featured Resources Section */}
@@ -149,13 +196,13 @@ const ContentLibrary = () => {
           )}
           <div className="grid md:grid-cols-3 gap-6 mb-8">
             {(userMoodCategory
-              ? contentData.filter(
+              ? allContent.filter(
                   (item) =>
                     item.category === userMoodCategory ||
                     (item.featured && item.category === 'Mental Health')
                 )
-              : contentData.filter((item) => item.featured)
-            ).map((item) => (
+              : allContent.filter((item) => item.featured)
+            ).slice(0, 3).map((item) => (
               <div
                 key={item.id}
                 className="bg-white rounded-lg shadow-lg hover:shadow-xl transition-shadow overflow-hidden border-2 border-primary-100"
@@ -274,7 +321,7 @@ const ContentLibrary = () => {
         <div className="mb-4 mt-8">
           <h2 className="text-xl font-bold text-gray-900 mb-4">More Resources</h2>
           <p className="text-sm text-gray-600">
-            Showing {filteredContent.length} of {contentData.length} resources
+            Showing {filteredContent.length} of {allContent.length} resources
           </p>
         </div>
 
@@ -353,6 +400,13 @@ const ContentLibrary = () => {
           </div>
         )}
       </div>
+
+      {/* Upload Modal */}
+      <ContentUploadForm 
+        isOpen={isUploadModalOpen} 
+        onClose={() => setIsUploadModalOpen(false)} 
+        onContentAdded={handleContentAdded}
+      />
     </div>
   );
 };

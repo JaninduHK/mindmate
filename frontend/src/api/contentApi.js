@@ -26,4 +26,22 @@ export const contentAPI = {
     const response = await axiosInstance.post(`/content/${contentId}/rate`, { rating });
     return response.data;
   },
+
+  // Create content (therapists/counselors/admins)
+  createContent: async (contentData) => {
+    const response = await axiosInstance.post('/content', contentData);
+    return response.data;
+  },
+
+  // Update content
+  updateContent: async (id, contentData) => {
+    const response = await axiosInstance.put(`/content/${id}`, contentData);
+    return response.data;
+  },
+
+  // Delete content
+  deleteContent: async (id) => {
+    const response = await axiosInstance.delete(`/content/${id}`);
+    return response.data;
+  },
 };

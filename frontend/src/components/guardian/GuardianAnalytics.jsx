@@ -38,55 +38,6 @@ const GuardianAnalytics = ({ moodAnalytics = null, goalAnalytics = null, loading
 
   return (
     <div className="space-y-6">
-      {/* Mood Trend Chart */}
-      {moodAnalytics?.trend && moodAnalytics.trend.length > 0 && (
-        <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-          <div className="flex items-center gap-2 mb-4">
-            <TrendingUp className="w-5 h-5 text-emerald-600" />
-            <h3 className="text-lg font-semibold text-gray-900">Mood Trend (Last 7 Days)</h3>
-          </div>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={moodAnalytics.trend}>
-                <defs>
-                  <linearGradient id="colorMood" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="5%" stopColor="#10B981" stopOpacity={0.3} />
-                    <stop offset="95%" stopColor="#10B981" stopOpacity={0} />
-                  </linearGradient>
-                </defs>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis dataKey="date" axisLine={false} tickLine={false} />
-                <YAxis axisLine={false} tickLine={false} domain={[1, 5]} />
-                <Tooltip />
-                <Area
-                  type="monotone"
-                  dataKey="score"
-                  stroke="#10B981"
-                  strokeWidth={2}
-                  fill="url(#colorMood)"
-                />
-              </AreaChart>
-            </ResponsiveContainer>
-          </div>
-          <div className="mt-4 pt-4 border-t border-gray-100 grid grid-cols-3 gap-4">
-            <div>
-              <p className="text-xs text-gray-500">Average Score</p>
-              <p className="text-2xl font-bold text-gray-900">{moodAnalytics.average}/5</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Total Entries</p>
-              <p className="text-2xl font-bold text-gray-900">{moodAnalytics.totalEntries}</p>
-            </div>
-            <div>
-              <p className="text-xs text-gray-500">Consecutive Negatives</p>
-              <p className={`text-2xl font-bold ${moodAnalytics.consecutiveNegative ? 'text-red-600' : 'text-emerald-600'}`}>
-                {moodAnalytics.consecutiveNegative ? '⚠️ Yes' : '✓ No'}
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Mood Distribution */}
         {moodAnalytics?.distribution && (

@@ -7,6 +7,7 @@ import ApiResponse from '../utils/ApiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { sendEmail } from '../utils/email.util.js';
+import { sendSMS, normalizePhoneNumber } from '../utils/smsService.js';
 
 // Get all regular users (for peer supporters to help)
 export const getUsers = asyncHandler(async (req, res) => {
@@ -280,6 +281,22 @@ export const activateEmergency = asyncHandler(async (req, res) => {
             console.error(`Failed to send email to ${contact.email}:`, error);
           }
         }
+
+        // Send SMS notification
+        if (contact.phoneNumber) {
+          try {
+            const normalizedPhone = normalizePhoneNumber(contact.phoneNumber);
+            let message = `🚨 EMERGENCY ALERT: ${user.name} has activated emergency mode.`;
+            if (location) {
+              const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${location.lat},${location.lng}`;
+              message += ` Location: ${mapsUrl}`;
+            }
+            await sendSMS(normalizedPhone, message);
+            console.log(`Emergency SMS sent to ${normalizedPhone}`);
+          } catch (error) {
+            console.error(`Failed to send SMS to ${contact.phoneNumber}:`, error);
+          }
+        }
       });
 
       // Wait for all notifications to complete
@@ -393,6 +410,15 @@ export const deactivateEmergency = asyncHandler(async (req, res) => {
             });
           } catch (error) {
             console.error(`Failed to send deactivation email to ${contact.email}:`, error);
+          }
+        }
+
+        if (contact.phoneNumber) {
+          try {
+            const normalizedPhone = normalizePhoneNumber(contact.phoneNumber);
+            await sendSMS(normalizedPhone, `✅ Emergency Deactivated: ${user.name} is safe and emergency mode has concluded.`);
+          } catch (error) {
+            console.error(`Failed to send deactivation SMS to ${contact.phoneNumber}:`, error);
           }
         }
       });

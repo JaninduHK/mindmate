@@ -877,7 +877,7 @@ export const getMoodAlerts = asyncHandler(async (req, res) => {
   twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
   const recentEntry = recentMoods.find(m => m.createdAt >= twoDaysAgo);
   
-  if (!recentEntry && alerts.length < 3) {
+  if (!recentEntry && alerts.length < 5) {
     alerts.push({
       type: 'no_recent_entry',
       severity: 'medium',
@@ -886,6 +886,37 @@ export const getMoodAlerts = asyncHandler(async (req, res) => {
       date: new Date(),
       recommendation: 'Encourage user to track their mood regularly.',
     });
+  }
+
+  // Alert: Goals not completed or not added
+  const todayStart = new Date();
+  todayStart.setHours(0, 0, 0, 0);
+  const todaysGoals = await Goal.find({
+    userId: userObjectId,
+    createdAt: { $gte: todayStart }
+  });
+
+  if (todaysGoals.length === 0 && alerts.length < 5) {
+    alerts.push({
+      type: 'no_goals_added',
+      severity: 'low',
+      title: 'No Goals Added Today',
+      description: 'User has not set any goals for today.',
+      date: new Date(),
+      recommendation: 'Encourage user to set small achievable goals.',
+    });
+  } else {
+    const incompleteGoals = todaysGoals.filter(g => g.status !== 'complete');
+    if (incompleteGoals.length > 0 && incompleteGoals.length === todaysGoals.length && alerts.length < 5) {
+      alerts.push({
+        type: 'goals_not_completed',
+        severity: 'medium',
+        title: 'Goals Not Completed',
+        description: `User did not complete any of their ${todaysGoals.length} goal(s) today.`,
+        date: new Date(),
+        recommendation: 'Check in with user to see if they need help with their goals.',
+      });
+    }
   }
 
   // Calculate overall risk score

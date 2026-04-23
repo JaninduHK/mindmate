@@ -109,55 +109,7 @@ const GuardianDailyAnalytics = ({ dailyData = null, loading = false }) => {
         </div>
       </div>
 
-      {/* Weekly Mood Trend */}
-      {weekData && weekData.length > 0 && (
-        <div className="border-t pt-6">
-          <h4 className="text-md font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <TrendingUp className="w-4 h-4 text-blue-600" />
-            Weekly Mood Trend
-          </h4>
-          <div className="h-64 w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <LineChart data={weekData}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
-                <XAxis 
-                  dataKey="date" 
-                  axisLine={false} 
-                  tickLine={false}
-                  tickFormatter={(value) => new Date(value).toLocaleDateString('en-US', { weekday: 'short' })}
-                />
-                <YAxis axisLine={false} tickLine={false} domain={[0, 5]} />
-                <Tooltip 
-                  contentStyle={{
-                    backgroundColor: '#fff',
-                    border: '1px solid #e5e7eb',
-                    borderRadius: '8px'
-                  }}
-                />
-                <Legend />
-                <Line 
-                  type="monotone" 
-                  dataKey="moodScore" 
-                  stroke="#10B981" 
-                  strokeWidth={2}
-                  dot={{ fill: '#10B981', r: 6 }}
-                  activeDot={{ r: 8 }}
-                  name="Mood Score"
-                />
-                <Line 
-                  type="monotone" 
-                  dataKey="engagementScore" 
-                  stroke="#3B82F6" 
-                  strokeWidth={2}
-                  dot={{ fill: '#3B82F6', r: 6 }}
-                  activeDot={{ r: 8 }}
-                  name="Engagement Score"
-                />
-              </LineChart>
-            </ResponsiveContainer>
-          </div>
-        </div>
-      )}
+
 
       {/* Mood History - Today's Entries */}
       {moodHistory && moodHistory.length > 0 && (
@@ -192,82 +144,9 @@ const GuardianDailyAnalytics = ({ dailyData = null, loading = false }) => {
         </div>
       )}
 
-      {/* Goal Progress - Today */}
-      {goalProgress && Object.keys(goalProgress).length > 0 && (
-        <div className="border-t pt-6">
-          <h4 className="text-md font-semibold text-gray-900 mb-4 flex items-center gap-2">
-            <Activity className="w-4 h-4 text-emerald-600" />
-            Goal Progress Today
-          </h4>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {/* Pie Chart */}
-            <div className="flex flex-col items-center justify-center">
-              <div className="h-48 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <PieChart>
-                    <Pie
-                      data={[
-                        { name: 'Completed', value: goalProgress.completed || 0 },
-                        { name: 'In Progress', value: goalProgress.inProgress || 0 },
-                        { name: 'Not Started', value: goalProgress.notStarted || 0 },
-                      ]}
-                      cx="50%"
-                      cy="50%"
-                      labelLine={false}
-                      label={({ name, value }) => value > 0 ? `${name}: ${value}` : ''}
-                      outerRadius={80}
-                      fill="#8884d8"
-                      dataKey="value"
-                    >
-                      <Cell fill="#10B981" />
-                      <Cell fill="#3B82F6" />
-                      <Cell fill="#9CA3AF" />
-                    </Pie>
-                    <Tooltip />
-                  </PieChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
 
-            {/* Stats */}
-            <div className="space-y-3 flex flex-col justify-center">
-              <div className="bg-emerald-50 p-3 rounded-lg border border-emerald-200">
-                <p className="text-sm text-emerald-600 font-medium">Completed Today</p>
-                <p className="text-2xl font-bold text-emerald-900">{goalProgress.completed || 0}</p>
-              </div>
-              <div className="bg-blue-50 p-3 rounded-lg border border-blue-200">
-                <p className="text-sm text-blue-600 font-medium">In Progress</p>
-                <p className="text-2xl font-bold text-blue-900">{goalProgress.inProgress || 0}</p>
-              </div>
-              <div className="bg-gray-100 p-3 rounded-lg border border-gray-300">
-                <p className="text-sm text-gray-600 font-medium">Not Started</p>
-                <p className="text-2xl font-bold text-gray-900">{goalProgress.notStarted || 0}</p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
-      {/* Activity Summary */}
-      {activitySummary && Object.keys(activitySummary).length > 0 && (
-        <div className="border-t pt-6">
-          <h4 className="text-md font-semibold text-gray-900 mb-4">Activity Summary</h4>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-600 font-medium mb-2">Mood Entries</p>
-              <p className="text-2xl font-bold text-blue-900">{activitySummary.moodEntriesCount || 0}</p>
-            </div>
-            <div className="p-4 bg-purple-50 rounded-lg border border-purple-200">
-              <p className="text-sm text-purple-600 font-medium mb-2">Goal Updates</p>
-              <p className="text-2xl font-bold text-purple-900">{activitySummary.goalUpdatesCount || 0}</p>
-            </div>
-            <div className="p-4 bg-pink-50 rounded-lg border border-pink-200">
-              <p className="text-sm text-pink-600 font-medium mb-2">Sessions</p>
-              <p className="text-2xl font-bold text-pink-900">{activitySummary.sessionsCount || 0}</p>
-            </div>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 };

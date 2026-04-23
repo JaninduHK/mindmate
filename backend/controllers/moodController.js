@@ -7,6 +7,10 @@ import { analyzeRiskLevel } from '../services/riskDetection.service.js';
 import Notification from '../models/Notification.model.js';
 import EmergencyContact from '../models/EmergencyContact.model.js';
 import User from '../models/User.model.js';
+import { sendEmail } from '../utils/email.util.js';
+import { sendSMS, normalizePhoneNumber } from '../utils/smsService.js';
+import { composeEmergencyAlertEmail } from '../utils/invitationMailer.js';
+import { composeEmergencyAlertSMS } from '../utils/smsBodies.js';
 
 const toUTCDateOnly = (input) => {
   if (!input) return null;
@@ -88,8 +92,45 @@ export const addMood = asyncHandler(async (req, res) => {
         await Notification.insertMany(notifications);
       }
 
-      // Emit socket event to notify guardians in real-time
+        // Send email and SMS to each contact
+        for (const contact of emergencyContacts) {
+          try {
+            const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3003';
+            const dashboardUrl = `${frontendUrl}/guardian-dashboard`;
+            const alertMsg = `Auto-activated emergency mode due to high-risk mood keyword: "${riskAnalysis.triggerKeyword}"`;
+
+            // Email
+            const emailContent = composeEmergencyAlertEmail(
+              contact.fullName || contact.email,
+              dashboardUrl,
+              '911' // placeholder emergency number
+            );
+            await sendEmail({
+              to: contact.email,
+              subject: `🚨 Emergency Alert: ${user.name} reported a high-risk mood`,
+              html: emailContent.html,
+              text: emailContent.text,
+            });
+
+            // SMS
+            if (contact.phoneNumber) {
+              const smsContent = composeEmergencyAlertSMS(user.name, null, alertMsg, 'critical');
+              const normalizedPhone = normalizePhoneNumber(contact.phoneNumber);
+              await sendSMS(normalizedPhone, smsContent.body);
+            }
+          } catch (notifErr) {
+            console.error('Error sending sms/email for high risk mood:', notifErr);
+          }
+        }
+
+      // Emit socket event to notify guardians and user in real-time
       if (global.io) {
+        // Activate emergency mode for the user automatically
+        global.io.to(`user_${userId}`).emit('EMERGENCY_ACTIVATED', {
+          reason: 'High risk mood detected',
+        });
+
+        // Notify contacts
         emergencyContacts.forEach((contact) => {
           global.io.to(`user_${contact.contactUserId}`).emit('HIGH_RISK_ALERT', {
             userId,
@@ -97,6 +138,10 @@ export const addMood = asyncHandler(async (req, res) => {
             moodType: mood,
             triggerKeyword: riskAnalysis.triggerKeyword,
             timestamp: new Date(),
+          });
+          global.io.to(`user_${contact.contactUserId}`).emit('EMERGENCY_ACTIVATED', {
+            userId,
+            userName: user.name,
           });
         });
       }

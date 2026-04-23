@@ -8,6 +8,7 @@ import GuardianDailyAnalytics from '../components/guardian/GuardianDailyAnalytic
 import GuardianMoodAlerts from '../components/guardian/GuardianMoodAlerts';
 import GuardianEmergencyContacts from '../components/guardian/GuardianEmergencyContacts';
 import GuardianLastActive from '../components/guardian/GuardianLastActive';
+import GuardianCalendar from '../components/guardian/GuardianCalendar';
 import AnalyticsSummary from '../components/personalTracking/AnalyticsSummary';
 
 const GuardianDashboard = () => {
@@ -249,6 +250,11 @@ const GuardianDashboard = () => {
               goalAnalytics={goalAnalytics}
               loading={analyticsLoading}
             />
+
+            {/* Calendar Section */}
+            {!analyticsLoading && dashboardData?.moods && (
+              <GuardianCalendar moods={dashboardData.moods} />
+            )}
           </div>
 
           {/* Right Sidebar */}

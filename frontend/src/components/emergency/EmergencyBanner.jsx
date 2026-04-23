@@ -54,14 +54,7 @@ function EmergencyBanner() {
       <AnimatePresence>
         {isActive && (
           <>
-            {/* Blocking overlay - prevents interaction with page */}
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-40 bg-black/30 backdrop-blur-sm"
-              onClick={(e) => e.preventDefault()}
-            />
+            {/* Non-blocking Emergency Banner */}
 
             {/* Emergency Banner */}
             <motion.div
@@ -83,7 +76,7 @@ function EmergencyBanner() {
                       🚨 EMERGENCY MODE ACTIVE 🚨
                     </p>
                     <p className="text-xs sm:text-sm text-red-100 mt-1">
-                      Your location has been shared with emergency contacts. Navigation is disabled.
+                      Your location has been shared with emergency contacts.
                     </p>
                   </div>
                 </div>

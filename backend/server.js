@@ -38,6 +38,7 @@ import moodConfigRoutes from './routes/moodConfig.routes.js';
 import guardianRoutes from './routes/guardian.routes.js';
 import emergencyContactRoutes from './routes/emergencyContact.routes.js';
 import emergencyRoutes from './routes/emergency/emergency.routes.js';
+import contentRoutes from './routes/content.routes.js';
 
 // Import models to ensure they are created in MongoDB
 import GuardianSignup from './models/GuardianSignup.model.js';
@@ -59,6 +60,8 @@ const allowedOrigins = [
   process.env.CLIENT_URL,
   'http://localhost:3000',
   'http://localhost:3001',
+  'http://localhost:3002',
+  'http://localhost:3003',
   'http://localhost:5173',
   'http://localhost:5174',
   'http://localhost:5175',
@@ -66,6 +69,8 @@ const allowedOrigins = [
   'http://localhost:5177',
   'http://127.0.0.1:3000',
   'http://127.0.0.1:3001',
+  'http://127.0.0.1:3002',
+  'http://127.0.0.1:3003',
   'http://127.0.0.1:5173',
   'http://127.0.0.1:5174',
   'http://127.0.0.1:5175',
@@ -188,6 +193,7 @@ app.use('/api/mood-config', moodConfigRoutes);
 app.use('/api/guardian', guardianRoutes);
 app.use('/api/emergency-contacts', emergencyContactRoutes);
 app.use('/api/emergency', emergencyRoutes);
+app.use('/api/content', contentRoutes);
 
 
 // ===============================

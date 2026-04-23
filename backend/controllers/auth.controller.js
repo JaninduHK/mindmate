@@ -15,6 +15,7 @@ import { sendEmail } from '../utils/email.util.js';
 import { composeInvitationEmail } from '../utils/invitationMailer.js';
 import { composeInvitationSMS } from '../utils/smsBodies.js';
 import { generateInvitationUrl, verifyTokenHash, hashToken } from '../utils/tokenGenerator.js';
+import { sendSMS, normalizePhoneNumber } from '../utils/smsService.js';
 
 // Helper function to set refresh token cookie
 const setRefreshTokenCookie = (res, token) => {
@@ -190,7 +191,7 @@ export const register = asyncHandler(async (req, res) => {
       );
 
       // Generate invitation URL
-      const frontendUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+      const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3003';
       const invitationUrl = generateInvitationUrl(newInvitationToken, frontendUrl);
 
       // Compose and send email
@@ -210,8 +211,13 @@ export const register = asyncHandler(async (req, res) => {
 
       // Compose and send SMS (if SMS service is available)
       const smsContent = composeInvitationSMS(user.name, invitationUrl);
-      console.log(`[SMS] Would send to ${initialEmergencyContact.phoneNumber}: ${smsContent.body}`);
-      // TODO: Integrate actual SMS service (Twilio, etc.) when available
+      try {
+        const normalizedPhone = normalizePhoneNumber(initialEmergencyContact.phoneNumber);
+        await sendSMS(normalizedPhone, smsContent.body);
+        console.log(`[SMS] Sent to ${normalizedPhone}`);
+      } catch (smsError) {
+        console.error('Error sending SMS:', smsError);
+      }
 
       invitationStatus = {
         success: true,
@@ -258,12 +264,17 @@ export const register = asyncHandler(async (req, res) => {
 export const login = asyncHandler(async (req, res) => {
   const { email, password } = req.body;
 
+  console.log('[LOGIN] Attempt - Email:', email.toLowerCase());
+
   // Find user with password field
-  const user = await User.findOne({ email }).select('+password');
+  const user = await User.findOne({ email: email.toLowerCase() }).select('+password');
 
   if (!user) {
+    console.log('[LOGIN] User not found:', email.toLowerCase());
     throw new ApiError(HTTP_STATUS.UNAUTHORIZED, 'Invalid email or password');
   }
+
+  console.log('[LOGIN] User found:', user.email, '| Active:', user.isActive);
 
   // Check if user is active
   if (!user.isActive) {
@@ -271,9 +282,12 @@ export const login = asyncHandler(async (req, res) => {
   }
 
   // Verify password
+  console.log('[LOGIN] Verifying password... (length:', password?.length, 'chars)');
   const isPasswordValid = await user.comparePassword(password);
+  console.log('[LOGIN] Password valid:', isPasswordValid);
 
   if (!isPasswordValid) {
+    console.log('[LOGIN] Invalid password for:', email.toLowerCase());
     throw new ApiError(HTTP_STATUS.UNAUTHORIZED, 'Invalid email or password');
   }
 
