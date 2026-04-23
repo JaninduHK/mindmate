@@ -441,7 +441,6 @@ export const getGuardianDashboard = asyncHandler(async (req, res) => {
   const contacts = await EmergencyContact.find({
     ownerUserId: userObjectId,
     inviteStatus: 'accepted',
-    contactUserId: { $ne: guardianId },
   }).select('fullName email phoneNumber relationship contactUserId');
 
   const highRiskAlert = await NotificationModel.findOne({

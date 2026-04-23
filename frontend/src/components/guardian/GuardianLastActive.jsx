@@ -19,6 +19,34 @@ const GuardianLastActive = ({ lastActiveTime, isEmergencyActive }) => {
     return lastActive.toLocaleDateString();
   };
 
+  // Calculate inactivity days this week
+  const getInactivityDaysThisWeek = () => {
+    if (!lastActiveTime) return 7; // All days inactive if never active
+    
+    const lastActive = new Date(lastActiveTime);
+    const now = new Date();
+    const diffMS = now - lastActive;
+    const diffDays = Math.floor(diffMS / (1000 * 60 * 60 * 24));
+    
+    // Get start of this week (Monday)
+    const today = new Date();
+    const dayOfWeek = today.getDay();
+    const diff = today.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Adjust for Sunday
+    const startOfWeek = new Date(today.setDate(diff));
+    startOfWeek.setHours(0, 0, 0, 0);
+    
+    const lastActiveDate = new Date(lastActiveTime);
+    
+    if (lastActiveDate < startOfWeek) {
+      // No activity this week
+      return 7;
+    } else {
+      // Had activity this week - calculate days since last activity
+      const daysInactive = Math.floor((now - lastActiveDate) / (1000 * 60 * 60 * 24));
+      return daysInactive;
+    }
+  };
+
   const getStatusColor = () => {
     if (isEmergencyActive) return 'bg-red-50 border-red-200';
     if (!lastActiveTime) return 'bg-gray-50 border-gray-200';
@@ -47,7 +75,7 @@ const GuardianLastActive = ({ lastActiveTime, isEmergencyActive }) => {
 
   const getStatusText = () => {
     if (isEmergencyActive) return '🚨 In Emergency';
-    if (!lastActiveTime) return 'Inactive';
+    if (!lastActiveTime) return 'Never Active';
     
     const lastActive = new Date(lastActiveTime);
     const now = new Date();
@@ -58,6 +86,8 @@ const GuardianLastActive = ({ lastActiveTime, isEmergencyActive }) => {
     return '⚠️ Inactive';
   };
 
+  const inactiveDays = getInactivityDaysThisWeek();
+
   return (
     <div className={`border p-6 rounded-2xl ${getStatusColor()}`}>
       <div className="flex items-center gap-2 mb-4">
@@ -65,21 +95,49 @@ const GuardianLastActive = ({ lastActiveTime, isEmergencyActive }) => {
         <h3 className="text-lg font-semibold text-gray-900">Activity Status</h3>
       </div>
       
-      <div className="space-y-3">
+      <div className="space-y-4">
+        {/* Last Active Info */}
         <div>
-          <p className="text-sm text-gray-600 mb-2">Last active</p>
+          <p className="text-sm text-gray-600 mb-2">Last Active</p>
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-gray-400" />
             <p className="text-sm font-semibold text-gray-900">{getLastActiveText()}</p>
           </div>
         </div>
         
+        {/* Last Active Date & Time */}
         {lastActiveTime && (
-          <p className="text-xs text-gray-500">
-            {new Date(lastActiveTime).toLocaleString()}
-          </p>
+          <div>
+            <p className="text-xs text-gray-500 font-medium mb-1">Date & Time</p>
+            <p className="text-xs text-gray-600 bg-white bg-opacity-50 px-2 py-1 rounded">
+              {new Date(lastActiveTime).toLocaleString('en-US', { 
+                month: 'short', 
+                day: 'numeric', 
+                year: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              })}
+            </p>
+          </div>
         )}
+
+        {/* Inactivity Days This Week */}
+        <div>
+          <p className="text-sm text-gray-600 mb-2">Inactive Days This Week</p>
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold text-gray-900">{inactiveDays}</span>
+            <span className="text-xs text-gray-500">/ 7 days</span>
+          </div>
+          <div className="w-full bg-gray-200 rounded-full h-2 mt-2">
+            <div 
+              className="bg-blue-600 h-2 rounded-full transition-all"
+              style={{ width: `${(inactiveDays / 7) * 100}%` }}
+            ></div>
+          </div>
+        </div>
         
+        {/* Status Badge */}
         <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium ${getStatusBadgeColor()}`}>
           <div className="w-2 h-2 rounded-full bg-current opacity-75"></div>
           {getStatusText()}

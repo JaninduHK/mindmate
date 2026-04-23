@@ -93,7 +93,7 @@ const GuardianCalendar = ({ moods = [] }) => {
         const cloneDay = day;
         const moodObj = getMoodForDate(cloneDay);
         
-        let cellClass = "p-2 border rounded-md flex justify-center items-center h-12 cursor-pointer transition-colors relative ";
+        let cellClass = "p-3 border rounded-md flex justify-center items-center h-16 cursor-pointer transition-colors relative ";
         
         if (!isSameMonth(day, monthStart)) {
           cellClass += "text-gray-300 bg-gray-50";
@@ -142,17 +142,17 @@ const GuardianCalendar = ({ moods = [] }) => {
 
   return (
     <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="md:col-span-2">
+      <div className="w-full">
+        <div className="w-full mb-6">
           {renderHeader()}
           {renderDays()}
           {renderCells()}
         </div>
         
-        {/* Selected Date Details */}
-        <div className="bg-gray-50 rounded-xl p-5 border border-gray-200">
+        {/* Selected Date Details - Full Width Below */}
+        <div className="bg-gray-50 rounded-xl p-6 border border-gray-200">
           <h3 className="text-lg font-bold text-gray-800 mb-4 border-b pb-2">
-            Details for {format(selectedDate, 'do MMM yyyy')}
+            Mood Details for {format(selectedDate, 'do MMM yyyy')}
           </h3>
           
           {selectedMood ? (
@@ -175,7 +175,7 @@ const GuardianCalendar = ({ moods = [] }) => {
                </div>
             </div>
           ) : (
-            <div className="flex flex-col items-center justify-center h-48 text-gray-400">
+            <div className="flex flex-col items-center justify-center py-8 text-gray-400">
               <CalendarIcon className="w-12 h-12 mb-2 opacity-50" />
               <p className="text-sm">No mood logged for this date.</p>
             </div>
