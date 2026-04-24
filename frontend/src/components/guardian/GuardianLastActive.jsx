@@ -69,14 +69,18 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     else lastActiveText = lastActivityTime.toLocaleDateString();
 
     // Calculate inactive days - count days this week with NO mood entries
-    // Get start of this week (Sunday)
+    // Week starts on Monday (not Sunday)
     const today = new Date();
-    const dayOfWeek = today.getDay();
-    const startOfWeekDate = new Date(today);
-    startOfWeekDate.setDate(today.getDate() - dayOfWeek); // 0 = Sunday
-    startOfWeekDate.setHours(0, 0, 0, 0);
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+    
+    // Calculate days back to Monday
+    const daysBackToMonday = (dayOfWeek === 0) ? 6 : (dayOfWeek - 1);
+    
+    const mondayDate = new Date(today);
+    mondayDate.setDate(today.getDate() - daysBackToMonday);
+    mondayDate.setHours(0, 0, 0, 0);
 
-    // Count days from start of week until today that have NO mood entries
+    // Count days from Monday to today that have NO mood entries
     const moodDates = moods.map(m => {
       if (m.createdAt) {
         const moodDate = new Date(m.createdAt);
@@ -88,9 +92,10 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     }).filter(d => d !== null);
 
     let inactiveDays = 0;
-    for (let i = 0; i <= dayOfWeek && i <= today.getDate() - startOfWeekDate.getDate(); i++) {
-      const checkDate = new Date(startOfWeekDate);
-      checkDate.setDate(startOfWeekDate.getDate() + i);
+    // Count from Monday to YESTERDAY (not including today since it's still ongoing)
+    for (let i = 0; i < daysBackToMonday; i++) {
+      const checkDate = new Date(mondayDate);
+      checkDate.setDate(mondayDate.getDate() + i);
       const checkDateStr = checkDate.toISOString().split('T')[0];
       
       if (!moodDates.includes(checkDateStr)) {
@@ -100,10 +105,10 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     
     inactiveDays = Math.max(0, Math.min(inactiveDays, 7));
 
-    console.log('[GuardianLastActive] Week analysis:', {
-      startOfWeek: startOfWeekDate.toISOString().split('T')[0],
+    console.log('[GuardianLastActive] Week analysis (Mon-Sun):', {
+      monday: mondayDate.toISOString().split('T')[0],
       today: today.toISOString().split('T')[0],
-      dayOfWeek,
+      daysBackToMonday,
       moodDates,
       inactiveDays,
     });
