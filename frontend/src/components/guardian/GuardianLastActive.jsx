@@ -92,17 +92,34 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
       return null;
     }).filter(d => d !== null);
 
+    console.log('[GuardianLastActive] DEBUG:', {
+      today: today.toISOString().split('T')[0],
+      dayOfWeek,
+      daysBackToMonday,
+      monday: mondayDate.toISOString().split('T')[0],
+      moodsArrayLength: moods.length,
+      extractedDates: moodDates,
+    });
+
     let inactiveDays = 0;
+    const daysChecked = [];
+    
     // Count from Monday to YESTERDAY (not including today since it's still ongoing)
     for (let i = 0; i < daysBackToMonday; i++) {
       const checkDate = new Date(mondayDate);
       checkDate.setDate(mondayDate.getDate() + i);
       const checkDateStr = checkDate.toISOString().split('T')[0];
+      const hasMood = moodDates.includes(checkDateStr);
       
-      if (!moodDates.includes(checkDateStr)) {
+      daysChecked.push({ date: checkDateStr, hasMood });
+      
+      if (!hasMood) {
         inactiveDays++;
       }
     }
+    
+    console.log('[GuardianLastActive] DEBUG - Days checked:', daysChecked);
+    console.log('[GuardianLastActive] DEBUG - Inactive days count:', inactiveDays);
     
     inactiveDays = Math.max(0, Math.min(inactiveDays, 7));
 
