@@ -11,15 +11,15 @@ import ApiResponse from '../utils/ApiResponse.js';
 import ApiError from '../utils/ApiError.js';
 import { detectRiskKeywords, calculateUserRiskScore } from '../utils/riskDetection.js';
 
-// Helper function to convert mood string to numeric score
+// Helper function to convert mood string to numeric score (1-5 scale)
 const getMoodScore = (moodString) => {
   const moodScores = {
-    'Positive': 8,
-    'Stable': 6,
-    'Pressure': 4,
-    'Low': 2,
+    'Positive': 5,
+    'Stable': 4,
+    'Pressure': 2,
+    'Low': 1,
   };
-  return moodScores[moodString] || 5;
+  return moodScores[moodString] || 3;
 };
 
 // DEBUG ENDPOINT: Check guardian's data in database
