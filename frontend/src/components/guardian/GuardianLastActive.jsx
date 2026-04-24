@@ -68,43 +68,56 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     else if (diffDays < 30) lastActiveText = `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
     else lastActiveText = lastActivityTime.toLocaleDateString();
 
-    // Calculate inactive days - count days this week with NO mood entries
-    // Get start of this week (Sunday)
+    // Calculate inactive days - count days this week (before today) with NO mood entries
     const today = new Date();
+    const todayStr = today.toISOString().split('T')[0];
+    
+    // Get start of week (Sunday = day 0)
     const dayOfWeek = today.getDay();
-    const startOfWeekDate = new Date(today);
-    startOfWeekDate.setDate(today.getDate() - dayOfWeek); // 0 = Sunday
-    startOfWeekDate.setHours(0, 0, 0, 0);
-
-    // Count days from start of week until today that have NO mood entries
-    const moodDates = moods.map(m => {
+    const weekStart = new Date(today);
+    weekStart.setDate(today.getDate() - dayOfWeek);
+    weekStart.setHours(0, 0, 0, 0);
+    
+    // Create a Set of all mood dates (YYYY-MM-DD) for fast lookup
+    const moodDateSet = new Set();
+    moods.forEach(m => {
+      let dateStr = null;
       if (m.createdAt) {
         const moodDate = new Date(m.createdAt);
-        return moodDate.toISOString().split('T')[0]; // YYYY-MM-DD
+        dateStr = moodDate.toISOString().split('T')[0];
       } else if (m.date) {
-        return m.date; // Already YYYY-MM-DD
+        dateStr = m.date;
       }
-      return null;
-    }).filter(d => d !== null);
-
+      if (dateStr) {
+        moodDateSet.add(dateStr);
+      }
+    });
+    
+    // Count days from start of week until today (NOT including today) that have NO moods
     let inactiveDays = 0;
-    for (let i = 0; i < dayOfWeek; i++) {
-      const checkDate = new Date(startOfWeekDate);
-      checkDate.setDate(startOfWeekDate.getDate() + i);
+    for (let dayOffset = 0; dayOffset < dayOfWeek; dayOffset++) {
+      const checkDate = new Date(weekStart);
+      checkDate.setDate(weekStart.getDate() + dayOffset);
       const checkDateStr = checkDate.toISOString().split('T')[0];
       
-      if (!moodDates.includes(checkDateStr)) {
+      if (!moodDateSet.has(checkDateStr)) {
         inactiveDays++;
       }
     }
     
+    // Clamp between 0 and 7
     inactiveDays = Math.max(0, Math.min(inactiveDays, 7));
 
-    console.log('[GuardianLastActive] Week analysis:', {
-      startOfWeek: startOfWeekDate.toISOString().split('T')[0],
-      today: today.toISOString().split('T')[0],
+    console.log('[GuardianLastActive] Inactive Days Calculation:', {
+      weekStart: weekStart.toISOString().split('T')[0],
+      today: todayStr,
       dayOfWeek,
-      moodDates,
+      moodDatesInWeek: Array.from(moodDateSet),
+      daysChecked: Array.from({length: dayOfWeek}, (_, i) => {
+        const d = new Date(weekStart);
+        d.setDate(weekStart.getDate() + i);
+        return d.toISOString().split('T')[0];
+      }),
       inactiveDays,
     });
 
