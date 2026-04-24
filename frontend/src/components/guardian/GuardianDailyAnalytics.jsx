@@ -126,7 +126,7 @@ const GuardianDailyAnalytics = ({ dailyData = null, loading = false }) => {
                     >
                       {entry.mood}
                     </span>
-                    <span className="text-sm font-medium text-gray-900">Score: {Math.min(entry.score, 5)}/5</span>
+                    <span className="text-sm font-medium text-gray-900">Score: {entry.score}</span>
                   </div>
                   <span className="text-xs text-gray-500">
                     {new Date(entry.timestamp).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}

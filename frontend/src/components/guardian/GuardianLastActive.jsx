@@ -4,9 +4,6 @@ import { Activity, Clock } from 'lucide-react';
 const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
   // Calculate last active time based on most recent mood or goal
   const { lastActiveDate, lastActiveText, inactiveDays } = useMemo(() => {
-    console.log('[GuardianLastActive] Received moods:', moods);
-    console.log('[GuardianLastActive] Received goals:', goals);
-    
     if (!moods?.length && !goals?.length) {
       return {
         lastActiveDate: null,
@@ -91,34 +88,18 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
       }
     });
 
-    console.log('[GuardianLastActive] DEBUG:', {
-      today: today.toISOString().split('T')[0],
-      dayOfWeek,
-      daysBackToMonday,
-      startOfWeekDate: startOfWeek.toISOString().split('T')[0],
-      moods: moods.map(m => m.date || (m.createdAt ? new Date(m.createdAt).toISOString().split('T')[0] : 'no date')),
-      moodDateSet: Array.from(moodDateSet),
-    });
-
     // Count days from Monday to yesterday (not including today)
     let inactiveDays = 0;
-    const daysInWeek = [];
     
     for (let dayOffset = 0; dayOffset < daysBackToMonday; dayOffset++) {
       const checkDate = new Date(startOfWeek);
       checkDate.setDate(startOfWeek.getDate() + dayOffset);
       const dateStr = checkDate.toISOString().split('T')[0];
       
-      const hasMood = moodDateSet.has(dateStr);
-      daysInWeek.push({ date: dateStr, hasMood });
-      
-      if (!hasMood) {
+      if (!moodDateSet.has(dateStr)) {
         inactiveDays++;
       }
     }
-    
-    console.log('[GuardianLastActive] Days in week:', daysInWeek);
-    console.log('[GuardianLastActive] Total inactive days:', inactiveDays);
     
     inactiveDays = Math.max(0, Math.min(inactiveDays, 7));
 
