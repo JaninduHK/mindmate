@@ -80,13 +80,14 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     mondayDate.setDate(today.getDate() - daysBackToMonday);
     mondayDate.setHours(0, 0, 0, 0);
 
-    // Count days from Monday to today that have NO mood entries
+    // Count days from Monday to yesterday that have NO mood entries
     const moodDates = moods.map(m => {
-      if (m.createdAt) {
+      // Use the date field (already YYYY-MM-DD) to avoid timezone conversion issues
+      if (m.date) {
+        return m.date;
+      } else if (m.createdAt) {
         const moodDate = new Date(m.createdAt);
-        return moodDate.toISOString().split('T')[0]; // YYYY-MM-DD
-      } else if (m.date) {
-        return m.date; // Already YYYY-MM-DD
+        return moodDate.toISOString().split('T')[0];
       }
       return null;
     }).filter(d => d !== null);
