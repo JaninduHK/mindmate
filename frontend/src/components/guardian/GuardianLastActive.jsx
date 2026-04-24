@@ -4,6 +4,9 @@ import { Activity, Clock } from 'lucide-react';
 const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
   // Calculate last active time based on most recent mood or goal
   const { lastActiveDate, lastActiveText, inactiveDays } = useMemo(() => {
+    console.log('[GuardianLastActive] Received moods:', moods);
+    console.log('[GuardianLastActive] Received goals:', goals);
+    
     if (!moods?.length && !goals?.length) {
       return {
         lastActiveDate: null,
@@ -66,42 +69,44 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     else lastActiveText = lastActivityTime.toLocaleDateString();
 
     // Calculate inactive days - count days this week with NO mood entries
-    // Get start of this week (Monday)
+    // Get start of this week (Sunday)
     const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
-    
-    // Calculate days back to Monday
-    const daysBackToMonday = (dayOfWeek === 0) ? 6 : (dayOfWeek - 1);
-    
-    const startOfWeek = new Date(today);
-    startOfWeek.setDate(today.getDate() - daysBackToMonday);
-    startOfWeek.setHours(0, 0, 0, 0);
+    const dayOfWeek = today.getDay();
+    const startOfWeekDate = new Date(today);
+    startOfWeekDate.setDate(today.getDate() - dayOfWeek); // 0 = Sunday
+    startOfWeekDate.setHours(0, 0, 0, 0);
 
-    // Extract all mood dates from the moods array
-    const moodDateSet = new Set();
-    moods.forEach(m => {
-      if (m.date) {
-        moodDateSet.add(m.date);
-      } else if (m.createdAt) {
-        const dateStr = new Date(m.createdAt).toISOString().split('T')[0];
-        moodDateSet.add(dateStr);
+    // Count days from start of week until today that have NO mood entries
+    const moodDates = moods.map(m => {
+      if (m.createdAt) {
+        const moodDate = new Date(m.createdAt);
+        return moodDate.toISOString().split('T')[0]; // YYYY-MM-DD
+      } else if (m.date) {
+        return m.date; // Already YYYY-MM-DD
       }
-    });
+      return null;
+    }).filter(d => d !== null);
 
-    // Count days from Monday to yesterday (not including today)
     let inactiveDays = 0;
-    
-    for (let dayOffset = 0; dayOffset < daysBackToMonday; dayOffset++) {
-      const checkDate = new Date(startOfWeek);
-      checkDate.setDate(startOfWeek.getDate() + dayOffset);
-      const dateStr = checkDate.toISOString().split('T')[0];
+    for (let i = 0; i < dayOfWeek; i++) {
+      const checkDate = new Date(startOfWeekDate);
+      checkDate.setDate(startOfWeekDate.getDate() + i);
+      const checkDateStr = checkDate.toISOString().split('T')[0];
       
-      if (!moodDateSet.has(dateStr)) {
+      if (!moodDates.includes(checkDateStr)) {
         inactiveDays++;
       }
     }
     
     inactiveDays = Math.max(0, Math.min(inactiveDays, 7));
+
+    console.log('[GuardianLastActive] Week analysis:', {
+      startOfWeek: startOfWeekDate.toISOString().split('T')[0],
+      today: today.toISOString().split('T')[0],
+      dayOfWeek,
+      moodDates,
+      inactiveDays,
+    });
 
     return {
       lastActiveDate: lastActivityTime,
