@@ -122,14 +122,6 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     
     inactiveDays = Math.max(0, Math.min(inactiveDays, 7));
 
-    console.log('[GuardianLastActive] Week analysis (Mon-Sun):', {
-      monday: mondayDate.toISOString().split('T')[0],
-      today: today.toISOString().split('T')[0],
-      daysBackToMonday,
-      moodDates,
-      inactiveDays,
-    });
-
     return {
       lastActiveDate: lastActivityTime,
       lastActiveText,
