@@ -72,54 +72,57 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     // Week starts on Monday (not Sunday)
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
+    // Calculate inactive days - count days this week with NO mood entries
+    // Get start of this week (Monday)
+    const today = new Date();
+    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
     
     // Calculate days back to Monday
     const daysBackToMonday = (dayOfWeek === 0) ? 6 : (dayOfWeek - 1);
     
-    const mondayDate = new Date(today);
-    mondayDate.setDate(today.getDate() - daysBackToMonday);
-    mondayDate.setHours(0, 0, 0, 0);
+    const startOfWeek = new Date(today);
+    startOfWeek.setDate(today.getDate() - daysBackToMonday);
+    startOfWeek.setHours(0, 0, 0, 0);
 
-    // Count days from Monday to yesterday that have NO mood entries
-    const moodDates = moods.map(m => {
-      // Use the date field (already YYYY-MM-DD) to avoid timezone conversion issues
+    // Extract all mood dates from the moods array
+    const moodDateSet = new Set();
+    moods.forEach(m => {
       if (m.date) {
-        return m.date;
+        moodDateSet.add(m.date);
       } else if (m.createdAt) {
-        const moodDate = new Date(m.createdAt);
-        return moodDate.toISOString().split('T')[0];
+        const dateStr = new Date(m.createdAt).toISOString().split('T')[0];
+        moodDateSet.add(dateStr);
       }
-      return null;
-    }).filter(d => d !== null);
+    });
 
     console.log('[GuardianLastActive] DEBUG:', {
       today: today.toISOString().split('T')[0],
       dayOfWeek,
       daysBackToMonday,
-      monday: mondayDate.toISOString().split('T')[0],
-      moodsArrayLength: moods.length,
-      extractedDates: moodDates,
+      startOfWeekDate: startOfWeek.toISOString().split('T')[0],
+      moods: moods.map(m => m.date || (m.createdAt ? new Date(m.createdAt).toISOString().split('T')[0] : 'no date')),
+      moodDateSet: Array.from(moodDateSet),
     });
 
+    // Count days from Monday to yesterday (not including today)
     let inactiveDays = 0;
-    const daysChecked = [];
+    const daysInWeek = [];
     
-    // Count from Monday to YESTERDAY (not including today since it's still ongoing)
-    for (let i = 0; i < daysBackToMonday; i++) {
-      const checkDate = new Date(mondayDate);
-      checkDate.setDate(mondayDate.getDate() + i);
-      const checkDateStr = checkDate.toISOString().split('T')[0];
-      const hasMood = moodDates.includes(checkDateStr);
+    for (let dayOffset = 0; dayOffset < daysBackToMonday; dayOffset++) {
+      const checkDate = new Date(startOfWeek);
+      checkDate.setDate(startOfWeek.getDate() + dayOffset);
+      const dateStr = checkDate.toISOString().split('T')[0];
       
-      daysChecked.push({ date: checkDateStr, hasMood });
+      const hasMood = moodDateSet.has(dateStr);
+      daysInWeek.push({ date: dateStr, hasMood });
       
       if (!hasMood) {
         inactiveDays++;
       }
     }
     
-    console.log('[GuardianLastActive] DEBUG - Days checked:', daysChecked);
-    console.log('[GuardianLastActive] DEBUG - Inactive days count:', inactiveDays);
+    console.log('[GuardianLastActive] Days in week:', daysInWeek);
+    console.log('[GuardianLastActive] Total inactive days:', inactiveDays);
     
     inactiveDays = Math.max(0, Math.min(inactiveDays, 7));
 
