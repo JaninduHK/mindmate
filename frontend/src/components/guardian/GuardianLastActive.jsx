@@ -69,10 +69,6 @@ const GuardianLastActive = ({ moods = [], goals = [], isEmergencyActive }) => {
     else lastActiveText = lastActivityTime.toLocaleDateString();
 
     // Calculate inactive days - count days this week with NO mood entries
-    // Week starts on Monday (not Sunday)
-    const today = new Date();
-    const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
-    // Calculate inactive days - count days this week with NO mood entries
     // Get start of this week (Monday)
     const today = new Date();
     const dayOfWeek = today.getDay(); // 0 = Sunday, 1 = Monday, ... 6 = Saturday
