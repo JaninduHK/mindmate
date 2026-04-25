@@ -13,8 +13,8 @@ const NotificationBell = () => {
   const navigate = useNavigate();
   const ref = useRef(null);
 
-  // Total unread count = system notifications + unread messages
-  const totalUnread = unreadCount + unreadMessages;
+  // Total unread count = system notifications only
+  const totalUnread = unreadCount;
 
   const fetchNotifications = async () => {
     try {
@@ -90,30 +90,8 @@ const NotificationBell = () => {
           </div>
 
           <div className="overflow-y-auto flex-1 divide-y divide-gray-50">
-            {/* Message Notifications */}
-            {messageNotifications.length > 0 && (
-              <>
-                {messageNotifications.map((n) => (
-                  <div
-                    key={n.id}
-                    onClick={() => handleMessageNotificationClick(n)}
-                    className="px-4 py-3 cursor-pointer hover:bg-blue-50 transition-colors bg-gradient-to-r from-blue-50/50 to-indigo-50/50 border-l-4 border-primary-300"
-                  >
-                    <p className="text-sm font-bold text-primary-900">{n.senderName}</p>
-                    {n.isGroupMessage && (
-                      <p className="text-xs text-primary-600 font-medium mt-0.5">
-                        in {n.groupName}
-                      </p>
-                    )}
-                    <p className="text-sm text-gray-700 mt-1 line-clamp-2 leading-relaxed">{n.message}</p>
-                    <p className="text-xs text-primary-600 mt-1 font-medium">Click to open chat</p>
-                  </div>
-                ))}
-              </>
-            )}
-
             {/* System Notifications */}
-            {notifications.length === 0 && messageNotifications.length === 0 ? (
+            {notifications.length === 0 ? (
               <p className="p-4 text-sm text-gray-400 text-center">No notifications</p>
             ) : (
               notifications.map((n) => (

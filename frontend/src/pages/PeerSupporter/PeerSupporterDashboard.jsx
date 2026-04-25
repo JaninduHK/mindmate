@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen, FiAward, FiClock, FiStar, FiCalendar, FiTrendingUp } from 'react-icons/fi';
 import { useAuth } from '../../hooks/useAuth';
+import socket from '../../socket/socket';
 import GroupChatWidgets from '../../components/Dashboard/GroupChatWidgets';
 import AvailabilityToggle from '../../components/peer/AvailabilityToggle';
 import PeerSessionManagement from '../../components/PeerSupporter/PeerSessionManagement';
@@ -62,6 +63,14 @@ const PeerSupporterDashboard = () => {
   const [isAvailable, setIsAvailable] = useState(user?.isAvailableNow || false);
   const [upcomingSessions, setUpcomingSessions] = useState([]);
   const [loadingSessions, setLoadingSessions] = useState(false);
+
+  // Join personal room to receive notifications
+  useEffect(() => {
+    if (user?._id) {
+      socket.emit('join_room', user._id);
+      console.log('✅ Peer supporter joined personal room:', user._id);
+    }
+  }, [user?._id]);
 
   // Fetch upcoming confirmed sessions
   useEffect(() => {
