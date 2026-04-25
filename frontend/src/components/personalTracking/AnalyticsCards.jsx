@@ -44,6 +44,19 @@ export default function AnalyticsCards({ summary }) {
   const missingGoalsCount = summary?.missingGoalsCount ?? 0;
   const moodDistribution = summary?.moodDistribution ?? [];
 
+  // Monthly insight fields from the extended summary
+  const totalTrackedDays    = summary?.totalTrackedDays ?? null;
+  const stressDays          = summary?.stressDays ?? null;
+  const lastStressDay       = summary?.lastStressDay ?? null;
+  const stressPercentage    = summary?.stressPercentage ?? null;
+  const mostMissedGoal      = summary?.mostMissedGoal ?? null;
+  const shortRecommendation = summary?.shortRecommendation ?? null;
+  const suggestedActivities = summary?.suggestedActivities ?? [];
+  const topSummary          = summary?.topSummary ?? null;
+  const periodStart         = summary?.periodStart ?? null;
+  const periodEnd           = summary?.periodEnd ?? null;
+  const hasInsights         = totalTrackedDays !== null && totalTrackedDays > 0;
+
   const moodUi = mostCommonMood ? MOOD_UI[mostCommonMood] : null;
   const normalizePercent = (p) => {
     const n = Number(p ?? 0);
@@ -234,6 +247,74 @@ export default function AnalyticsCards({ summary }) {
                 ))}
             </div>
           </div>
+        </div>
+      )}
+
+      {/* Monthly Insights Block */}
+      {hasInsights && (
+        <div className="space-y-4">
+          {/* Summary sentence */}
+          {topSummary && (
+            <div className="bg-blue-50 border border-blue-100 rounded-2xl p-5">
+              <p className="text-xs font-bold uppercase tracking-wider text-blue-600 mb-2">
+                Monthly Summary{periodStart && periodEnd ? ` · ${periodStart} → ${periodEnd}` : ''}
+              </p>
+              <p className="text-sm text-gray-700 leading-relaxed">{topSummary}</p>
+            </div>
+          )}
+
+          {/* Insight stat cards */}
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Tracked Days</p>
+              <p className="text-2xl font-bold text-gray-900 mt-1">{totalTrackedDays}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Stress Days</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{stressDays}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Stress %</p>
+              <p className="text-2xl font-bold text-orange-600 mt-1">{stressPercentage}%</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Last Stress Day</p>
+              <p className="text-sm font-bold text-gray-900 mt-1">{lastStressDay === 'N/A' ? '—' : lastStressDay}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Missing Goals</p>
+              <p className="text-2xl font-bold text-red-600 mt-1">{missingGoalsCount}</p>
+            </div>
+            <div className="bg-white rounded-2xl border border-gray-100 shadow-sm p-4">
+              <p className="text-[11px] font-bold uppercase tracking-wider text-gray-400">Most Missed Goal</p>
+              <p className="text-sm font-bold text-gray-900 mt-1 truncate" title={mostMissedGoal}>
+                {mostMissedGoal === 'N/A' ? '—' : mostMissedGoal}
+              </p>
+            </div>
+          </div>
+
+          {/* Recommendation + activities */}
+          {shortRecommendation && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="bg-cyan-50 border border-cyan-100 rounded-2xl p-5">
+                <p className="text-xs font-bold uppercase tracking-wider text-cyan-700 mb-2">Recommendation</p>
+                <p className="text-sm text-gray-700 leading-relaxed">{shortRecommendation}</p>
+              </div>
+              {suggestedActivities.length > 0 && (
+                <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-5">
+                  <p className="text-xs font-bold uppercase tracking-wider text-primary-600 mb-3">Suggested Activities</p>
+                  <ul className="space-y-1.5">
+                    {suggestedActivities.map((act, i) => (
+                      <li key={i} className="flex items-start gap-2 text-sm text-gray-700">
+                        <span className="mt-1 w-1.5 h-1.5 rounded-full bg-primary-500 flex-shrink-0" />
+                        {act}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       )}
 

@@ -22,6 +22,9 @@ export default function GoalPage() {
   const [editingGoal, setEditingGoal] = useState(null);
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
+  const [searchQuery, setSearchQuery] = useState('');
+  const [startDate, setStartDate] = useState('');
+  const [endDate, setEndDate] = useState('');
   const [loading, setLoading] = useState(true);
 
   const refreshGoals = useCallback(async () => {
@@ -111,6 +114,26 @@ export default function GoalPage() {
     }
   };
 
+  const handleReactivate = async (goalId) => {
+    if (!confirm('Re-activate this goal for today?')) return;
+    try {
+      // Reset the goal to incomplete status for today
+      await axiosInstance.patch(`/personal-tracking/goals/${goalId}`, { status: 'incomplete' });
+      toast.success('Goal re-activated for today');
+      await refreshGoals();
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to re-activate goal');
+    }
+  };
+
+  const handleClearFilters = () => {
+    setTypeFilter('all');
+    setStatusFilter('all');
+    setSearchQuery('');
+    setStartDate('');
+    setEndDate('');
+  };
+
   const latestGoals = [...goals].sort((a, b) => {
     if (b.date !== a.date) return b.date.localeCompare(a.date);
     return String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''));
@@ -118,15 +141,61 @@ export default function GoalPage() {
 
   const filteredGoals = useMemo(() => {
     return latestGoals.filter((g) => {
+      // type filter
       const typeOk = typeFilter === 'all' ? true : g.goalType === typeFilter;
       if (!typeOk) return false;
-      if (statusFilter === 'all') return true;
-      if (statusFilter === 'active') return g.status === 'incomplete';
-      if (statusFilter === 'completed') return g.status === 'complete';
-      if (statusFilter === 'missed') return g.status === 'incomplete' && String(g.date ?? '') < todayISO;
+
+      // status filter
+      if (statusFilter === 'active' && g.status !== 'incomplete') return false;
+      if (statusFilter === 'completed' && g.status !== 'complete') return false;
+      if (statusFilter === 'missed' && !(g.status === 'incomplete' && String(g.date ?? '') < todayISO)) return false;
+
+      // search filter
+      if (searchQuery.trim()) {
+        const query = searchQuery.trim().toLowerCase();
+        const name = String(g.goalName ?? '').toLowerCase();
+        if (!name.includes(query)) return false;
+      }
+
+      // date range filter
+      const goalDate = String(g.date ?? '').slice(0, 10);
+      if (startDate && goalDate < startDate) return false;
+      if (endDate && goalDate > endDate) return false;
+
       return true;
     });
-  }, [latestGoals, typeFilter, statusFilter, todayISO]);
+  }, [latestGoals, typeFilter, statusFilter, searchQuery, startDate, endDate, todayISO]);
+
+  /**
+   * Merge completionDates across ALL documents that share the same
+   * goalType + normalized goalName.  This is what makes "planting" on
+   * Apr 24 and "planting" on Apr 25 share a single recurring history.
+   */
+  const recurringCompletionDates = useMemo(() => {
+    const normalizeName = (s) =>
+      String(s ?? '').trim().toLowerCase().replace(/\s+/g, ' ');
+
+    const map = {};
+    for (const g of goals ?? []) {
+      const key = `${g.goalType}::${normalizeName(g.goalName)}`;
+      if (!map[key]) map[key] = new Set();
+      // include the goal's own date if it is complete
+      if (g.status === 'complete') {
+        map[key].add(String(g.date ?? '').slice(0, 10));
+      }
+      // include every explicit completionDate stored on the document
+      for (const d of Array.isArray(g.completionDates) ? g.completionDates : []) {
+        const iso = String(d).slice(0, 10);
+        if (iso) map[key].add(iso);
+      }
+    }
+    // convert Sets → sorted arrays
+    const result = {};
+    for (const [key, set] of Object.entries(map)) {
+      result[key] = [...set].filter(Boolean).sort();
+    }
+    return result;
+  }, [goals]);
 
   const weeklyProgressByGoal = useMemo(() => {
     const normalizeName = (s) =>
@@ -263,33 +332,63 @@ export default function GoalPage() {
               <select
                 value={typeFilter}
                 onChange={(e) => setTypeFilter(e.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="all">All</option>
+                <option value="all">All Types</option>
                 <option value="daily">Daily</option>
                 <option value="weekly">Weekly</option>
-                <option value="custom">Custom Weekly</option>
+                <option value="custom">3x/week</option>
               </select>
               <select
                 value={statusFilter}
                 onChange={(e) => setStatusFilter(e.target.value)}
-                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
               >
-                <option value="all">All status</option>
+                <option value="all">All Status</option>
                 <option value="active">Active</option>
                 <option value="completed">Completed</option>
                 <option value="missed">Missed</option>
               </select>
+              <input
+                type="text"
+                placeholder="Search by goal name..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 min-w-[200px]"
+              />
+              <input
+                type="date"
+                placeholder="Start date"
+                value={startDate}
+                onChange={(e) => setStartDate(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <input
+                type="date"
+                placeholder="End date"
+                value={endDate}
+                onChange={(e) => setEndDate(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+              />
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="rounded-lg border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 transition-colors"
+              >
+                Clear Filters
+              </button>
             </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-shadow hover:shadow-md">
               <div className="p-6">
                 <GoalHistoryCards
                   goals={filteredGoals}
                   weeklyProgressByGoal={weeklyProgressByGoal}
+                  recurringCompletionDates={recurringCompletionDates}
                   onMarkComplete={handleMarkComplete}
                   onDelete={handleDeleteGoal}
                   todayISO={todayISO}
                   onEdit={(g) => setEditingGoal(g)}
+                  onReactivate={handleReactivate}
                 />
               </div>
             </div>

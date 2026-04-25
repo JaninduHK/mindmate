@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import axiosInstance from '../../api/axios.config';
 import toast from 'react-hot-toast';
 import { useAuth } from '../../hooks/useAuth';
@@ -12,17 +12,31 @@ export default function AnalyticsPage() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Current month bounds — computed once
+  const { monthStart, monthEnd } = useMemo(() => {
+    const now = new Date();
+    const y = now.getUTCFullYear();
+    const m = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const d = String(now.getUTCDate()).padStart(2, '0');
+    return {
+      monthStart: `${y}-${m}-01`,
+      monthEnd:   `${y}-${m}-${d}`,
+    };
+  }, []);
+
   const loadSummary = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await axiosInstance.get('/personal-tracking/analytics/summary');
+      const res = await axiosInstance.get('/personal-tracking/analytics/summary', {
+        params: { startDate: monthStart, endDate: monthEnd },
+      });
       setSummary(res.data?.data ?? null);
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to load analytics');
     } finally {
       setLoading(false);
     }
-  }, []);
+  }, [monthStart, monthEnd]);
 
   useEffect(() => {
     loadSummary();
@@ -39,7 +53,7 @@ export default function AnalyticsPage() {
           Mood and goal insights
         </h2>
         <p className="text-sm text-gray-500 mt-1">
-          Track your emotional patterns and goal achievements over time.
+          Showing current month summary ({monthStart} → {monthEnd}).
         </p>
       </div>
 
