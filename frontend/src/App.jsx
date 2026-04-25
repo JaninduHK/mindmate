@@ -1,9 +1,11 @@
 import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import GlobalMessageListener from './components/listeners/GlobalMessageListener';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -11,11 +13,13 @@ import Register from './pages/Register';
 import Dashboard from './pages/Dashboard';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
-import ChatPage from './pages/chat/ChatPage';
-
 // Events
 import EventList from './pages/Events/EventList';
 import EventDetail from './pages/Events/EventDetail';
+
+// Chat
+import ChatPage from './pages/chat/ChatPage';
+import GroupChatPage from './pages/chat/GroupChatPage';
 
 // Counselors (public)
 import CounselorList from './pages/Counselors/CounselorList';
@@ -43,29 +47,35 @@ import EventEdit from './pages/Counselor/EventEdit';
 // Peer Supporter pages
 import PeerSupporterRegister from './pages/PeerSupporter/PeerSupporterRegister';
 import PeerSupporterDashboard from './pages/PeerSupporter/PeerSupporterDashboard';
+import ManageAvailability from './pages/PeerSupporter/ManageAvailability';
 import PeerSupporterList from './pages/PeerSupporter/PeerSupporterList';
+import BookSessionPage from './pages/PeerSupporter/BookSessionPage';
 import UsersList from './pages/PeerSupporter/UsersList';
+import UserSessions from './pages/PeerSupporter/UserSessions';
+import PeerSupporterSessions from './pages/PeerSupporter/PeerSupporterSessions';
 
 // Personal tracking
 import PersonalTrackingPage from './pages/PersonalTracking/PersonalTrackingPage';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
-        <div className="flex flex-col min-h-screen">
-          <Toaster
-            position="top-right"
-            toastOptions={{
-              duration: 3000,
-              style: { background: '#363636', color: '#fff' },
-              success: { duration: 3000, iconTheme: { primary: '#10b981', secondary: '#fff' } },
-              error: { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
-            }}
-          />
-          <Header />
-          <main className="flex-1">
-            <Routes>
+        <NotificationProvider>
+          <GlobalMessageListener />
+          <div className="flex flex-col min-h-screen">
+            <Toaster
+              position="top-right"
+              toastOptions={{
+                duration: 3000,
+                style: { background: '#363636', color: '#fff' },
+                success: { duration: 3000, iconTheme: { primary: '#10b981', secondary: '#fff' } },
+                error: { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
+              }}
+            />
+            <Header />
+            <main className="flex-1">
+              <Routes>
               {/* Public */}
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
@@ -76,8 +86,10 @@ function App() {
               <Route path="/counselors" element={<CounselorList />} />
               <Route path="/counselors/:id" element={<CounselorProfile />} />
               <Route path="/peer-supporters" element={<PeerSupporterList />} />
+              <Route path="/book-session/:supporterId" element={<BookSessionPage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/chat/:recipientId" element={<ChatPage />} />
+              <Route path="/chat-group/:groupId" element={<GroupChatPage />} />
               {/* Protected — user role only */}
               <Route element={<ProtectedRoute allowedRoles={['user']} />}>
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -94,13 +106,16 @@ function App() {
                 <Route path="/booking/checkout/:eventId" element={<BookingCheckout />} />
                 <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
                 <Route path="/booking/my" element={<MyBookings />} />
+                <Route path="/my-sessions" element={<UserSessions />} />
                 <Route path="/counselor/onboarding" element={<CounselorOnboarding />} />
               </Route>
 
               {/* Protected — peer supporter role */}
               <Route element={<ProtectedRoute allowedRoles={['peer_supporter']} />}>
                 <Route path="/peer-supporter/dashboard" element={<PeerSupporterDashboard />} />
+                <Route path="/peer-supporter/manage-availability" element={<ManageAvailability />} />
                 <Route path="/peer-supporter/users" element={<UsersList />} />
+                <Route path="/peer-supporter/sessions" element={<PeerSupporterSessions />} />
               </Route>
 
               {/* Protected — counselor role */}
@@ -125,6 +140,7 @@ function App() {
           </main>
           <Footer />
         </div>
+        </NotificationProvider>
       </AuthProvider>
     </BrowserRouter>
   );
