@@ -104,9 +104,24 @@ export default function AnalyticsCards({ summary }) {
         toast.error('No data found for the selected period');
         return;
       }
-      toast('Report generation will be available in the final release!');
+
+      const reportRes = await axiosInstance.get('/personal-tracking/analytics/report-download', {
+        params: { startDate, endDate },
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([reportRes.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mindmate-report-${startDate}-to-${endDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Report downloaded successfully');
     } catch (err) {
-      toast.error(err.response?.data?.message || 'Could not validate report range');
+      toast.error(err.response?.data?.message || 'Could not generate report');
     } finally {
       setChecking(false);
     }
@@ -266,7 +281,7 @@ export default function AnalyticsCards({ summary }) {
               }`}
               onClick={handleDownloadReport}
             >
-              {checking ? 'Checking…' : 'Download Report'}
+              {checking ? 'Generating…' : 'Download Report'}
             </button>
           </div>
         </div>
