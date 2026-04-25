@@ -60,13 +60,33 @@ export default function AdminWellness() {
   }, [selectedConfig, moodType]);
 
   const moodChartData = useMemo(() => {
-    const counts = MOOD_ORDER.reduce((acc, mood) => ({ ...acc, [mood]: 0 }), {});
+    const byUser = new Map();
     moods.forEach((m) => {
-      if (counts[m.mood] !== undefined) counts[m.mood] += 1;
+      const key = String(m.userId);
+      if (!byUser.has(key)) byUser.set(key, {});
+      const c = byUser.get(key);
+      c[m.mood] = (c[m.mood] || 0) + 1;
     });
+
+    const dominantMoodCounts = MOOD_ORDER.reduce((acc, mood) => ({ ...acc, [mood]: 0 }), {});
+
+    byUser.forEach((counts) => {
+      const entries = Object.entries(counts);
+      if (!entries.length) return;
+      // Sort counts descending; on tie, prefer mood that comes earlier in MOOD_ORDER
+      entries.sort((a, b) => {
+        if (b[1] !== a[1]) return b[1] - a[1];
+        return MOOD_ORDER.indexOf(a[0]) - MOOD_ORDER.indexOf(b[0]);
+      });
+      const topMood = entries[0][0];
+      if (dominantMoodCounts[topMood] !== undefined) {
+        dominantMoodCounts[topMood] += 1;
+      }
+    });
+
     return MOOD_ORDER.map((mood) => ({
       name: mood,
-      value: counts[mood],
+      value: dominantMoodCounts[mood],
     }));
   }, [moods]);
 

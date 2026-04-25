@@ -9,6 +9,8 @@ import { cloudinary } from '../config/cloudinary.js';
 import { encrypt } from '../utils/encryption.util.js';
 import { HTTP_STATUS } from '../config/constants.js';
 import { sendNotification } from '../services/notification.service.js';
+import User from '../models/User.model.js';
+
 
 // POST /api/bookings
 export const createBooking = asyncHandler(async (req, res) => {
@@ -86,6 +88,35 @@ export const createBooking = asyncHandler(async (req, res) => {
       consentDate: new Date(),
     },
   });
+
+  // Send notification to peer supporter/counselor
+  try {
+    const bookedUser = await User.findById(req.user._id).select('name');
+    const eventName = event.title;
+    const sessionDate = new Date(event.startDate).toLocaleDateString('en-US', {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric',
+    });
+
+    await sendNotification({
+      userId: event.counselorId,
+      type: 'booking_confirmed',
+      title: 'New Session Booking',
+      message: `${bookedUser?.name || 'A user'} has booked your session "${eventName}" scheduled for ${sessionDate}.`,
+      data: {
+        bookingId: booking._id,
+        eventId: eventId,
+        userId: req.user._id,
+        eventName: eventName,
+        sessionDate: event.startDate,
+      },
+    });
+  } catch (error) {
+    // Log but don't fail the booking if notification fails
+    console.error('Failed to send booking notification:', error.message);
+  }
 
   if (paymentMethod === 'bank_transfer') {
     // Auto-confirm bank transfer bookings (simulate admin confirmation)
@@ -283,6 +314,27 @@ export const cancelBooking = asyncHandler(async (req, res) => {
 
   // Restore seat
   await Event.findByIdAndUpdate(booking.eventId, { $inc: { seatsAvailable: 1 } });
+
+  // Send cancellation notification to counselor
+  try {
+    const event = await Event.findById(booking.eventId).select('title');
+    const user = await User.findById(req.user._id).select('name');
+    
+    await sendNotification({
+      userId: booking.counselorId,
+      type: 'booking_cancelled',
+      title: 'Session Booking Cancelled',
+      message: `${user?.name || 'A user'} has cancelled their booking for "${event?.title || 'your session'}".`,
+      data: {
+        bookingId: booking._id,
+        eventId: booking.eventId,
+        userId: booking.userId,
+        reason: booking.cancellationReason,
+      },
+    });
+  } catch (error) {
+    console.error('Failed to send cancellation notification:', error.message);
+  }
 
   res.json(new ApiResponse(HTTP_STATUS.OK, { booking }, 'Booking cancelled'));
 });

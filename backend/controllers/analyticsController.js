@@ -151,26 +151,40 @@ export const getAnalyticsSummary = asyncHandler(async (req, res) => {
   // Use ObjectId for reliable $match in aggregation.
   const userId = req.user._id;
 
-  const today = new Date();
-  // Midnight UTC boundary for "today"
-  const startOfTodayUTC = new Date(
-    Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate())
-  );
+  const today = getTodayUTCDateOnly();
+
+  // Default to current calendar month (UTC). Accept optional query params for custom range.
+  let start, end;
+  if (req.query.startDate && req.query.endDate) {
+    start = parseISODateOnly(req.query.startDate);
+    end   = parseISODateOnly(req.query.endDate);
+    if (!start || !end || start > end) {
+      throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invalid date range');
+    }
+  } else {
+    // Current month: first day of this month → today
+    start = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), 1));
+    end   = today;
+  }
+
+  const dateFilter = { $gte: start, $lte: end };
+
+  const startOfTodayUTC = today;
 
   const [mostCommonMoodAgg, stressCount, moodCounts, missingGoalsCount] = await Promise.all([
     Mood.aggregate([
-      { $match: { userId } },
+      { $match: { userId, date: dateFilter } },
       { $group: { _id: '$mood', count: { $sum: 1 } } },
       { $sort: { count: -1 } },
       { $limit: 1 },
     ]),
-    Mood.countDocuments({ userId, mood: 'Pressure' }),
+    Mood.countDocuments({ userId, mood: 'Pressure', date: dateFilter }),
     Mood.aggregate([
-      { $match: { userId } },
+      { $match: { userId, date: dateFilter } },
       { $group: { _id: '$mood', count: { $sum: 1 } } },
     ]),
-    // Missing = incomplete AND strictly before today (UTC)
-    Goal.countDocuments({ userId, status: 'incomplete', date: { $lt: startOfTodayUTC } }),
+    // Missing = incomplete AND strictly before today (UTC), within the date range
+    Goal.countDocuments({ userId, status: 'incomplete', date: { $gte: start, $lt: startOfTodayUTC } }),
   ]);
 
   const mostCommonMood = mostCommonMoodAgg?.[0]?._id ?? null;
@@ -180,9 +194,13 @@ export const getAnalyticsSummary = asyncHandler(async (req, res) => {
   const moodDistribution = moodOrder.map((mood) => {
     const found = (moodCounts ?? []).find((r) => r?._id === mood);
     const count = found?.count ?? 0;
-    const percent = totalMoods > 0 ? (count / totalMoods) * 100 : 0; // one decimal
+    const percent = totalMoods > 0 ? (count / totalMoods) * 100 : 0;
     return { mood, count, percent };
   });
+
+  // Build the same report-style insights for the current month view
+  const reportInsights = await buildReportData({ userId, start, end });
+  const insights = reportInsights.overview;
 
   res.json(
     new ApiResponse(
@@ -192,6 +210,17 @@ export const getAnalyticsSummary = asyncHandler(async (req, res) => {
         stressCount,
         missingGoalsCount,
         moodDistribution,
+        // report-style fields for the monthly UI
+        totalTrackedDays:    insights.totalTrackedDays,
+        stressDays:          insights.stressDays,
+        lastStressDay:       insights.lastStressDay,
+        stressPercentage:    insights.stressPercentage,
+        mostMissedGoal:      insights.mostMissedGoal,
+        shortRecommendation: insights.shortRecommendation,
+        suggestedActivities: insights.suggestedActivities,
+        topSummary:          insights.topSummary,
+        periodStart:         formatDateOnly(start),
+        periodEnd:           formatDateOnly(end),
       },
       'Analytics summary retrieved'
     )

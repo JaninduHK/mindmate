@@ -54,6 +54,11 @@ const goalSchema = new mongoose.Schema(
       required: true,
       index: true,
     },
+    // Set once when a missed-goal alert email has been sent — prevents duplicate alerts
+    missedAlertSentAt: {
+      type: Date,
+      default: null,
+    },
   },
   { timestamps: true }
 );

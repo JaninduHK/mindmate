@@ -105,25 +105,28 @@ const UsersList = () => {
       ) : (
         <>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-            {users.map((user) => (
+            {users.map((user) => {
+              const displayUsername = user.username || `User #${user._id ? user._id.substring(user._id.length - 6).toUpperCase() : 'UNKNOWN'}`;
+              
+              return (
               <div key={user._id} className="bg-white rounded-2xl border border-gray-100 shadow-sm hover:shadow-md transition-shadow overflow-hidden">
                 <div className="p-6">
                   <div className="flex items-center justify-center mb-4">
                     {user.avatar?.url ? (
                       <img
                         src={user.avatar.url}
-                        alt="Anonymous User"
+                        alt={displayUsername}
                         className="w-20 h-20 rounded-full object-cover border-4 border-primary-50"
                       />
                     ) : (
                       <div className="w-20 h-20 rounded-full bg-primary-100 flex items-center justify-center text-2xl font-bold text-primary-600">
-                        A
+                        {displayUsername[0]?.toUpperCase() || 'U'}
                       </div>
                     )}
                   </div>
                   
                   <div className="text-center mb-5">
-                    <h3 className="font-semibold text-lg text-gray-900">Anonymous User</h3>
+                    <h3 className="font-semibold text-xl text-gray-900">{displayUsername}</h3>
                     <div className="mt-3 inline-block bg-primary-50 text-primary-700 px-3 py-1.5 rounded-full text-xs font-semibold">
                       Needs Support
                     </div>
@@ -144,7 +147,8 @@ const UsersList = () => {
                   </button>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
 
           {totalPages > 1 && (

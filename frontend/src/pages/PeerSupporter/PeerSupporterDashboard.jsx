@@ -1,8 +1,12 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
-import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen, FiAward, FiArrowRight, FiActivity, FiClock, FiStar, FiCalendar } from 'react-icons/fi';
+import { Link, useNavigate } from 'react-router-dom';
+import { FiUsers, FiMessageCircle, FiHeart, FiBookOpen, FiAward, FiClock, FiStar, FiCalendar, FiTrendingUp } from 'react-icons/fi';
 import { useAuth } from '../../hooks/useAuth';
+import socket from '../../socket/socket';
+import GroupChatWidgets from '../../components/Dashboard/GroupChatWidgets';
 import AvailabilityToggle from '../../components/peer/AvailabilityToggle';
+import PeerSessionManagement from '../../components/PeerSupporter/PeerSessionManagement';
+import * as sessionApi from '../../api/session.api';
 
 const getGreeting = () => {
   const hour = new Date().getHours();
@@ -11,55 +15,42 @@ const getGreeting = () => {
   return "Good evening";
 };
 
-const StatCard = ({ icon: Icon, label, value, color, delay }) => (
-  <div 
-    className={`bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100/80 p-6 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] hover:-translate-y-1 transition-all duration-300 group animate-[fadeInUp_0.6s_ease-out_forwards]`}
-    style={{ animationDelay: `${delay}ms`, opacity: 0 }}
-  >
-    <div className="flex items-center justify-between">
-      <div>
-        <p className="text-sm font-medium text-gray-500 group-hover:text-gray-700 transition-colors uppercase tracking-wider text-xs mb-1">{label}</p>
-        <p className="text-3xl font-extrabold text-gray-900 mt-1">{value}</p>
-      </div>
-      <div className={`w-14 h-14 rounded-2xl flex items-center justify-center ${color} bg-opacity-10 group-hover:bg-opacity-20 transition-all duration-300 transform group-hover:scale-110 group-hover:rotate-3 shadow-inner`}>
-        <Icon className={`w-7 h-7 ${color.replace('bg-', 'text-').replace('-500', '-600')}`} />
-      </div>
+const StatCard = ({ icon: Icon, label, value, colorClass }) => (
+  <div className="bg-white border border-gray-100 rounded-2xl p-5 flex items-center gap-4 shadow-sm hover:shadow-md transition-shadow">
+    <div className={`w-12 h-12 rounded-xl flex flex-col items-center justify-center shrink-0 ${colorClass}`}>
+      <Icon className="w-6 h-6" />
+    </div>
+    <div>
+      <p className="text-sm font-medium text-gray-500">{label}</p>
+      <p className="text-2xl font-bold text-gray-900">{value}</p>
     </div>
   </div>
 );
 
-const ActionCard = ({ to, icon: Icon, title, description, colors, delay }) => (
+const ActionCard = ({ to, icon: Icon, title, description, colorClass }) => (
   <Link 
     to={to} 
-    className={`group relative overflow-hidden bg-white rounded-2xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100/80 p-6 hover:shadow-[0_8px_30px_-4px_rgba(0,0,0,0.1)] ${colors.borderHover} transition-all duration-300 animate-[fadeInUp_0.6s_ease-out_forwards] flex flex-col justify-between h-full`}
-    style={{ animationDelay: `${delay}ms`, opacity: 0 }}
+    className="bg-white border border-gray-100 rounded-2xl p-5 flex items-start gap-4 hover:shadow-md hover:border-primary-200 transition-all group"
   >
-    <div className={`absolute top-0 left-0 w-full h-1 opacity-0 group-hover:opacity-100 transition-opacity duration-300 bg-gradient-to-r ${colors.gradient}`} />
-    
-    <div className="relative z-10">
-      <div className="flex items-center justify-between mb-5">
-        <div className={`w-12 h-12 rounded-xl ${colors.bg} flex items-center justify-center ${colors.bgHover} transition-colors duration-300 shadow-sm`}>
-          <Icon className={`w-6 h-6 ${colors.text}`} />
-        </div>
-        <div className={`w-8 h-8 rounded-full flex items-center justify-center bg-gray-50 group-hover:${colors.bg} transition-colors duration-300`}>
-          <FiArrowRight className={`w-4 h-4 text-gray-400 ${colors.textHover} group-hover:translate-x-1 transition-all duration-300`} />
-        </div>
-      </div>
-      <h3 className="text-xl font-bold text-gray-900 mb-2 group-hover:text-gray-800 transition-colors">{title}</h3>
-      <p className="text-sm text-gray-500 leading-relaxed group-hover:text-gray-600 transition-colors">{description}</p>
+    <div className={`p-3 rounded-xl shrink-0 transition-transform group-hover:scale-105 ${colorClass}`}>
+      <Icon className="w-6 h-6" />
+    </div>
+    <div>
+      <h3 className="font-semibold text-gray-900 group-hover:text-primary-600 transition-colors mb-1">{title}</h3>
+      <p className="text-sm text-gray-500 leading-relaxed line-clamp-2">{description}</p>
     </div>
   </Link>
 );
 
 const TimelineItem = ({ icon: Icon, title, time, isLast }) => (
-  <div className="relative flex gap-4">
-    {!isLast && <div className="absolute left-5 top-10 bottom-[-20px] w-0.5 bg-gray-100 rounded-full" />}
-    <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center shrink-0 border-4 border-white shadow-sm z-10">
+  <div className="relative flex gap-4 pb-6">
+    {!isLast && <div className="absolute left-5 top-10 bottom-0 w-0.5 bg-gray-100" />}
+    <div className="w-10 h-10 rounded-full bg-primary-50 flex items-center justify-center shrink-0 border-4 border-white shadow-sm z-10 relative">
       <Icon className="w-4 h-4 text-primary-600" />
     </div>
-    <div className="pt-2 pb-6">
+    <div className="pt-2">
       <p className="text-sm font-semibold text-gray-900">{title}</p>
-      <p className="text-xs text-gray-500 mt-1 flex items-center gap-1">
+      <p className="text-xs text-gray-500 mt-1 flex items-center gap-1.5">
         <FiClock className="w-3 h-3" /> {time}
       </p>
     </div>
@@ -68,78 +59,131 @@ const TimelineItem = ({ icon: Icon, title, time, isLast }) => (
 
 const PeerSupporterDashboard = () => {
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [isAvailable, setIsAvailable] = useState(user?.isAvailableNow || false);
-  const [isLoaded, setIsLoaded] = useState(false);
+  const [upcomingSessions, setUpcomingSessions] = useState([]);
+  const [loadingSessions, setLoadingSessions] = useState(false);
 
+  // Join personal room to receive notifications
   useEffect(() => {
-    setIsLoaded(true);
+    if (user?._id) {
+      socket.emit('join_room', user._id);
+      console.log('✅ Peer supporter joined personal room:', user._id);
+    }
+  }, [user?._id]);
+
+  // Fetch upcoming confirmed sessions
+  useEffect(() => {
+    const fetchUpcomingSessions = async () => {
+      try {
+        setLoadingSessions(true);
+        const res = await sessionApi.getSupporterBookings();
+        
+        if (res.success) {
+          // Filter for confirmed sessions that are today or in the future
+          const today = new Date();
+          today.setHours(0, 0, 0, 0);
+          
+          const upcoming = res.data
+            .filter(session => {
+              const sessionDate = new Date(session.sessionDate);
+              sessionDate.setHours(0, 0, 0, 0);
+              return session.status === 'confirmed' && sessionDate >= today;
+            })
+            .sort((a, b) => new Date(a.sessionDate) - new Date(b.sessionDate))
+            .slice(0, 3); // Only show top 3
+          
+          setUpcomingSessions(upcoming);
+        }
+      } catch (error) {
+        console.error('Error fetching upcoming sessions:', error);
+      } finally {
+        setLoadingSessions(false);
+      }
+    };
+
+    fetchUpcomingSessions();
   }, []);
+
+  // Format session date and time for display
+  const formatSessionDateTime = (sessionDate, sessionTime) => {
+    const date = new Date(sessionDate);
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    date.setHours(0, 0, 0, 0);
+
+    const isToday = date.getTime() === today.getTime();
+    const isTomorrow = date.getTime() === new Date(today.getTime() + 86400000).getTime();
+
+    let dateStr = '';
+    if (isToday) {
+      dateStr = 'Today';
+    } else if (isTomorrow) {
+      dateStr = 'Tomorrow';
+    } else {
+      const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+      dateStr = days[date.getDay()];
+    }
+
+    return `${dateStr}, ${sessionTime}`;
+  };
+
+  // Handle opening chat session
+  const handleOpenChat = (session) => {
+    navigate(`/chat/${session.userId._id}`, { state: { session } });
+  };
+
+  // Check if session time has arrived
+  const isSessionTimeAvailable = (sessionDate, sessionTime) => {
+    const now = new Date();
+    const [hours, minutes] = sessionTime.split(':').map(Number);
+    
+    const sessionDateTime = new Date(sessionDate);
+    sessionDateTime.setHours(hours, minutes, 0, 0);
+    
+    return now >= sessionDateTime;
+  };
 
   const handleAvailabilityChange = (newStatus) => {
     setIsAvailable(newStatus);
   };
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] pb-12 font-sans selection:bg-primary-100 selection:text-primary-900">
-      {/* Dynamic inline styles for keyframes */}
-      <style>{`
-        @keyframes fadeInUp {
-          from { opacity: 0; transform: translateY(20px); }
-          to { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes blob {
-          0% { transform: translate(0px, 0px) scale(1); }
-          33% { transform: translate(30px, -50px) scale(1.1); }
-          66% { transform: translate(-20px, 20px) scale(0.9); }
-          100% { transform: translate(0px, 0px) scale(1); }
-        }
-        .animate-blob {
-          animation: blob 7s infinite;
-        }
-        .animation-delay-2000 {
-          animation-delay: 2s;
-        }
-        .animation-delay-4000 {
-          animation-delay: 4s;
-        }
-      `}</style>
+    <div className="min-h-screen bg-gray-50 pb-12 font-sans">
       
-      {/* Header Banner - Enhanced with Gradients and Blobs */}
-      <div className="relative bg-white border-b border-gray-200 pt-10 pb-12 mb-10 overflow-hidden shadow-[0_4px_30px_rgba(0,0,0,0.03)] z-0">
-        {/* Animated Background Blobs */}
-        <div className="absolute top-0 right-0 -mr-20 -mt-20 w-96 h-96 bg-primary-50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob z-[-1]"></div>
-        <div className="absolute top-0 right-40 w-72 h-72 bg-teal-50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-2000 z-[-1]"></div>
-        <div className="absolute -bottom-8 right-20 w-80 h-80 bg-rose-50 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-blob animation-delay-4000 z-[-1]"></div>
-
-        <div className="container-custom relative z-10">
-          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-            <div className="animate-[fadeInUp_0.6s_ease-out_forwards]">
-              <div className="inline-flex items-center gap-2 bg-primary-50 border border-primary-100/50 text-primary-700 px-3.5 py-1.5 rounded-full text-xs font-bold mb-4 uppercase tracking-widest shadow-sm">
+      {/* Redesigned Header Banner */}
+      <div className="bg-white border-b border-gray-200 pt-8 pb-8 mb-8 shadow-sm">
+        <div className="container-custom">
+          <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
+            <div>
+              <div className="inline-flex items-center gap-2 bg-primary-50 text-primary-700 px-3 py-1 rounded-full text-xs font-bold mb-3 uppercase tracking-wider">
                 <FiStar className="w-3.5 h-3.5" /> Peer Counselor
               </div>
-              <h1 className="text-4xl md:text-5xl font-extrabold text-gray-900 tracking-tight leading-tight">
-                {getGreeting()}, <span className="text-transparent bg-clip-text bg-gradient-to-r from-primary-600 to-teal-500">{user?.name?.split(' ')[0] || 'Counselor'}</span>!
+              <h1 className="text-3xl md:text-4xl font-extrabold text-gray-900 tracking-tight">
+                {getGreeting()}, <span className="text-primary-600">{user?.name?.split(' ')[0] || 'Counselor'}</span>!
               </h1>
-              <p className="text-gray-500 mt-3 text-lg md:text-xl max-w-2xl font-medium">Ready to make a positive impact today? Let's check your dashboard.</p>
+              <p className="text-gray-500 mt-2 text-base max-w-2xl">
+                Here's what's happening with your support sessions and community groups today.
+              </p>
             </div>
             
-            <div 
-              className={`bg-white/80 backdrop-blur-md p-5 rounded-3xl border ${isAvailable ? 'border-green-200 ring-4 ring-green-50/50' : 'border-gray-200'} shadow-[0_8px_30px_rgba(0,0,0,0.04)] flex items-center gap-6 min-w-[300px] animate-[fadeInUp_0.6s_ease-out_forwards] transition-all duration-500`}
-              style={{ animationDelay: '200ms' }}
-            >
+            {/* Minimalist Availability Card */}
+            <div className={`bg-white p-4 rounded-2xl border ${isAvailable ? 'border-green-200 shadow-sm' : 'border-gray-200'} flex items-center justify-between gap-6 min-w-[280px] shrink-0`}>
               <div>
-                <p className="text-sm font-bold text-gray-800 mb-1 flex items-center gap-2">
+                <p className="text-sm font-bold text-gray-800 mb-0.5 flex items-center gap-2">
                   Status 
                   {isAvailable && (
-                    <span className="relative flex h-2.5 w-2.5">
+                    <span className="relative flex h-2 w-2">
                       <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                      <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                      <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                     </span>
                   )}
                 </p>
-                <p className="text-xs font-medium text-gray-500">{isAvailable ? "You are visible to users" : "You are currently offline"}</p>
+                <p className="text-xs font-medium text-gray-500">
+                  {isAvailable ? "Visible to users" : "Currently offline"}
+                </p>
               </div>
-              <div className="transform scale-110 ml-auto">
+              <div className="scale-105">
                 <AvailabilityToggle isAvailableNow={isAvailable} onStatusChange={handleAvailabilityChange} />
               </div>
             </div>
@@ -147,136 +191,152 @@ const PeerSupporterDashboard = () => {
         </div>
       </div>
 
-      <div className="container-custom space-y-12">
-        {/* Stats Grid */}
-        <div>
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-10 h-10 rounded-xl bg-primary-100/50 flex items-center justify-center">
-              <FiActivity className="w-5 h-5 text-primary-600" />
-            </div>
-            <h2 className="text-xl font-bold text-gray-900">Your Impact</h2>
-          </div>
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            <StatCard icon={FiUsers} label="People Helped" value="12" color="bg-teal-500" delay={100} />
-            <StatCard icon={FiMessageCircle} label="Hours Logged" value="24" color="bg-primary-500" delay={200} />
-            <StatCard icon={FiHeart} label="Support Rating" value="4.9" color="bg-rose-500" delay={300} />
-            <StatCard icon={FiBookOpen} label="Resources Shared" value="8" color="bg-amber-500" delay={400} />
-          </div>
+      <div className="container-custom">
+        {/* Quick Stats */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
+          <StatCard icon={FiUsers} label="People Helped" value="12" colorClass="bg-teal-50 text-teal-600" />
+          <StatCard icon={FiMessageCircle} label="Hours Logged" value="24" colorClass="bg-primary-50 text-primary-600" />
+          <StatCard icon={FiHeart} label="Support Rating" value="4.9" colorClass="bg-rose-50 text-rose-600" />
+          <StatCard icon={FiBookOpen} label="Resources Shared" value="8" colorClass="bg-amber-50 text-amber-600" />
         </div>
 
-        {/* Two Column Layout: Quick Actions & Recent Activity */}
+        {/* Dashboard Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center gap-3 mb-2">
-              <div className="w-10 h-10 rounded-xl bg-green-100/50 flex items-center justify-center">
-                <FiAward className="w-5 h-5 text-green-600" />
-              </div>
-              <h2 className="text-xl font-bold text-gray-900">Quick Tools</h2>
-            </div>
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-              <ActionCard 
-                to="/peer-supporter/users" 
-                icon={FiUsers} 
-                title="People Needing Support" 
-                description="Browse users currently looking for a listening ear and connect with them instantly."
-                colors={{
-                  bg: 'bg-green-50', bgHover: 'group-hover:bg-green-500',
-                  text: 'text-green-600', textHover: 'group-hover:text-green-600',
-                  borderHover: 'hover:border-green-300', gradient: 'from-green-400 to-emerald-500'
-                }}
-                delay={400}
-              />
-              <ActionCard 
-                to="#" 
-                icon={FiHeart} 
-                title="My Profile" 
-                description="Update your bio, availability, and areas of support so users can find you easier."
-                colors={{
-                  bg: 'bg-rose-50', bgHover: 'group-hover:bg-rose-500',
-                  text: 'text-rose-600', textHover: 'group-hover:text-rose-600',
-                  borderHover: 'hover:border-rose-300', gradient: 'from-rose-400 to-pink-500'
-                }}
-                delay={500}
-              />
-              <ActionCard 
-                to="#" 
-                icon={FiCalendar} 
-                title="Support Sessions" 
-                description="View your past session history and manage your upcoming peer support engagements."
-                colors={{
-                  bg: 'bg-primary-50', bgHover: 'group-hover:bg-primary-500',
-                  text: 'text-primary-600', textHover: 'group-hover:text-primary-600',
-                  borderHover: 'hover:border-primary-300', gradient: 'from-primary-400 to-blue-500'
-                }}
-                delay={600}
-              />
-              <ActionCard 
-                to="#" 
-                icon={FiBookOpen} 
-                title="Resource Library" 
-                description="Access templates, guides, and exercises to share with your peers during sessions."
-                colors={{
-                  bg: 'bg-amber-50', bgHover: 'group-hover:bg-amber-500',
-                  text: 'text-amber-600', textHover: 'group-hover:text-amber-600',
-                  borderHover: 'hover:border-amber-300', gradient: 'from-amber-400 to-orange-500'
-                }}
-                delay={700}
-              />
-            </div>
-          </div>
-
-          <div className="lg:col-span-1">
-            <div className="bg-white rounded-3xl shadow-[0_4px_20px_-4px_rgba(0,0,0,0.05)] border border-gray-100/80 p-6 sm:p-8 h-full animate-[fadeInUp_0.6s_ease-out_forwards]" style={{ animationDelay: '600ms', opacity: 0 }}>
-              <div className="flex items-center justify-between mb-8">
-                <h2 className="text-xl font-bold text-gray-900">Upcoming Schedule</h2>
-                <Link to="#" className="text-sm font-medium text-primary-600 hover:text-primary-700">View All</Link>
+          
+          {/* Main Content Area (Spans 2 columns on lg screens) */}
+          <div className="lg:col-span-2 space-y-8">
+            
+            {/* Quick Tools Grid */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="w-10 h-10 rounded-xl bg-gray-50 border border-gray-100 flex items-center justify-center text-gray-600">
+                  <FiAward className="w-5 h-5" />
+                </div>
+                <h2 className="text-xl font-bold text-gray-900">Counselor Tools</h2>
               </div>
               
-              <div className="space-y-2">
-                <TimelineItem icon={FiMessageCircle} title="Chat with Alex M." time="Today, 2:00 PM" />
-                <TimelineItem icon={FiUsers} title="Group Support Module" time="Tomorrow, 10:00 AM" />
-                <TimelineItem icon={FiStar} title="Peer Review Meeting" time="Friday, 4:00 PM" isLast />
-              </div>
-
-              <div className="mt-10 p-5 bg-gradient-to-br from-indigo-50 to-blue-50 rounded-2xl border border-indigo-100/50">
-                <h4 className="font-bold text-indigo-900 mb-1">Weekly Tip</h4>
-                <p className="text-sm text-indigo-700/80 leading-relaxed">
-                  Remember to practice active listening. Sometimes people just need to be heard without judgment.
-                </p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <ActionCard 
+                  to="/peer-supporter/users" 
+                  icon={FiUsers} 
+                  title="Needs Support" 
+                  description="Find users actively looking for a listening ear."
+                  colorClass="bg-green-50 text-green-600"
+                />
+                <ActionCard 
+                  to="/peer-supporter/manage-availability" 
+                  icon={FiCalendar} 
+                  title="Availability" 
+                  description="Manage the time slots when you're free to chat."
+                  colorClass="bg-primary-50 text-primary-600"
+                />
+                <ActionCard 
+                  to="/peer-supporter/sessions" 
+                  icon={FiClock} 
+                  title="My Sessions" 
+                  description="Review upcoming scheduled support sessions."
+                  colorClass="bg-cyan-50 text-cyan-600"
+                />
+                <ActionCard 
+                  to="#" 
+                  icon={FiBookOpen} 
+                  title="Resources" 
+                  description="Access templates and guides to share with peers."
+                  colorClass="bg-amber-50 text-amber-600"
+                />
               </div>
             </div>
+
+            {/* Session Bookings Management */}
+            <PeerSessionManagement />
+
+            {/* Community Chat Groups */}
+            <GroupChatWidgets user={user} />
           </div>
-        </div>
 
-        {/* Upgrade Banner */}
-        <div 
-          className="mt-4 relative overflow-hidden bg-gradient-to-br from-gray-900 via-primary-900 to-primary-800 rounded-3xl shadow-2xl animate-[fadeInUp_0.6s_ease-out_forwards] group"
-          style={{ animationDelay: '800ms', opacity: 0 }}
-        >
-          {/* Abstract background shapes */}
-          <div className="absolute top-0 right-0 -mr-16 -mt-16 w-80 h-80 bg-white opacity-[0.07] rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="absolute bottom-0 left-0 -ml-16 -mb-16 w-64 h-64 bg-teal-400 opacity-20 rounded-full blur-3xl group-hover:scale-110 transition-transform duration-700"></div>
-          <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-full h-full bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-white/10 via-transparent to-transparent opacity-50"></div>
-          
-          <div className="relative z-10 p-8 sm:p-12 flex flex-col md:flex-row items-center justify-between gap-8">
-            <div className="flex items-start md:items-center gap-6">
-              <div className="w-20 h-20 rounded-3xl bg-white/10 backdrop-blur-md border border-white/20 flex items-center justify-center shrink-0 shadow-[inset_0_2px_20px_rgba(255,255,255,0.2)]">
-                <FiAward className="w-10 h-10 text-white drop-shadow-md" />
+          {/* Sidebar Area (Spans 1 column on lg screens) */}
+          <div className="lg:col-span-1 space-y-8">
+            
+            {/* Upcoming Schedule Panel */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 md:p-8">
+              <div className="flex items-center justify-between mb-8">
+                <h2 className="text-xl font-bold text-gray-900">Upcoming</h2>
+                <Link to="/peer-supporter/sessions" className="text-sm font-semibold text-primary-600 hover:text-primary-700 bg-primary-50 px-3 py-1 rounded-lg transition-colors">
+                  View All
+                </Link>
               </div>
-              <div className="max-w-xl">
-                <h3 className="text-2xl sm:text-3xl font-extrabold text-white mb-2 tracking-tight">Ready to elevate your impact?</h3>
-                <p className="text-primary-100/90 text-sm sm:text-base leading-relaxed font-medium">
-                  You've been doing great. Take the next step in your journey to register as a professional counselor, publish structured sessions, and earn from your expertise.
-                </p>
+              
+              <div className="space-y-0">
+                {loadingSessions ? (
+                  <div className="text-center py-4 text-gray-400 text-sm">Loading sessions...</div>
+                ) : upcomingSessions.length === 0 ? (
+                  <div className="text-center py-4 text-gray-400 text-sm">No upcoming sessions scheduled</div>
+                ) : (
+                  upcomingSessions.map((session, idx) => {
+                    const isTimeAvailable = isSessionTimeAvailable(session.sessionDate, session.sessionTime);
+                    
+                    return (
+                      <button
+                        key={session._id}
+                        onClick={() => isTimeAvailable && handleOpenChat(session)}
+                        disabled={!isTimeAvailable}
+                        className={`w-full text-left transition-colors ${
+                          isTimeAvailable 
+                            ? 'hover:bg-gray-50 cursor-pointer' 
+                            : 'cursor-not-allowed opacity-60'
+                        }`}
+                        title={!isTimeAvailable ? 'Chat will be available at session time' : 'Click to open chat'}
+                      >
+                        <TimelineItem 
+                          icon={FiMessageCircle} 
+                          title={`Chat with ${session.userId?.name || 'User'}`}
+                          time={formatSessionDateTime(session.sessionDate, session.sessionTime)}
+                          isLast={idx === upcomingSessions.length - 1}
+                        />
+                        {!isTimeAvailable && (
+                          <p className="text-xs text-gray-400 ml-14 -mt-1">Available at {session.sessionTime}</p>
+                        )}
+                      </button>
+                    );
+                  })
+                )}
+              </div>
+
+              <div className="mt-8 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 flex gap-4">
+                <div className="shrink-0 text-indigo-500 mt-0.5">
+                  <FiTrendingUp className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-bold text-sm text-indigo-900 mb-1">Weekly Tip</h4>
+                  <p className="text-xs text-indigo-700 leading-relaxed">
+                    Remember to practice active listening. Sometimes people just need to be heard without judgment.
+                  </p>
+                </div>
               </div>
             </div>
-            
-            <Link
-              to="/counselor/onboarding"
-              className="w-full md:w-auto text-center px-8 py-4 bg-white text-primary-900 font-extrabold rounded-2xl hover:bg-gray-50 hover:scale-105 hover:shadow-[0_0_40px_rgba(255,255,255,0.3)] transition-all duration-300 whitespace-nowrap"
-            >
-              Become a Counselor
-            </Link>
+
+            {/* Upgrade Banner Panel */}
+            <div className="bg-gradient-to-b from-primary-900 to-gray-900 rounded-2xl p-8 border border-gray-800 shadow-lg relative overflow-hidden group text-center">
+              <div className="absolute top-0 right-0 w-32 h-32 bg-white/5 rounded-full blur-2xl"></div>
+              <div className="absolute bottom-0 left-0 w-32 h-32 bg-primary-500/20 rounded-full blur-2xl"></div>
+              
+              <div className="relative z-10 flex flex-col items-center">
+                <div className="w-16 h-16 rounded-2xl bg-white/10 backdrop-blur-sm border border-white/20 flex items-center justify-center mb-5 shadow-inner">
+                  <FiAward className="w-8 h-8 text-white" />
+                </div>
+                <h3 className="text-xl font-bold text-white mb-3">Elevate your impact</h3>
+                <p className="text-primary-100/80 text-sm leading-relaxed mb-6 font-medium">
+                  Register as a professional counselor to publish structured sessions and earn from your expertise.
+                </p>
+                <Link
+                  to="/counselor/onboarding"
+                  className="w-full py-3 bg-white text-primary-900 font-bold rounded-xl hover:bg-gray-50 transition-colors shadow-sm"
+                >
+                  Become a Counselor
+                </Link>
+              </div>
+            </div>
+
           </div>
         </div>
       </div>
