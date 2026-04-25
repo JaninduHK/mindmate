@@ -132,10 +132,12 @@ export const deleteAccount = asyncHandler(async (req, res) => {
   await user.deleteOne();
 
   // Clear cookie
+  const isProd = process.env.NODE_ENV === 'production';
   res.clearCookie('refreshToken', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    path: '/',
   });
 
   res.status(HTTP_STATUS.OK).json(

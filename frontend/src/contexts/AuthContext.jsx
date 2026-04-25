@@ -1,6 +1,6 @@
 import { createContext, useState, useEffect } from 'react';
 import { authAPI } from '../api/auth.api';
-import { setAccessToken, clearAccessToken } from '../api/axios.config';
+import { setAccessToken, clearAccessToken, getAccessToken } from '../api/axios.config';
 import toast from 'react-hot-toast';
 
 export const AuthContext = createContext();
@@ -14,12 +14,34 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const initializeAuth = async () => {
       try {
-        // Try to get current user (will use refresh token)
-        const response = await authAPI.getCurrentUser();
-        if (response.success && response.data.user) {
-          setUser(response.data.user);
-          setIsAuthenticated(true);
+        // Ensure we have a usable access token on app load.
+        // If missing/expired, try refresh (uses httpOnly refresh cookie).
+        const hasToken = Boolean(getAccessToken());
+        let meResponse;
+        try {
+          meResponse = await authAPI.getCurrentUser();
+        } catch (err) {
+          // If /me fails (commonly due to missing/expired access token),
+          // attempt refresh once, then retry /me.
+          const status = err?.response?.status;
+          if (status === 401 || !hasToken) {
+            const refreshRes = await authAPI.refreshToken();
+            const newToken = refreshRes?.data?.accessToken;
+            if (newToken) setAccessToken(newToken);
+            meResponse = await authAPI.getCurrentUser();
+          } else {
+            throw err;
+          }
         }
+
+        if (meResponse?.success && meResponse?.data?.user) {
+          setUser(meResponse.data.user);
+          setIsAuthenticated(true);
+          return;
+        }
+
+        setUser(null);
+        setIsAuthenticated(false);
       } catch (error) {
         // User not authenticated, clear any stale data
         setUser(null);

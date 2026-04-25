@@ -11,8 +11,13 @@ const goalTypeValues = ['daily', 'weekly', 'custom'];
 const statusValues = ['complete', 'incomplete'];
 
 const goalCreateSchema = Joi.object({
-  goalName: Joi.string().trim().required(),
+  goalName: Joi.string()
+    .trim()
+    .required()
+    .pattern(/^[^0-9]*$/)
+    .messages({ 'string.pattern.base': 'Numbers are not allowed in this field' }),
   goalType: Joi.string().valid(...goalTypeValues).required(),
+  frequencyPerWeek: Joi.number().integer().min(1).max(7).optional(),
   status: Joi.string().valid(...statusValues).optional(),
   date: Joi.date().optional(),
 });
@@ -22,8 +27,13 @@ const goalStatusUpdateSchema = Joi.object({
 });
 
 const goalDetailsUpdateSchema = Joi.object({
-  goalName: Joi.string().trim().required(),
+  goalName: Joi.string()
+    .trim()
+    .required()
+    .pattern(/^[^0-9]*$/)
+    .messages({ 'string.pattern.base': 'Numbers are not allowed in this field' }),
   goalType: Joi.string().valid(...goalTypeValues).required(),
+  frequencyPerWeek: Joi.number().integer().min(1).max(7).optional(),
 });
 
 // POST add goal

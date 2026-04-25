@@ -1,5 +1,6 @@
 import toast from 'react-hot-toast';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import axiosInstance from '../../api/axios.config';
 import {
   Cell,
   Pie,
@@ -30,8 +31,13 @@ const StatCard = ({ label, value, icon, accent = 'bg-primary-600' }) => (
 );
 
 export default function AnalyticsCards({ summary }) {
+  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
   const [startDate, setStartDate] = useState('');
   const [endDate, setEndDate] = useState('');
+  const [checking, setChecking] = useState(false);
+
+  const bothDatesSelected = Boolean(startDate && endDate);
+  const downloadDisabled = !bothDatesSelected || checking;
 
   const mostCommonMood = summary?.mostCommonMood ?? null;
   const stressCount = summary?.stressCount ?? 0;
@@ -59,6 +65,67 @@ export default function AnalyticsCards({ summary }) {
               ? '#ef4444'
               : '#0284c7',
   }));
+
+  const handleStartDateChange = (e) => {
+    const v = e.target.value;
+    if (!v) {
+      setStartDate('');
+      return;
+    }
+    if (v > todayISO) return;
+    setStartDate(v);
+    if (endDate && endDate < v) setEndDate(v);
+  };
+
+  const handleEndDateChange = (e) => {
+    const v = e.target.value;
+    if (!v) {
+      setEndDate('');
+      return;
+    }
+    if (v > todayISO) return;
+    if (startDate && v < startDate) {
+      setEndDate(startDate);
+      return;
+    }
+    setEndDate(v);
+  };
+
+  const handleDownloadReport = async () => {
+    if (!startDate || !endDate) return;
+
+    setChecking(true);
+    try {
+      const res = await axiosInstance.get('/personal-tracking/analytics/report-range-check', {
+        params: { startDate, endDate },
+      });
+      const hasData = res.data?.data?.hasData === true;
+      if (!hasData) {
+        toast.error('No data found for the selected period');
+        return;
+      }
+
+      const reportRes = await axiosInstance.get('/personal-tracking/analytics/report-download', {
+        params: { startDate, endDate },
+        responseType: 'blob',
+      });
+
+      const blob = new Blob([reportRes.data], { type: 'application/pdf' });
+      const url = window.URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `mindmate-report-${startDate}-to-${endDate}.pdf`;
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      window.URL.revokeObjectURL(url);
+      toast.success('Report downloaded successfully');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Could not generate report');
+    } finally {
+      setChecking(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -186,7 +253,8 @@ export default function AnalyticsCards({ summary }) {
               <input
                 type="date"
                 value={startDate}
-                onChange={(e) => setStartDate(e.target.value)}
+                onChange={handleStartDateChange}
+                max={todayISO}
                 className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
               />
             </div>
@@ -196,19 +264,24 @@ export default function AnalyticsCards({ summary }) {
               <input
                 type="date"
                 value={endDate}
-                onChange={(e) => setEndDate(e.target.value)}
+                onChange={handleEndDateChange}
+                max={todayISO}
+                min={startDate || undefined}
                 className="border border-gray-200 rounded-xl px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-transparent transition-all duration-200"
               />
             </div>
 
             <button
               type="button"
-              className="bg-primary-600 hover:bg-primary-700 text-white font-semibold px-6 py-2 rounded-xl transition-all duration-200 hover:shadow-md active:scale-[0.98]"
-              onClick={() => {
-                toast('Report generation will be available in the final release!');
-              }}
+              disabled={downloadDisabled}
+              className={`font-semibold px-6 py-2 rounded-xl transition-all duration-200 ${
+                downloadDisabled
+                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
+                  : 'bg-primary-600 hover:bg-primary-700 text-white hover:shadow-md active:scale-[0.98]'
+              }`}
+              onClick={handleDownloadReport}
             >
-              Download Report
+              {checking ? 'Generating…' : 'Download Report'}
             </button>
           </div>
         </div>

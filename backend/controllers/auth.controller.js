@@ -1,5 +1,6 @@
 import User from '../models/User.model.js';
 import RefreshToken from '../models/RefreshToken.model.js';
+import PeerSupporterProfile from '../models/PeerSupporterProfile.model.js';
 import { generateAccessToken, generateRefreshToken, verifyRefreshToken } from '../utils/jwt.util.js';
 import { generateUsername } from '../utils/username.util.js';
 import ApiError from '../utils/ApiError.js';
@@ -7,12 +8,20 @@ import ApiResponse from '../utils/ApiResponse.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import { HTTP_STATUS, JWT_CONFIG } from '../config/constants.js';
 
-// Helper function to set refresh token cookie
+// Cross-origin SPA (e.g. Vite :5173 → API :5000) needs Lax in dev; production HTTPS needs None + Secure.
+const refreshCookieBase = () => {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    path: '/',
+  };
+};
+
 const setRefreshTokenCookie = (res, token) => {
   res.cookie('refreshToken', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    ...refreshCookieBase(),
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 };
@@ -218,12 +227,7 @@ export const logout = asyncHandler(async (req, res) => {
     }
   }
 
-  // Clear cookie
-  res.clearCookie('refreshToken', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-  });
+  res.clearCookie('refreshToken', refreshCookieBase());
 
   res.status(HTTP_STATUS.OK).json(new ApiResponse(HTTP_STATUS.OK, null, 'Logout successful'));
 });
@@ -251,6 +255,12 @@ export const registerPeerSupporter = asyncHandler(async (req, res) => {
     password,
     username,
     role: 'peer_supporter',
+  });
+
+  // Create peer supporter profile (starts as unverified/pending)
+  await PeerSupporterProfile.create({
+    userId: user._id,
+    isVerified: false,
   });
 
   const accessToken = generateAccessToken({ userId: user._id });

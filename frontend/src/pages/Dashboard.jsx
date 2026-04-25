@@ -341,7 +341,6 @@ const Dashboard = () => {
             </div>
           </div>
         )}
-
         {/* ── Welcome Banner (new users with no bookings) ───────────────── */}
         {bookings.length === 0 && (
           <div className="bg-gradient-to-r from-primary-50 to-sky-50 border border-primary-100 rounded-2xl p-6 flex items-start gap-4">
@@ -368,6 +367,30 @@ const Dashboard = () => {
                 </Link>
               </div>
             </div>
+        {/* Quick Actions */}
+        <div className="bg-white rounded-lg shadow p-6">
+          <h2 className="text-xl font-semibold text-gray-900 mb-4">
+            Quick Actions
+          </h2>
+          <div className="grid md:grid-cols-3 gap-4">
+            <Link to="/events" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">Browse Events</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                Find sessions and workshops near you
+              </p>
+            </Link>
+            <Link to="/booking/my" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">My Bookings</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                View and manage your upcoming sessions
+              </p>
+            </Link>
+            <Link to="/personal-tracking" className="p-4 border-2 border-gray-200 rounded-lg hover:border-primary-500 transition-colors text-left block">
+              <h3 className="font-semibold text-gray-900">Personal Tracker</h3>
+              <p className="text-gray-600 text-sm mt-1">
+                Manage your mood history and daily goals.
+              </p>
+            </Link>
           </div>
         )}
       </div>

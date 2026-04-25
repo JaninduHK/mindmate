@@ -89,7 +89,7 @@ const PeerSupporterRegister = () => {
               <span className="text-white font-bold text-3xl">M</span>
             </div>
           </div>
-          <h2 className="text-3xl font-bold text-gray-900">Join as Peer Supporter</h2>
+          <h2 className="text-3xl font-bold text-gray-900">Join as Peer Counselor</h2>
           <p className="mt-2 text-gray-600">Help others on their mental wellness journey</p>
         </div>
 
@@ -158,7 +158,7 @@ const PeerSupporterRegister = () => {
           </div>
 
           <Button type="submit" fullWidth loading={loading} disabled={loading}>
-            Create Peer Supporter Account
+            Create Peer Counselor Account
           </Button>
 
           <div className="text-center text-sm space-y-2">

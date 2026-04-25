@@ -22,7 +22,7 @@ const moodSchema = new mongoose.Schema(
     keyword: {
       type: String,
       required: true,
-      enum: ['Busy', 'Calm', 'Tired', 'Worried'],
+      trim: true,
     },
     description: {
       type: String,
