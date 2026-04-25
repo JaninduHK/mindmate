@@ -1,7 +1,5 @@
 import { io } from "socket.io-client";
 
-const URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:8000";
-
-export const socket = io(URL, {
-  withCredentials: true
-});
+export const socket = import.meta.env.VITE_SOCKET_URL
+  ? io(import.meta.env.VITE_SOCKET_URL, { withCredentials: true })
+  : io({ withCredentials: true });

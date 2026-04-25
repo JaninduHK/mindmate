@@ -45,6 +45,7 @@ import PeerSupporterRegister from './pages/PeerSupporter/PeerSupporterRegister';
 import PeerSupporterDashboard from './pages/PeerSupporter/PeerSupporterDashboard';
 import PeerSupporterList from './pages/PeerSupporter/PeerSupporterList';
 import UsersList from './pages/PeerSupporter/UsersList';
+import MySessionsPage from './pages/PeerSupporter/MySessionsPage';
 
 // Personal tracking
 import PersonalTrackingPage from './pages/PersonalTracking/PersonalTrackingPage';
@@ -94,6 +95,7 @@ function App() {
                 <Route path="/booking/checkout/:eventId" element={<BookingCheckout />} />
                 <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
                 <Route path="/booking/my" element={<MyBookings />} />
+                <Route path="/my-sessions" element={<MySessionsPage />} />
                 <Route path="/counselor/onboarding" element={<CounselorOnboarding />} />
               </Route>
 
