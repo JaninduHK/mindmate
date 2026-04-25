@@ -1,4 +1,5 @@
 import Message from '../models/message.model.js';
+import GroupChat from '../models/GroupChat.model.js';
 import asyncHandler from '../utils/asyncHandler.js';
 import ApiError from '../utils/ApiError.js';
 import ApiResponse from '../utils/ApiResponse.js';
@@ -233,5 +234,172 @@ export const searchMessages = asyncHandler(async (req, res) => {
 
   res.status(HTTP_STATUS.OK).json(
     new ApiResponse(HTTP_STATUS.OK, { messages }, 'Messages searched successfully')
+  );
+});
+
+// ---- GROUP CHAT METHODS ---- //
+
+// Create group chat (peer counselors only)
+export const createGroupChat = asyncHandler(async (req, res) => {
+  const { name, description } = req.body;
+  const { _id: userId, role } = req.user;
+
+  console.log('Creating group chat:', { name, userId, userRole: role });
+
+  if (!name) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Group name is required');
+  }
+
+  // Only peer_supporter role can create groups
+  if (role !== 'peer_supporter') {
+    console.error('User role not peer_supporter:', { role });
+    throw new ApiError(HTTP_STATUS.FORBIDDEN, 'Only peer supporters can create group chats');
+  }
+
+  const newGroup = await GroupChat.create({
+    name,
+    description: description || '',
+    creatorId: userId,
+    members: [userId]
+  });
+
+  console.log('Group created successfully:', newGroup);
+
+  await newGroup.populate('creatorId', 'name avatar');
+
+  console.log('Group populated:', newGroup);
+
+  res.status(HTTP_STATUS.CREATED).json(
+    new ApiResponse(HTTP_STATUS.CREATED, newGroup, 'Group chat created successfully')
+  );
+});
+
+// Get all available group chats
+export const getAvailableGroupChats = asyncHandler(async (req, res) => {
+  console.log('Fetching available group chats...');
+  
+  const groups = await GroupChat.find({ isActive: true })
+    .populate('creatorId', 'name avatar')
+    .sort({ createdAt: -1 });
+
+  console.log('Available groups found:', groups.length);
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(HTTP_STATUS.OK, groups, 'Available group chats retrieved')
+  );
+});
+
+// Get group chat messages
+export const getGroupChatMessages = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+
+  const messages = await Message.find({ recipientId: groupId })
+    .populate('senderId', 'name avatar')
+    .sort({ createdAt: 1 });
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(HTTP_STATUS.OK, messages, 'Group messages retrieved')
+  );
+});
+
+// Join a group chat
+export const joinGroupChat = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const { _id: userId } = req.user;
+
+  const group = await GroupChat.findById(groupId);
+
+  if (!group) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Group chat not found');
+  }
+
+  // Check if user is already a member
+  if (group.members.includes(userId)) {
+    return res.status(HTTP_STATUS.OK).json(
+      new ApiResponse(HTTP_STATUS.OK, group, 'You are already a member of this group')
+    );
+  }
+
+  // Add user to group
+  group.members.push(userId);
+  await group.save();
+  await group.populate(['creatorId', 'members'], 'name avatar');
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(HTTP_STATUS.OK, group, 'Successfully joined the group chat')
+  );
+});
+
+// Leave a group chat
+export const leaveGroupChat = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const { _id: userId } = req.user;
+
+  const group = await GroupChat.findById(groupId);
+
+  if (!group) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Group chat not found');
+  }
+
+  // Remove user from group
+  group.members = group.members.filter(member => member.toString() !== userId.toString());
+  await group.save();
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(HTTP_STATUS.OK, group, 'Successfully left the group chat')
+  );
+});
+
+// Get group details with members
+export const getGroupDetails = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+
+  const group = await GroupChat.findById(groupId)
+    .populate('creatorId', 'name avatar')
+    .populate('members', 'name avatar');
+
+  if (!group) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Group chat not found');
+  }
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(HTTP_STATUS.OK, group, 'Group details retrieved')
+  );
+});
+
+// Send message to group
+export const sendGroupMessage = asyncHandler(async (req, res) => {
+  const { groupId } = req.params;
+  const { message, fileUrl, fileType, fileName } = req.body;
+  const { _id: userId } = req.user;
+
+  if (!message) {
+    throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Message content is required');
+  }
+
+  // Verify group exists and user is member
+  const group = await GroupChat.findById(groupId);
+
+  if (!group) {
+    throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Group chat not found');
+  }
+
+  if (!group.members.includes(userId)) {
+    throw new ApiError(HTTP_STATUS.FORBIDDEN, 'You are not a member of this group');
+  }
+
+  const newMessage = await Message.create({
+    senderId: userId,
+    recipientId: groupId, // Use groupId as recipientId for group messages
+    message,
+    fileUrl: fileUrl || null,
+    fileType: fileType || null,
+    fileName: fileName || null,
+  });
+
+  await newMessage.populate('senderId', 'name avatar');
+
+  res.status(HTTP_STATUS.CREATED).json(
+    new ApiResponse(HTTP_STATUS.CREATED, newMessage, 'Message sent to group')
   );
 });

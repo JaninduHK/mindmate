@@ -31,6 +31,8 @@ import notificationRoutes from './routes/notification.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import withdrawalRoutes from './routes/withdrawal.routes.js';
+import sessionRoutes from './routes/session.routes.js';
+import availabilityRoutes from './routes/availability.routes.js';
 import moodRoutes from './routes/moodRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
 import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
@@ -71,7 +73,13 @@ const corsOptions = {
 // ===============================
 const io = new Server(server, {
   cors: corsOptions,
+  transports: ['websocket', 'polling'],
 });
+
+console.log('🔌 Socket.IO initialized with CORS:', corsOptions);
+
+// Make io available globally via app for use in controllers
+app.io = io;
 
 // Initialize socket events
 socketHandler(io);
@@ -141,6 +149,8 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/chats', chatRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/availability', availabilityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
 app.use('/api/personal-tracking/moods', moodRoutes);
