@@ -37,6 +37,7 @@ import moodRoutes from './routes/moodRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
 import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
 import moodConfigRoutes from './routes/moodConfig.routes.js';
+import { registerGoalMissedAlertJobs } from './services/goalMissedAlert.service.js';
 
 // Initialize Express app
 const app = express();
@@ -187,6 +188,8 @@ connectDB().then(() => {
     console.log(`🌐 API: http://localhost:${PORT}/api`);
     console.log(`🏥 Health: http://localhost:${PORT}/api/health\n`);
   });
+  // Register scheduled jobs after DB is connected
+  registerGoalMissedAlertJobs();
 });
 
 
