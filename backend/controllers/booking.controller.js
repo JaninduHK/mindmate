@@ -11,6 +11,7 @@ import { HTTP_STATUS } from '../config/constants.js';
 import { sendNotification } from '../services/notification.service.js';
 import User from '../models/User.model.js';
 
+
 // POST /api/bookings
 export const createBooking = asyncHandler(async (req, res) => {
   const { eventId, healthData, attendee, paymentMethod = 'stripe' } = req.body;
@@ -118,11 +119,33 @@ export const createBooking = asyncHandler(async (req, res) => {
   }
 
   if (paymentMethod === 'bank_transfer') {
+    // Auto-confirm bank transfer bookings (simulate admin confirmation)
+    booking.status = 'confirmed';
+    booking.paymentStatus = 'paid';
+    await booking.save();
+
+    await Event.findByIdAndUpdate(eventId, { $inc: { seatsAvailable: -1 } });
+
+    await sendNotification({
+      userId: booking.userId,
+      type: 'booking_confirmed',
+      title: 'Booking Confirmed',
+      message: `Your booking for "${event.title}" has been confirmed!`,
+      data: { bookingId: booking._id, eventId: booking.eventId },
+    });
+    await sendNotification({
+      userId: booking.counselorId,
+      type: 'payment_received',
+      title: 'New Booking',
+      message: `You have a new booking for "${event.title}" (bank transfer).`,
+      data: { bookingId: booking._id, eventId: booking.eventId },
+    });
+
     return res.status(HTTP_STATUS.CREATED).json(
       new ApiResponse(
         HTTP_STATUS.CREATED,
         { booking },
-        'Booking created — upload your payment slip to complete'
+        'Booking confirmed'
       )
     );
   }
@@ -199,6 +222,30 @@ export const getMyBookings = asyncHandler(async (req, res) => {
     Booking.find(filter)
       .populate('eventId', 'title startDate coverImage price')
       .populate('counselorId', 'name avatar')
+      .sort({ createdAt: -1 })
+      .skip(skip)
+      .limit(limit),
+    Booking.countDocuments(filter),
+  ]);
+
+  res.json(
+    new ApiResponse(HTTP_STATUS.OK, { bookings, total, page, pages: Math.ceil(total / limit) })
+  );
+});
+
+// GET /api/bookings/counselor
+export const getCounselorBookings = asyncHandler(async (req, res) => {
+  const page = parseInt(req.query.page) || 1;
+  const limit = parseInt(req.query.limit) || 20;
+  const skip = (page - 1) * limit;
+
+  const filter = { counselorId: req.user._id };
+  if (req.query.status) filter.status = req.query.status;
+
+  const [bookings, total] = await Promise.all([
+    Booking.find(filter)
+      .populate('eventId', 'title startDate price')
+      .populate('userId', 'name email avatar')
       .sort({ createdAt: -1 })
       .skip(skip)
       .limit(limit),

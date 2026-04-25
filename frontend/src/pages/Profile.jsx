@@ -1,20 +1,51 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
 import { userAPI } from '../api/user.api';
 import { uploadAPI } from '../api/upload.api';
+import { counselorAPI } from '../api/counselor.api';
 import Button from '../components/common/Button';
 import Input from '../components/common/Input';
 import toast from 'react-hot-toast';
-import { FiCamera, FiSave } from 'react-icons/fi';
+import { FiCamera, FiSave, FiPlus, FiTrash2 } from 'react-icons/fi';
 
 const Profile = () => {
   const { user, updateUser } = useAuth();
+  const isCounselor = user?.role === 'counselor';
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
   });
   const [loading, setLoading] = useState(false);
   const [uploadingImage, setUploadingImage] = useState(false);
+  const [certifications, setCertifications] = useState([]);
+  const [savingCerts, setSavingCerts] = useState(false);
+
+  useEffect(() => {
+    if (!isCounselor) return;
+    counselorAPI.getMyProfile().then((res) => {
+      const certs = res?.data?.profile?.certifications ?? [];
+      setCertifications(certs.length > 0 ? certs : [{ name: '', issuingBody: '' }]);
+    }).catch(() => {});
+  }, [isCounselor]);
+
+  const addCert = () => setCertifications((prev) => [...prev, { name: '', issuingBody: '' }]);
+  const removeCert = (i) => setCertifications((prev) => prev.filter((_, idx) => idx !== i));
+  const updateCert = (i, field, value) =>
+    setCertifications((prev) => prev.map((c, idx) => (idx === i ? { ...c, [field]: value } : c)));
+
+  const handleSaveCerts = async () => {
+    const valid = certifications.filter((c) => c.name.trim() && c.issuingBody.trim());
+    setSavingCerts(true);
+    try {
+      await counselorAPI.updateMyProfile({ certifications: valid });
+      setCertifications(valid.length > 0 ? valid : [{ name: '', issuingBody: '' }]);
+      toast.success('Certifications updated');
+    } catch (err) {
+      toast.error(err.response?.data?.message || 'Failed to save certifications');
+    } finally {
+      setSavingCerts(false);
+    }
+  };
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -181,6 +212,54 @@ const Profile = () => {
             </div>
           </form>
         </div>
+
+        {/* Certifications — counselors only */}
+        {isCounselor && (
+          <div className="bg-white rounded-lg shadow p-6 mt-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-xl font-semibold text-gray-900">Certifications</h2>
+              <button
+                type="button"
+                onClick={addCert}
+                className="flex items-center space-x-1 text-sm text-primary-600 hover:text-primary-700"
+              >
+                <FiPlus className="w-4 h-4" />
+                <span>Add</span>
+              </button>
+            </div>
+            <div className="space-y-2 mb-4">
+              {certifications.map((c, i) => (
+                <div key={i} className="flex gap-2 items-center">
+                  <input
+                    value={c.name}
+                    onChange={(e) => updateCert(i, 'name', e.target.value)}
+                    placeholder="Certificate name"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  <input
+                    value={c.issuingBody}
+                    onChange={(e) => updateCert(i, 'issuingBody', e.target.value)}
+                    placeholder="Issuing body"
+                    className="flex-1 border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-primary-500"
+                  />
+                  {certifications.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => removeCert(i)}
+                      className="text-red-400 hover:text-red-600 p-1"
+                    >
+                      <FiTrash2 className="w-4 h-4" />
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+            <Button onClick={handleSaveCerts} loading={savingCerts} disabled={savingCerts} className="flex items-center space-x-2">
+              <FiSave />
+              <span>Save Certifications</span>
+            </Button>
+          </div>
+        )}
 
         {/* Account Information */}
         <div className="bg-white rounded-lg shadow p-6 mt-6">

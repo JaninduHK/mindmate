@@ -7,11 +7,21 @@ import GoalForm from '../../components/personalTracking/GoalForm';
 import GoalProgress from '../../components/personalTracking/GoalProgress';
 import GoalHistoryCards from '../../components/personalTracking/GoalHistoryCards';
 
+const getLocalDateISO = () => {
+  const d = new Date();
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
 export default function GoalPage() {
-  const todayISO = useMemo(() => new Date().toISOString().slice(0, 10), []);
+  const todayISO = useMemo(() => getLocalDateISO(), []);
 
   const [goals, setGoals] = useState([]);
   const [editingGoal, setEditingGoal] = useState(null);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
   const [loading, setLoading] = useState(true);
 
   const refreshGoals = useCallback(async () => {
@@ -101,6 +111,98 @@ export default function GoalPage() {
     }
   };
 
+  const latestGoals = [...goals].sort((a, b) => {
+    if (b.date !== a.date) return b.date.localeCompare(a.date);
+    return String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''));
+  });
+
+  const filteredGoals = useMemo(() => {
+    return latestGoals.filter((g) => {
+      const typeOk = typeFilter === 'all' ? true : g.goalType === typeFilter;
+      if (!typeOk) return false;
+      if (statusFilter === 'all') return true;
+      if (statusFilter === 'active') return g.status === 'incomplete';
+      if (statusFilter === 'completed') return g.status === 'complete';
+      if (statusFilter === 'missed') return g.status === 'incomplete' && String(g.date ?? '') < todayISO;
+      return true;
+    });
+  }, [latestGoals, typeFilter, statusFilter, todayISO]);
+
+  const weeklyProgressByGoal = useMemo(() => {
+    const normalizeName = (s) =>
+      String(s ?? '')
+        .trim()
+        .toLowerCase()
+        .replace(/\s+/g, ' ');
+
+    const now = new Date();
+    const day = now.getUTCDay() || 7;
+    const monday = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+    monday.setUTCDate(monday.getUTCDate() - (day - 1));
+    const sunday = new Date(monday);
+    sunday.setUTCDate(monday.getUTCDate() + 6);
+
+    const toISODate = (d) => String(d ?? '').slice(0, 10);
+    const inThisWeek = (d) => {
+      const iso = toISODate(d);
+      if (!iso) return false;
+      const x = new Date(`${iso}T00:00:00Z`);
+      return x >= monday && x <= sunday;
+    };
+
+    const weekDays = Array.from({ length: 7 }).map((_, i) => {
+      const dt = new Date(monday);
+      dt.setUTCDate(monday.getUTCDate() + i);
+      return toISODate(dt.toISOString());
+    });
+
+    const progress = {};
+    const addKeyIfMissing = (key, init) => {
+      if (!progress[key]) progress[key] = init;
+    };
+
+    const weekGoals = (goals ?? []).filter((g) => inThisWeek(g.date));
+
+    for (const g of weekGoals) {
+      const goalType = g.goalType;
+      const goalNameNorm = normalizeName(g.goalName);
+      if (!goalType || !goalNameNorm) continue;
+      const key = `${goalType}::${goalNameNorm}`;
+
+      if (goalType === 'daily') {
+        addKeyIfMissing(key, { goalType, goalNameNorm, days: weekDays.map(() => false) });
+        const idx = weekDays.indexOf(toISODate(g.date));
+        const done = g.status === 'complete';
+        if (idx >= 0 && done) progress[key].days[idx] = true;
+        continue;
+      }
+
+      if (goalType === 'weekly') {
+        addKeyIfMissing(key, { goalType, goalNameNorm, current: 0, target: 1 });
+        const done = Math.min(1, g.progress?.current ?? (g.status === 'complete' ? 1 : 0)) >= 1;
+        if (done) progress[key].current = 1;
+        continue;
+      }
+
+      if (goalType === 'custom') {
+        const target = g.progress?.target ?? g.frequencyPerWeek ?? 3;
+        addKeyIfMissing(key, { goalType, goalNameNorm, current: 0, target: Number(target) || 3 });
+        const inc = g.progress?.current ?? g.completedSessions ?? (g.status === 'complete' ? 1 : 0);
+        const nextCurrent = Number(inc) || 0;
+        progress[key].current = Math.max(progress[key].current ?? 0, nextCurrent);
+        progress[key].target = Number(target) || progress[key].target || 3;
+      }
+    }
+
+    for (const [key, row] of Object.entries(progress)) {
+      if (row.goalType === 'daily') continue;
+      row.current = Math.max(0, Math.min(row.current ?? 0, row.target ?? 1));
+      progress[key] = row;
+    }
+
+    return progress;
+  }, [goals]);
+
   if (loading) {
     return (
       <div className="flex items-center justify-center min-h-[60vh]">
@@ -110,11 +212,6 @@ export default function GoalPage() {
       </div>
     );
   }
-
-  const latestGoals = [...goals].sort((a, b) => {
-    if (b.date !== a.date) return b.date.localeCompare(a.date);
-    return String(b.createdAt ?? '').localeCompare(String(a.createdAt ?? ''));
-  });
 
   return (
     <div className="space-y-8">
@@ -162,10 +259,33 @@ export default function GoalPage() {
               <h3 className="text-lg font-semibold text-gray-900">Goal History</h3>
               <p className="text-sm text-gray-500">Track your past and upcoming goals</p>
             </div>
+            <div className="mb-4 flex flex-wrap items-center gap-3">
+              <select
+                value={typeFilter}
+                onChange={(e) => setTypeFilter(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="all">All</option>
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="custom">Custom Weekly</option>
+              </select>
+              <select
+                value={statusFilter}
+                onChange={(e) => setStatusFilter(e.target.value)}
+                className="rounded-lg border border-gray-300 px-3 py-2 text-sm"
+              >
+                <option value="all">All status</option>
+                <option value="active">Active</option>
+                <option value="completed">Completed</option>
+                <option value="missed">Missed</option>
+              </select>
+            </div>
             <div className="bg-white rounded-2xl shadow-sm border border-gray-100 overflow-hidden transition-shadow hover:shadow-md">
               <div className="p-6">
                 <GoalHistoryCards
-                  goals={latestGoals}
+                  goals={filteredGoals}
+                  weeklyProgressByGoal={weeklyProgressByGoal}
                   onMarkComplete={handleMarkComplete}
                   onDelete={handleDeleteGoal}
                   todayISO={todayISO}

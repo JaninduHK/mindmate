@@ -57,14 +57,6 @@ MindMate/
 └── README.md              # This file
 ```
 
-## 🚦 Getting Started
-
-### Prerequisites
-
-- Node.js (v18 or higher)
-- MongoDB (local or Atlas)
-- Cloudinary account
-
 ### Installation
 
 1. **Clone the repository**
@@ -115,14 +107,6 @@ VITE_API_BASE_URL=http://localhost:5000/api
 VITE_APP_NAME=MindMate
 ```
 
-## 🔐 Authentication Flow
-
-1. **Register/Login**: User creates account or logs in
-2. **Access Token**: Short-lived token (15 min) stored in memory
-3. **Refresh Token**: Long-lived token (7 days) stored in httpOnly cookie
-4. **Auto Refresh**: Axios interceptor automatically refreshes expired tokens
-5. **Logout**: Clears tokens and redirects to login
-
 ## 📡 API Endpoints
 
 ### Authentication
@@ -141,18 +125,6 @@ VITE_APP_NAME=MindMate
 ### File Upload
 - `POST /api/upload/image` - Upload profile image
 - `DELETE /api/upload/image` - Delete profile image
-
-## 🔒 Security Features
-
-- JWT authentication with dual-token approach
-- Password hashing with bcrypt (12 rounds)
-- httpOnly cookies for refresh tokens (XSS protection)
-- Rate limiting on authentication endpoints
-- Input validation and sanitization
-- NoSQL injection prevention
-- CORS configuration
-- Helmet security headers
-- MongoDB connection encryption
 
 ## 🎨 Frontend Routes
 
@@ -177,21 +149,4 @@ VITE_APP_NAME=MindMate
 2. Deploy dist folder to Netlify, Vercel, or similar
 3. Update environment variables for production API
 
-## 🤝 Contributing
 
-Contributions are welcome! Please feel free to submit a Pull Request.
-
-## 📝 License
-
-This project is licensed under the MIT License.
-
-## 👨‍💻 Author
-
-Your Name
-
-## 🙏 Acknowledgments
-
-- React team for the amazing library
-- Express.js team for the robust framework
-- MongoDB team for the flexible database
-- Cloudinary for file storage solution

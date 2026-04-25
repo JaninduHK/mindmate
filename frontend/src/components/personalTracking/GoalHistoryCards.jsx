@@ -39,8 +39,37 @@ const MiniDots = ({ filledCount, totalDots }) => {
   );
 };
 
-export default function GoalHistoryCards({ goals, onMarkComplete, onDelete, todayISO, onEdit }) {
+const MiniWeek = ({ days }) => {
+  const d = Array.isArray(days) ? days.slice(0, 7) : [];
+  const labels = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
+  return (
+    <div className="mt-2" aria-label="Weekly progress (Mon-Sun)">
+      <div className="flex items-center justify-between text-[11px] text-gray-500 mb-1">
+        <span className="font-semibold text-gray-600">This week</span>
+        <span className="font-semibold text-primary-700">{d.filter(Boolean).length}/7</span>
+      </div>
+      <div className="grid grid-cols-7 gap-1.5">
+        {Array.from({ length: 7 }).map((_, i) => {
+          const done = Boolean(d[i]);
+          return (
+            <div key={`day-${i}`} className="flex flex-col items-center gap-1">
+              <span className={`w-3 h-3 rounded-full ${done ? 'bg-green-500' : 'bg-gray-200'}`} />
+              <span className="text-[10px] text-gray-400">{labels[i]}</span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+};
+
+export default function GoalHistoryCards({ goals, weeklyProgressByGoal, onMarkComplete, onDelete, todayISO, onEdit }) {
   const latest = goals ?? [];
+  const normalizeName = (s) =>
+    String(s ?? '')
+      .trim()
+      .toLowerCase()
+      .replace(/\s+/g, ' ');
 
   return (
     <div>
@@ -80,10 +109,16 @@ export default function GoalHistoryCards({ goals, onMarkComplete, onDelete, toda
                 ? `Missed on ${dateText}`
                 : 'Due Today';
 
-            const badgeText = g.goalType === 'custom' ? '3x/week' : '1x/week';
-            const badgeTooltip = g.goalType === 'custom' ? 'Target: 3 times this week' : 'Target: 1 time this week';
+            const badgeTextDynamic = `${frequency}x/week`;
+            const badgeTooltip = `Target: ${frequency} time${frequency !== 1 ? 's' : ''} this week`;
             const filledDots = sessionsDone;
             const extraClassName = isWeeklyGoal ? 'border-l-4 border-blue-200' : '';
+            const progressText = g.goalType === 'daily'
+              ? `Today: ${Math.min(1, g.progress?.current ?? sessionsDone)}/1`
+              : `This week: ${(g.progress?.current ?? sessionsDone)}/${frequency}`;
+
+            const key = `${g.goalType}::${normalizeName(g.goalName)}`;
+            const weeklyRow = weeklyProgressByGoal?.[key] ?? null;
 
             return (
               <Card key={g._id} variant={variant} extraClassName={extraClassName}>
@@ -99,7 +134,7 @@ export default function GoalHistoryCards({ goals, onMarkComplete, onDelete, toda
                           title={badgeTooltip}
                           className="inline-flex items-center rounded-full bg-blue-50 border border-blue-200 px-2 py-0.5 text-xs font-medium text-blue-700 whitespace-nowrap"
                         >
-                          {badgeText}
+                          {badgeTextDynamic}
                         </span>
                       )}
                     </div>
@@ -107,13 +142,20 @@ export default function GoalHistoryCards({ goals, onMarkComplete, onDelete, toda
                       {isDueToday && !isComplete && <Clock className="w-4 h-4 text-gray-500" />}
                       <span>{statusLine}</span>
                     </div>
+                    <div className="text-xs font-semibold text-primary-700 mt-1">{progressText}</div>
 
-                    {isWeeklyGoal && <MiniDots filledCount={filledDots} totalDots={frequency} />}
+                    {g.goalType === 'daily' && weeklyRow?.days && <MiniWeek days={weeklyRow.days} />}
+                    {isWeeklyGoal && (
+                      <MiniDots
+                        filledCount={weeklyRow ? (weeklyRow.current ?? filledDots) : filledDots}
+                        totalDots={weeklyRow ? (weeklyRow.target ?? frequency) : frequency}
+                      />
+                    )}
                   </div>
 
                   <div className="flex flex-col sm:flex-row items-end sm:items-center gap-2">
                     <button
-                      type="button"
+                      type="button"      //button validation
                       disabled={isComplete}
                       onClick={() => onMarkComplete?.(g._id)}
                       className={`

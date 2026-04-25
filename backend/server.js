@@ -36,6 +36,7 @@ import availabilityRoutes from './routes/availability.routes.js';
 import moodRoutes from './routes/moodRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
 import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
+import moodConfigRoutes from './routes/moodConfig.routes.js';
 
 // Initialize Express app
 const app = express();
@@ -156,6 +157,7 @@ app.use('/api/personal-tracking/moods', moodRoutes);
 app.use('/api/moods', moodRoutes);
 app.use('/api/personal-tracking/goals', goalRoutes);
 app.use('/api/personal-tracking/analytics', personalTrackingAnalyticsRoutes);
+app.use('/api/mood-config', moodConfigRoutes);
 
 
 // ===============================

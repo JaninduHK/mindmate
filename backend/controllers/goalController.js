@@ -18,6 +18,11 @@ const formatDateOnly = (d) => {
   return new Date(d).toISOString().slice(0, 10);
 };
 
+const normalizeGoalName = (s) =>
+  String(s ?? '')
+    .trim()
+    .toLowerCase();
+
 const parseDateParamOrBody = ({ paramDate, bodyDate }) => {
   const raw = paramDate ?? bodyDate;
   if (raw === undefined) return toUTCDateOnly(new Date());
@@ -37,25 +42,29 @@ const getUTCISOWeekRange = (dateOnly) => {
   return { start: monday, end: sunday };
 };
 
-const frequencyFromGoalType = (goalType) => {
-  if (goalType === 'custom') return 3;
+const frequencyFromGoalType = (goalType, customFrequencyPerWeek) => {
+  if (goalType === 'custom') {
+    const n = Number(customFrequencyPerWeek);
+    return Number.isFinite(n) && n >= 1 && n <= 7 ? Math.floor(n) : 3;
+  }
   if (goalType === 'weekly') return 1;
   return 1; // daily
 };
 
 export const addGoal = asyncHandler(async (req, res) => {
-  const { goalName, goalType, status = 'incomplete', date } = req.body;
+  const { goalName, goalType, status = 'incomplete', date, frequencyPerWeek } = req.body;
   const dateOnly = parseDateParamOrBody({ bodyDate: date });
   if (!dateOnly) throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'Invalid date');
 
   const userId = req.user.id;
 
-  const normalizedGoalName = String(goalName ?? '').trim();
+  const goalNameTrimmed = String(goalName ?? '').trim();
+  const normalizedGoalName = normalizeGoalName(goalNameTrimmed);
 
   // Duplicate rules:
   // - daily: same goalName once per day
   // - weekly/custom: same goalName once per ISO week
-  let duplicateQuery = { userId, goalType, goalName: normalizedGoalName };
+  let duplicateQuery = { userId, goalType, goalNameNormalized: normalizedGoalName };
   if (goalType === 'daily') {
     duplicateQuery.date = dateOnly;
   } else if (goalType === 'weekly' || goalType === 'custom') {
@@ -68,10 +77,12 @@ export const addGoal = asyncHandler(async (req, res) => {
 
   const goal = await Goal.create({
     userId,
-    goalName: normalizedGoalName,
+    goalName: goalNameTrimmed,
+    goalNameNormalized: normalizedGoalName,
     goalType,
-    frequencyPerWeek: frequencyFromGoalType(goalType),
-    completedSessions: status === 'complete' ? frequencyFromGoalType(goalType) : 0,
+    frequencyPerWeek: frequencyFromGoalType(goalType, frequencyPerWeek),
+    completedSessions: status === 'complete' ? frequencyFromGoalType(goalType, frequencyPerWeek) : 0,
+    completionDates: [],
     status,
     date: dateOnly,
   });
@@ -93,7 +104,33 @@ export const getGoals = asyncHandler(async (req, res) => {
     .sort({ date: -1, createdAt: -1 })
     .lean();
 
-  const formatted = goals.map((g) => ({ ...g, date: formatDateOnly(g.date) }));
+  const todayOnly = toUTCDateOnly(new Date());
+  const todayISO = formatDateOnly(todayOnly);
+  const currentWeek = getUTCISOWeekRange(todayOnly);
+
+  const formatted = goals.map((g) => {
+    const completionDates = Array.isArray(g.completionDates) ? g.completionDates : [];
+    const completionDateISO = completionDates.map((d) => formatDateOnly(d)).filter(Boolean);
+    const inCurrentWeek = completionDates.filter((d) => d >= currentWeek.start && d <= currentWeek.end);
+    const progress = g.goalType === 'daily'
+      ? {
+          periodLabel: 'today',
+          current: completionDateISO.includes(todayISO) ? 1 : 0,
+          target: 1,
+        }
+      : {
+          periodLabel: 'this_week',
+          current: inCurrentWeek.length,
+          target: g.frequencyPerWeek || frequencyFromGoalType(g.goalType),
+        };
+
+    return {
+      ...g,
+      date: formatDateOnly(g.date),
+      completionDates: completionDateISO,
+      progress,
+    };
+  });
 
   res.json(new ApiResponse(HTTP_STATUS.OK, { goals: formatted }, 'Goals retrieved'));
 });
@@ -106,25 +143,51 @@ export const updateGoalStatus = asyncHandler(async (req, res) => {
 
   const goal = await Goal.findOne({ _id: id, userId });
   if (!goal) throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Goal not found');
+  if (!goal.goalNameNormalized) {
+    goal.goalNameNormalized = normalizeGoalName(goal.goalName);
+  }
 
   // Session-based completion for weekly/custom goals:
   // - Each "complete" action fills one dot/session.
   // - Goal becomes "complete" only when all required sessions are filled.
   if (status === 'complete') {
+    const todayOnly = toUTCDateOnly(new Date());
     const target = goal.frequencyPerWeek || frequencyFromGoalType(goal.goalType);
-    const next = Math.min(goal.completedSessions + 1, target);
-    goal.completedSessions = next;
-    goal.status = next >= target ? 'complete' : 'incomplete';
+    const completionDates = Array.isArray(goal.completionDates) ? goal.completionDates : [];
+    const alreadyToday = completionDates.some((d) => formatDateOnly(d) === formatDateOnly(todayOnly));
+
+    if (alreadyToday) {
+      throw new ApiError(HTTP_STATUS.CONFLICT, 'Goal already completed for today');
+    }
+
+    if (goal.goalType === 'daily') {
+      goal.completionDates = [todayOnly];
+      goal.completedSessions = 1;
+      goal.status = 'complete';
+    } else {
+      const weekRange = getUTCISOWeekRange(todayOnly);
+      const weekCompletions = completionDates.filter((d) => d >= weekRange.start && d <= weekRange.end);
+      if (weekCompletions.length >= target) {
+        throw new ApiError(HTTP_STATUS.CONFLICT, 'Weekly target already reached');
+      }
+
+      goal.completionDates = [...completionDates, todayOnly];
+      goal.completedSessions = weekCompletions.length + 1;
+      goal.status = goal.completedSessions >= target ? 'complete' : 'incomplete';
+    }
   } else {
     goal.status = 'incomplete';
     goal.completedSessions = 0;
+    goal.completionDates = [];
   }
 
   await goal.save();
 
   const response = goal.toObject();
   response.date = formatDateOnly(response.date);
+  response.completionDates = (response.completionDates ?? []).map((d) => formatDateOnly(d));
   delete response.userId;
+  delete response.goalNameNormalized;
 
   const target = response.frequencyPerWeek || frequencyFromGoalType(response.goalType);
   const progressMessage = response.status === 'complete'
@@ -137,18 +200,27 @@ export const updateGoalStatus = asyncHandler(async (req, res) => {
 // PUT /api/personal-tracking/goals/:id (edit goal name/type)
 export const updateGoalDetails = asyncHandler(async (req, res) => {
   const { id } = req.params;
-  const { goalName, goalType } = req.body;
+  const { goalName, goalType, frequencyPerWeek } = req.body;
 
   const userId = req.user.id;
 
   const goal = await Goal.findOne({ _id: id, userId });
   if (!goal) throw new ApiError(HTTP_STATUS.NOT_FOUND, 'Goal not found');
+  if (!goal.goalNameNormalized) {
+    goal.goalNameNormalized = normalizeGoalName(goal.goalName);
+  }
 
-  const normalizedGoalName = String(goalName ?? '').trim();
+  const goalNameTrimmed = String(goalName ?? '').trim();
+  const normalizedGoalName = normalizeGoalName(goalNameTrimmed);
   if (!normalizedGoalName) throw new ApiError(HTTP_STATUS.BAD_REQUEST, 'goalName is required');
 
   // Duplicate check excluding the current goal document
-  let duplicateQuery = { userId, goalType, goalName: normalizedGoalName, _id: { $ne: id } };
+  let duplicateQuery = {
+    userId,
+    goalType,
+    goalNameNormalized: normalizedGoalName,
+    _id: { $ne: id },
+  };
   if (goalType === 'daily') {
     duplicateQuery.date = goal.date;
   } else if (goalType === 'weekly' || goalType === 'custom') {
@@ -159,16 +231,19 @@ export const updateGoalDetails = asyncHandler(async (req, res) => {
   const duplicate = await Goal.findOne(duplicateQuery).lean();
   if (duplicate) throw new ApiError(HTTP_STATUS.CONFLICT, 'Goal already exists for the selected frequency');
 
-  goal.goalName = normalizedGoalName;
+  goal.goalName = goalNameTrimmed;
+  goal.goalNameNormalized = normalizedGoalName;
   goal.goalType = goalType;
-  goal.frequencyPerWeek = frequencyFromGoalType(goalType);
+  goal.frequencyPerWeek = frequencyFromGoalType(goalType, frequencyPerWeek);
   goal.completedSessions = Math.min(goal.completedSessions || 0, goal.frequencyPerWeek);
   goal.status = goal.completedSessions >= goal.frequencyPerWeek ? 'complete' : 'incomplete';
   await goal.save();
 
   const response = goal.toObject();
   response.date = formatDateOnly(response.date);
+  response.completionDates = (response.completionDates ?? []).map((d) => formatDateOnly(d));
   delete response.userId;
+  delete response.goalNameNormalized;
 
   res.json(new ApiResponse(HTTP_STATUS.OK, { goal: response }, 'Goal updated'));
 });

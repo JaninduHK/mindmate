@@ -118,3 +118,17 @@ export const deleteMood = asyncHandler(async (req, res) => {
   res.json(new ApiResponse(HTTP_STATUS.OK, { mood: deleted }, 'Mood deleted'));
 });
 
+export const getAllMoods = asyncHandler(async (_req, res) => {
+  const moods = await Mood.find({})
+    .select('userId mood keyword date')
+    .sort({ createdAt: -1 })
+    .lean();
+
+  const formatted = moods.map((m) => ({
+    ...m,
+    date: formatDateOnly(m.date),
+  }));
+
+  res.json(new ApiResponse(HTTP_STATUS.OK, { moods: formatted }, 'All moods retrieved'));
+});
+

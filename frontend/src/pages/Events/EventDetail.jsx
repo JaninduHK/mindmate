@@ -116,7 +116,7 @@ const EventDetail = () => {
         <div className="lg:col-span-1">
           <div className="bg-white rounded-xl shadow-sm border border-gray-100 p-5 sticky top-6 space-y-4">
             <div className="text-2xl font-bold text-primary-600">
-              {price === 0 ? 'Free' : `$${price.toFixed(2)}`}
+              {price === 0 ? 'Free' : `LKR ${price.toFixed(2)}`}
             </div>
 
             <div className="space-y-2 text-sm text-gray-600">

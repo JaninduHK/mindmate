@@ -1,7 +1,11 @@
 import { io } from "socket.io-client";
 
+<<<<<<< HEAD
 // Get socket URL from environment variable, fallback to localhost:5000
 const SOCKET_URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:5000";
+=======
+const URL = import.meta.env.VITE_SOCKET_URL || "http://localhost:8000";
+>>>>>>> main
 
 console.log("Socket connecting to:", SOCKET_URL);
 
