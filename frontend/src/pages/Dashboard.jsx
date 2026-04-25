@@ -1,4 +1,6 @@
-<<<<<<< HEAD
+
+import { useState, useEffect, useRef } from 'react';
+
 import { Link, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useAuth } from '../hooks/useAuth';
@@ -98,17 +100,19 @@ const Dashboard = () => {
     
     return now >= sessionDateTime;
   };
-=======
+
 import { useState, useEffect } from 'react';
+
 import { Link } from 'react-router-dom';
 import {
-  FiCalendar, FiCheckCircle, FiClock, FiUsers,
+  FiCalendar, FiCheckCircle, FiUsers,
   FiArrowRight, FiHeart, FiBookOpen, FiMessageCircle,
-  FiStar, FiTrendingUp,
+  FiTrendingUp, FiList, FiChevronLeft, FiChevronRight,
 } from 'react-icons/fi';
 import { useAuth } from '../hooks/useAuth';
 import { bookingAPI } from '../api/booking.api';
 import { eventAPI } from '../api/event.api';
+import { peerSessionAPI } from '../api/peerSession.api';
 import Loading from '../components/common/Loading';
 
 const WELLNESS_TIPS = [
@@ -119,6 +123,17 @@ const WELLNESS_TIPS = [
   "Your feelings are valid. It's okay to not be okay sometimes.",
   'Connect with someone you trust today — even a short message helps.',
   'Celebrate the small wins. Progress is progress, no matter how small.',
+];
+
+const COMMUNITY_GROUPS = [
+  { id: 1, name: 'Anxiety Support', members: 128, tag: 'Anxiety', bg: 'bg-blue-50', border: 'border-blue-100', iconBg: 'bg-blue-100', iconColor: 'text-blue-600', dot: 'bg-blue-400' },
+  { id: 2, name: 'Mindfulness Circle', members: 95, tag: 'Mindfulness', bg: 'bg-violet-50', border: 'border-violet-100', iconBg: 'bg-violet-100', iconColor: 'text-violet-600', dot: 'bg-violet-400' },
+  { id: 3, name: 'Depression Support', members: 89, tag: 'Depression', bg: 'bg-indigo-50', border: 'border-indigo-100', iconBg: 'bg-indigo-100', iconColor: 'text-indigo-600', dot: 'bg-indigo-400' },
+  { id: 4, name: 'Stress Management', members: 74, tag: 'Stress', bg: 'bg-green-50', border: 'border-green-100', iconBg: 'bg-green-100', iconColor: 'text-green-600', dot: 'bg-green-400' },
+  { id: 5, name: 'Grief & Loss', members: 52, tag: 'Grief', bg: 'bg-amber-50', border: 'border-amber-100', iconBg: 'bg-amber-100', iconColor: 'text-amber-600', dot: 'bg-amber-400' },
+  { id: 6, name: 'Young Adults', members: 110, tag: 'Community', bg: 'bg-pink-50', border: 'border-pink-100', iconBg: 'bg-pink-100', iconColor: 'text-pink-600', dot: 'bg-pink-400' },
+  { id: 7, name: 'Work-Life Balance', members: 67, tag: 'Wellness', bg: 'bg-teal-50', border: 'border-teal-100', iconBg: 'bg-teal-100', iconColor: 'text-teal-600', dot: 'bg-teal-400' },
+  { id: 8, name: 'Self-Esteem & Confidence', members: 83, tag: 'Growth', bg: 'bg-orange-50', border: 'border-orange-100', iconBg: 'bg-orange-100', iconColor: 'text-orange-600', dot: 'bg-orange-400' },
 ];
 
 const getGreeting = () => {
@@ -181,7 +196,9 @@ const Dashboard = () => {
   const { user } = useAuth();
   const [bookings, setBookings] = useState([]);
   const [events, setEvents] = useState([]);
+  const [sessions, setSessions] = useState([]);
   const [loading, setLoading] = useState(true);
+  const sliderRef = useRef(null);
 
   const tip = WELLNESS_TIPS[new Date().getDay() % WELLNESS_TIPS.length];
 
@@ -193,19 +210,22 @@ const Dashboard = () => {
     .slice(0, 2) || '?';
 
   useEffect(() => {
+    if (!user?._id) return;
     const load = async () => {
       try {
-        const [bRes, eRes] = await Promise.all([
+        const [bRes, eRes, sRes] = await Promise.all([
           bookingAPI.getMy({ limit: 10 }),
           eventAPI.list({ status: 'published', limit: 3 }),
+          peerSessionAPI.getMy({ userId: user._id }),
         ]);
         setBookings(bRes?.data?.bookings || []);
         setEvents(eRes?.data?.events || []);
+        setSessions(sRes?.data?.sessions || []);
       } catch (_) {}
       setLoading(false);
     };
     load();
-  }, []);
+  }, [user?._id]);
 
   if (loading) {
     return (
@@ -215,12 +235,14 @@ const Dashboard = () => {
     );
   }
 
-  const now = new Date();
-  const upcoming = bookings.filter(
-    (b) => b.status === 'confirmed' && new Date(b.eventId?.startDate) > now
-  );
   const completed = bookings.filter((b) => b.status === 'completed');
->>>>>>> main
+
+
+  const scrollSlider = (dir) => {
+    if (sliderRef.current) {
+      sliderRef.current.scrollBy({ left: dir * 280, behavior: 'smooth' });
+    }
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -262,10 +284,10 @@ const Dashboard = () => {
             iconColor="text-primary-600"
           />
           <StatCard
-            icon={FiClock}
-            label="Upcoming Sessions"
-            value={upcoming.length}
-            sub="Confirmed"
+            icon={FiMessageCircle}
+            label="Peer Sessions"
+            value={sessions.length}
+            sub="With peer counselors"
             iconBg="bg-green-50"
             iconColor="text-green-600"
           />
@@ -281,59 +303,132 @@ const Dashboard = () => {
 
         {/* ── Main Content Grid ─────────────────────────────────────────── */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
-          {/* Recent Bookings */}
-          <div className="lg:col-span-2 bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-5">
-              <h2 className="font-semibold text-gray-900">Recent Bookings</h2>
-              <Link
-                to="/booking/my"
-                className="text-primary-600 text-sm hover:text-primary-700 flex items-center gap-1 font-medium"
-              >
-                View all <FiArrowRight className="w-3.5 h-3.5" />
-              </Link>
-            </div>
-
-            {bookings.length === 0 ? (
-              <div className="flex flex-col items-center justify-center py-12 text-gray-400">
-                <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
-                  <FiCalendar className="w-7 h-7 opacity-50" />
-                </div>
-                <p className="text-sm font-medium text-gray-500">No bookings yet</p>
-                <p className="text-xs mt-1">Start by exploring available events</p>
+          {/* Left column — Recent Bookings + Upcoming Sessions */}
+          <div className="lg:col-span-2 flex flex-col gap-5">
+            {/* Recent Bookings */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <h2 className="font-semibold text-gray-900">Recent Bookings</h2>
                 <Link
-                  to="/events"
-                  className="mt-4 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors"
+                  to="/booking/my"
+                  className="text-primary-600 text-sm hover:text-primary-700 flex items-center gap-1 font-medium"
                 >
-                  Browse Events
+                  View all <FiArrowRight className="w-3.5 h-3.5" />
                 </Link>
               </div>
-            ) : (
-              <div className="space-y-2.5">
-                {bookings.slice(0, 5).map((b) => (
-                  <div
-                    key={b._id}
-                    className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 hover:bg-slate-100 transition-colors"
-                  >
-                    <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center flex-shrink-0">
-                      <FiCalendar className="w-4 h-4 text-primary-600" />
-                    </div>
-                    <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm truncate">
-                        {b.eventId?.title || 'Session'}
-                      </p>
-                      <p className="text-xs text-gray-400 mt-0.5">{fmtDate(b.eventId?.startDate)}</p>
-                    </div>
-                    <span
-                      className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${
-                        STATUS_STYLES[b.status] || 'bg-gray-100 text-gray-600'
-                      }`}
-                    >
-                      {b.status}
-                    </span>
+
+              {bookings.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-12 text-gray-400">
+                  <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mb-3">
+                    <FiCalendar className="w-7 h-7 opacity-50" />
                   </div>
-                ))}
+                  <p className="text-sm font-medium text-gray-500">No bookings yet</p>
+                  <p className="text-xs mt-1">Start by exploring available events</p>
+                  <Link
+                    to="/events"
+                    className="mt-4 px-4 py-2 bg-primary-600 hover:bg-primary-700 text-white text-sm rounded-lg font-medium transition-colors"
+                  >
+                    Browse Events
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {bookings.slice(0, 5).map((b) => (
+                    <div
+                      key={b._id}
+                      className="flex items-center gap-3 p-3.5 rounded-xl bg-gray-50 hover:bg-slate-100 transition-colors"
+                    >
+                      <div className="w-10 h-10 rounded-xl bg-primary-100 flex items-center justify-center flex-shrink-0">
+                        <FiCalendar className="w-4 h-4 text-primary-600" />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 text-sm truncate">
+                          {b.eventId?.title || 'Session'}
+                        </p>
+                        <p className="text-xs text-gray-400 mt-0.5">{fmtDate(b.eventId?.startDate)}</p>
+                      </div>
+                      <span
+                        className={`text-xs font-semibold px-2.5 py-1 rounded-full capitalize flex-shrink-0 ${
+                          STATUS_STYLES[b.status] || 'bg-gray-100 text-gray-600'
+                        }`}
+                      >
+                        {b.status}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* My Peer Counseling Sessions */}
+            <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
+              <div className="flex items-center justify-between mb-5">
+                <div>
+                  <h2 className="font-semibold text-gray-900">My Peer Sessions</h2>
+                  <p className="text-xs text-gray-400 mt-0.5">Chat sessions with peer counselors</p>
+                </div>
+                <Link
+                  to="/my-sessions"
+                  className="text-primary-600 text-sm hover:text-primary-700 flex items-center gap-1 font-medium"
+                >
+                  View all <FiArrowRight className="w-3.5 h-3.5" />
+                </Link>
               </div>
-            )}
+
+              {sessions.length === 0 ? (
+                <div className="flex flex-col items-center justify-center py-10 text-gray-400">
+                  <div className="w-14 h-14 bg-green-50 rounded-full flex items-center justify-center mb-3">
+                    <FiMessageCircle className="w-6 h-6 text-green-300" />
+                  </div>
+                  <p className="text-sm font-medium text-gray-500">No sessions yet</p>
+                  <p className="text-xs mt-1">Connect with a peer counselor to start a session</p>
+                  <Link
+                    to="/peer-supporters"
+                    className="mt-4 px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm rounded-lg font-medium transition-colors"
+                  >
+                    Find a Peer Counselor
+                  </Link>
+                </div>
+              ) : (
+                <div className="space-y-2.5">
+                  {sessions.slice(0, 5).map((s) => {
+                    const peer = s.peerId;
+                    const peerInitial = peer?.name?.[0]?.toUpperCase() || '?';
+                    const sessionDate = s.date
+                      ? new Date(s.date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+                      : '';
+                    const STATUS_DOT = { pending: 'bg-amber-400', confirmed: 'bg-green-400', completed: 'bg-blue-400', cancelled: 'bg-red-400' };
+                    return (
+                      <Link
+                        key={s._id}
+                        to="/my-sessions"
+                        className="flex items-center gap-3 p-3.5 rounded-xl bg-green-50 hover:bg-green-100 transition-colors"
+                      >
+                        <div className="w-10 h-10 rounded-full flex-shrink-0 overflow-hidden">
+                          {peer?.avatar?.url ? (
+                            <img src={peer.avatar.url} alt={peer.name} className="w-full h-full object-cover" />
+                          ) : (
+                            <div className="w-full h-full bg-green-200 flex items-center justify-center text-green-700 font-bold text-sm">
+                              {peerInitial}
+                            </div>
+                          )}
+                        </div>
+                        <div className="flex-1 min-w-0">
+                          <p className="font-medium text-gray-900 text-sm truncate">
+                            {peer?.name || 'Peer Counselor'}
+                          </p>
+                          <p className="text-xs text-gray-400 mt-0.5 truncate">{s.topic}</p>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-shrink-0">
+                          <div className={`w-2 h-2 rounded-full ${STATUS_DOT[s.status] || 'bg-gray-300'}`} />
+                          <span className="text-xs text-gray-400">{sessionDate}</span>
+                        </div>
+                      </Link>
+                    );
+                  })}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* Right column */}
@@ -380,9 +475,23 @@ const Dashboard = () => {
                   iconColor="text-green-600"
                 />
                 <QuickActionLink
+                  to="/my-sessions"
+                  icon={FiList}
+                  label="My Sessions"
+                  iconBg="bg-sky-50"
+                  iconColor="text-sky-600"
+                />
+                <QuickActionLink
+                  to="/personal-tracking"
+                  icon={FiTrendingUp}
+                  label="Personal Tracking"
+                  iconBg="bg-teal-50"
+                  iconColor="text-teal-600"
+                />
+                <QuickActionLink
                   to="/peer-supporters"
                   icon={FiMessageCircle}
-                  label="Peer Support"
+                  label="Peer Supporters"
                   iconBg="bg-amber-50"
                   iconColor="text-amber-600"
                 />
@@ -398,7 +507,7 @@ const Dashboard = () => {
           </div>
         </div>
 
-<<<<<<< HEAD
+
         {/* Main Grid Layout */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Main Content Area (Spans 2 columns on lg screens) */}
@@ -493,7 +602,6 @@ const Dashboard = () => {
                 )}
               </div>
             </div>
-=======
         {/* ── Upcoming Events ───────────────────────────────────────────── */}
         {events.length > 0 && (
           <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
@@ -539,6 +647,60 @@ const Dashboard = () => {
             </div>
           </div>
         )}
+
+        {/* ── Community Chat Groups ─────────────────────────────────────── */}
+        <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6 mb-6">
+          <div className="flex items-center justify-between mb-5">
+            <div>
+              <h2 className="font-semibold text-gray-900">Community Chat Groups</h2>
+              <p className="text-xs text-gray-400 mt-0.5">Connect with others on a similar journey</p>
+            </div>
+            <div className="flex items-center gap-2">
+              <button
+                onClick={() => scrollSlider(-1)}
+                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+              >
+                <FiChevronLeft className="w-4 h-4 text-gray-500" />
+              </button>
+              <button
+                onClick={() => scrollSlider(1)}
+                className="w-8 h-8 rounded-full border border-gray-200 flex items-center justify-center hover:bg-gray-50 transition-colors"
+              >
+                <FiChevronRight className="w-4 h-4 text-gray-500" />
+              </button>
+            </div>
+          </div>
+
+          <div
+            ref={sliderRef}
+            className="flex gap-4 overflow-x-auto pb-2 scroll-smooth"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
+            {COMMUNITY_GROUPS.map((group) => (
+              <Link
+                key={group.id}
+                to="/peer-supporters"
+                className={`flex-shrink-0 w-56 rounded-xl border p-4 hover:shadow-md transition-all hover:-translate-y-0.5 cursor-pointer ${group.bg} ${group.border}`}
+              >
+                <div className={`w-10 h-10 rounded-xl flex items-center justify-center mb-3 ${group.iconBg}`}>
+                  <FiMessageCircle className={`w-5 h-5 ${group.iconColor}`} />
+                </div>
+                <p className="font-semibold text-gray-900 text-sm leading-tight mb-1">{group.name}</p>
+                <p className="text-xs text-gray-400 mb-3">{group.members} members</p>
+                <div className="flex items-center justify-between">
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full bg-white/70 ${group.iconColor}`}>
+                    {group.tag}
+                  </span>
+                  <div className="flex items-center gap-1">
+                    <div className={`w-1.5 h-1.5 rounded-full ${group.dot}`} />
+                    <span className="text-xs text-gray-400">Active</span>
+                  </div>
+                </div>
+              </Link>
+            ))}
+          </div>
+        </div>
+
         {/* ── Welcome Banner (new users with no bookings) ───────────────── */}
         {bookings.length === 0 && (
           <div className="bg-gradient-to-r from-primary-50 to-sky-50 border border-primary-100 rounded-2xl p-6 flex items-start gap-4">
@@ -589,7 +751,7 @@ const Dashboard = () => {
                 Manage your mood history and daily goals.
               </p>
             </Link>
->>>>>>> main
+
           </div>
         )}
       </div>

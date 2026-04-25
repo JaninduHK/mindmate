@@ -51,8 +51,12 @@ import ManageAvailability from './pages/PeerSupporter/ManageAvailability';
 import PeerSupporterList from './pages/PeerSupporter/PeerSupporterList';
 import BookSessionPage from './pages/PeerSupporter/BookSessionPage';
 import UsersList from './pages/PeerSupporter/UsersList';
+
+import MySessionsPage from './pages/PeerSupporter/MySessionsPage';
+
 import UserSessions from './pages/PeerSupporter/UserSessions';
 import PeerSupporterSessions from './pages/PeerSupporter/PeerSupporterSessions';
+
 
 // Personal tracking
 import PersonalTrackingPage from './pages/PersonalTracking/PersonalTrackingPage';
@@ -106,7 +110,11 @@ function App() {
                 <Route path="/booking/checkout/:eventId" element={<BookingCheckout />} />
                 <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
                 <Route path="/booking/my" element={<MyBookings />} />
+
+                <Route path="/my-sessions" element={<MySessionsPage />} />
+
                 <Route path="/my-sessions" element={<UserSessions />} />
+
                 <Route path="/counselor/onboarding" element={<CounselorOnboarding />} />
               </Route>
 

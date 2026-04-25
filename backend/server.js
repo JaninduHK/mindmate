@@ -37,7 +37,9 @@ import moodRoutes from './routes/moodRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
 import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
 import moodConfigRoutes from './routes/moodConfig.routes.js';
+import peerSessionRoutes from './routes/peerSession.routes.js';
 import { registerGoalMissedAlertJobs } from './services/goalMissedAlert.service.js';
+
 
 // Initialize Express app
 const app = express();
@@ -101,8 +103,9 @@ const globalLimiter = rateLimit({
 // ===============================
 // MIDDLEWARE STACK
 // ===============================
-app.use(helmet()); // Security headers
-app.use(cors(corsOptions)); // CORS
+app.use(cors(corsOptions)); // CORS — must come before helmet so preflight is handled first
+app.options('*', cors(corsOptions)); // Explicitly handle all preflight requests
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 // Stripe webhook must come BEFORE JSON parser
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
@@ -159,6 +162,7 @@ app.use('/api/moods', moodRoutes);
 app.use('/api/personal-tracking/goals', goalRoutes);
 app.use('/api/personal-tracking/analytics', personalTrackingAnalyticsRoutes);
 app.use('/api/mood-config', moodConfigRoutes);
+app.use('/api/peer-sessions', peerSessionRoutes);
 
 
 // ===============================
