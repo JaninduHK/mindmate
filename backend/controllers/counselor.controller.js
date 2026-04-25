@@ -70,7 +70,14 @@ export const listCounselors = asyncHandler(async (req, res) => {
 
   const filter = { isVerified: true, isSuspended: false };
   if (req.query.specialization) {
-    filter.specializations = req.query.specialization;
+    filter.specializations = { $regex: new RegExp(`^${req.query.specialization}$`, 'i') };
+  }
+  if (req.query.search) {
+    const matchingUsers = await User.find(
+      { name: { $regex: req.query.search, $options: 'i' } },
+      '_id'
+    );
+    filter.userId = { $in: matchingUsers.map((u) => u._id) };
   }
 
   const [counselors, total] = await Promise.all([

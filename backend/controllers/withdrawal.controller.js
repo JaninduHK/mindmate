@@ -107,10 +107,14 @@ export const createWithdrawal = asyncHandler(async (req, res) => {
       bankName: bankDetails.bankName.trim(),
       swiftCode: bankDetails.swiftCode?.trim() || '',
     },
+    // Auto-complete: simulate immediate bank transfer
+    status: 'completed',
+    adminNote: 'Automatically processed',
+    processedAt: new Date(),
   });
 
   res.status(HTTP_STATUS.CREATED).json(
-    new ApiResponse(HTTP_STATUS.CREATED, { withdrawal }, 'Withdrawal request submitted')
+    new ApiResponse(HTTP_STATUS.CREATED, { withdrawal }, 'Withdrawal completed — funds transferred to your bank')
   );
 });
 

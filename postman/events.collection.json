@@ -1,0 +1,587 @@
+{
+  "info": {
+    "name": "MindMate – Events API",
+    "_postman_id": "mindmate-events-collection",
+    "description": "Tests for Create Event (POST /events), Get Event by ID (GET /events/:id), and Delete Event (DELETE /events/:id).\n\nBefore running:\n1. Set `counselorToken` – JWT for a counselor account\n2. Set `userToken` – JWT for a regular (client) account (wrong-role test)\n3. Set `otherCounselorToken` – JWT for a second counselor account (forbidden-delete test)\n\nRun the folder in order: Create → Get → Delete. The 'Create Event – Valid' request auto-saves the created event ID into the `eventId` collection variable.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "http://localhost:5000/api",
+      "type": "string",
+      "description": "Base URL of the API server"
+    },
+    {
+      "key": "counselorToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token for a counselor user – set before running"
+    },
+    {
+      "key": "userToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token for a regular (client) user – used for wrong-role test"
+    },
+    {
+      "key": "otherCounselorToken",
+      "value": "",
+      "type": "string",
+      "description": "JWT access token for a second counselor (not the event owner) – used for forbidden-delete test"
+    },
+    {
+      "key": "eventId",
+      "value": "",
+      "type": "string",
+      "description": "Populated automatically after 'Create Event – Valid' runs"
+    }
+  ],
+  "item": [
+    {
+      "name": "Create Event",
+      "item": [
+        {
+          "name": "Create Event – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 201\", () => {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "pm.test(\"success is true\", () => {",
+                  "    pm.expect(json.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"message is 'Event created'\", () => {",
+                  "    pm.expect(json.message).to.equal('Event created');",
+                  "});",
+                  "",
+                  "pm.test(\"data.event is an object\", () => {",
+                  "    pm.expect(json.data).to.have.property('event');",
+                  "    pm.expect(json.data.event).to.be.an('object');",
+                  "});",
+                  "",
+                  "pm.test(\"event title matches request body\", () => {",
+                  "    pm.expect(json.data.event.title).to.equal('Anxiety Management Workshop');",
+                  "});",
+                  "",
+                  "pm.test(\"event category matches request body\", () => {",
+                  "    pm.expect(json.data.event.category).to.equal('anxiety');",
+                  "});",
+                  "",
+                  "pm.test(\"event status defaults to draft\", () => {",
+                  "    pm.expect(json.data.event.status).to.equal('draft');",
+                  "});",
+                  "",
+                  "pm.test(\"seatsAvailable equals capacity\", () => {",
+                  "    pm.expect(json.data.event.seatsAvailable).to.equal(json.data.event.capacity);",
+                  "});",
+                  "",
+                  "pm.test(\"counselorId is set\", () => {",
+                  "    pm.expect(json.data.event.counselorId).to.exist;",
+                  "});",
+                  "",
+                  "pm.test(\"_id is present\", () => {",
+                  "    pm.expect(json.data.event._id).to.be.a('string').and.have.lengthOf(24);",
+                  "});",
+                  "",
+                  "// Persist for Get and Delete tests",
+                  "if (json.data && json.data.event && json.data.event._id) {",
+                  "    pm.collectionVariables.set('eventId', json.data.event._id);",
+                  "    console.log('eventId saved:', json.data.event._id);",
+                  "}"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{counselorToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Anxiety Management Workshop\",\n  \"description\": \"A comprehensive workshop to help manage anxiety through proven techniques and mindfulness practices.\",\n  \"category\": \"anxiety\",\n  \"eventType\": \"workshop\",\n  \"deliveryMode\": \"online\",\n  \"venueType\": \"online_platform\",\n  \"venue\": {\n    \"meetingLink\": \"https://zoom.us/j/123456789\"\n  },\n  \"startDate\": \"2026-06-15T10:00:00.000Z\",\n  \"duration\": 90,\n  \"capacity\": 20,\n  \"price\": 50,\n  \"language\": \"English\",\n  \"tags\": [\"anxiety\", \"coping\", \"mindfulness\"]\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            }
+          }
+        },
+        {
+          "name": "Create Event – No Auth",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 401\", () => {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"success is false\", () => {",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"error message references token\", () => {",
+                  "    pm.expect(json.message.toLowerCase()).to.include('token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Anxiety Management Workshop\",\n  \"description\": \"A workshop for anxiety.\",\n  \"category\": \"anxiety\",\n  \"eventType\": \"workshop\",\n  \"deliveryMode\": \"online\",\n  \"venueType\": \"online_platform\",\n  \"startDate\": \"2026-06-15T10:00:00.000Z\",\n  \"duration\": 90,\n  \"capacity\": 20,\n  \"price\": 50\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            }
+          }
+        },
+        {
+          "name": "Create Event – Wrong Role (client user)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 403\", () => {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test(\"success is false\", () => {",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"error message references permission\", () => {",
+                  "    pm.expect(json.message.toLowerCase()).to.include('permission');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{userToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Anxiety Management Workshop\",\n  \"description\": \"A workshop for anxiety.\",\n  \"category\": \"anxiety\",\n  \"eventType\": \"workshop\",\n  \"deliveryMode\": \"online\",\n  \"venueType\": \"online_platform\",\n  \"startDate\": \"2026-06-15T10:00:00.000Z\",\n  \"duration\": 90,\n  \"capacity\": 20,\n  \"price\": 50\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            }
+          }
+        },
+        {
+          "name": "Create Event – Missing Required Field (no title)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 4xx or 5xx\", () => {",
+                  "    pm.expect(pm.response.code).to.be.at.least(400);",
+                  "});",
+                  "",
+                  "pm.test(\"success is false\", () => {",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"error message is present\", () => {",
+                  "    pm.expect(json.message).to.be.a('string').and.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{counselorToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"description\": \"Missing title field.\",\n  \"category\": \"anxiety\",\n  \"eventType\": \"workshop\",\n  \"deliveryMode\": \"online\",\n  \"venueType\": \"online_platform\",\n  \"startDate\": \"2026-06-15T10:00:00.000Z\",\n  \"duration\": 90,\n  \"capacity\": 20,\n  \"price\": 50\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            }
+          }
+        },
+        {
+          "name": "Create Event – Invalid Enum Value (bad category)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 4xx or 5xx\", () => {",
+                  "    pm.expect(pm.response.code).to.be.at.least(400);",
+                  "});",
+                  "",
+                  "pm.test(\"success is false\", () => {",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"error message is present\", () => {",
+                  "    pm.expect(json.message).to.be.a('string').and.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{counselorToken}}" }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n  \"title\": \"Invalid Category Event\",\n  \"description\": \"Testing invalid enum value for category.\",\n  \"category\": \"not_a_real_category\",\n  \"eventType\": \"workshop\",\n  \"deliveryMode\": \"online\",\n  \"venueType\": \"online_platform\",\n  \"startDate\": \"2026-06-15T10:00:00.000Z\",\n  \"duration\": 90,\n  \"capacity\": 20,\n  \"price\": 50\n}",
+              "options": { "raw": { "language": "json" } }
+            },
+            "url": {
+              "raw": "{{baseUrl}}/events",
+              "host": ["{{baseUrl}}"],
+              "path": ["events"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Get Event by ID",
+      "item": [
+        {
+          "name": "Get Event by ID – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "const eventId = pm.collectionVariables.get('eventId');",
+                  "",
+                  "pm.test(\"Status is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"success is true\", () => {",
+                  "    pm.expect(json.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"data.event is an object\", () => {",
+                  "    pm.expect(json.data).to.have.property('event');",
+                  "    pm.expect(json.data.event).to.be.an('object');",
+                  "});",
+                  "",
+                  "pm.test(\"returned event ID matches requested ID\", () => {",
+                  "    pm.expect(json.data.event._id).to.equal(eventId);",
+                  "});",
+                  "",
+                  "pm.test(\"event has required fields\", () => {",
+                  "    const e = json.data.event;",
+                  "    pm.expect(e).to.have.all.keys(",
+                  "        '_id', 'title', 'description', 'category', 'eventType',",
+                  "        'deliveryMode', 'venueType', 'startDate', 'duration',",
+                  "        'capacity', 'price', 'status', 'counselorId'",
+                  "    );",
+                  "});",
+                  "",
+                  "pm.test(\"counselorId is populated (name present)\", () => {",
+                  "    pm.expect(json.data.event.counselorId).to.be.an('object');",
+                  "    pm.expect(json.data.event.counselorId.name).to.be.a('string');",
+                  "});",
+                  "",
+                  "pm.test(\"no auth required (public endpoint)\", () => {",
+                  "    // This test passing without an Authorization header confirms the endpoint is public",
+                  "    pm.response.to.have.status(200);",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            }
+          }
+        },
+        {
+          "name": "Get Event by ID – Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 404\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"success is false\", () => {",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"message references 'not found'\", () => {",
+                  "    pm.expect(json.message.toLowerCase()).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/000000000000000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "000000000000000000000000"]
+            }
+          }
+        },
+        {
+          "name": "Get Event by ID – Invalid ID Format",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 4xx\", () => {",
+                  "    pm.expect(pm.response.code).to.be.within(400, 499);",
+                  "});",
+                  "",
+                  "pm.test(\"success is false\", () => {",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"error message is present\", () => {",
+                  "    pm.expect(json.message).to.be.a('string').and.not.be.empty;",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/not-a-valid-object-id",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "not-a-valid-object-id"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Delete Event",
+      "item": [
+        {
+          "name": "Delete Event – No Auth",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 401\", () => {",
+                  "    pm.response.to.have.status(401);",
+                  "});",
+                  "",
+                  "pm.test(\"success is false\", () => {",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"error message references token\", () => {",
+                  "    pm.expect(json.message.toLowerCase()).to.include('token');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Event – Forbidden (not the owner)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 403\", () => {",
+                  "    pm.response.to.have.status(403);",
+                  "});",
+                  "",
+                  "pm.test(\"success is false\", () => {",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"error message references authorization\", () => {",
+                  "    pm.expect(json.message.toLowerCase()).to.satisfy(msg =>",
+                  "        msg.includes('authorized') || msg.includes('permission') || msg.includes('forbidden')",
+                  "    );",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{otherCounselorToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            }
+          }
+        },
+        {
+          "name": "Delete Event – Not Found",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 404\", () => {",
+                  "    pm.response.to.have.status(404);",
+                  "});",
+                  "",
+                  "pm.test(\"success is false\", () => {",
+                  "    pm.expect(json.success).to.be.false;",
+                  "});",
+                  "",
+                  "pm.test(\"message references 'not found'\", () => {",
+                  "    pm.expect(json.message.toLowerCase()).to.include('not found');",
+                  "});"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{counselorToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/000000000000000000000000",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "000000000000000000000000"]
+            }
+          }
+        },
+        {
+          "name": "Delete Event – Valid",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const json = pm.response.json();",
+                  "",
+                  "pm.test(\"Status is 200\", () => {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "pm.test(\"success is true\", () => {",
+                  "    pm.expect(json.success).to.be.true;",
+                  "});",
+                  "",
+                  "pm.test(\"message is 'Event cancelled'\", () => {",
+                  "    pm.expect(json.message).to.equal('Event cancelled');",
+                  "});",
+                  "",
+                  "// Clean up variable",
+                  "pm.collectionVariables.set('eventId', '');"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "DELETE",
+            "header": [
+              { "key": "Authorization", "value": "Bearer {{counselorToken}}" }
+            ],
+            "url": {
+              "raw": "{{baseUrl}}/events/{{eventId}}",
+              "host": ["{{baseUrl}}"],
+              "path": ["events", "{{eventId}}"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
