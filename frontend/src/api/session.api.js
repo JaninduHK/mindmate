@@ -1,27 +1,13 @@
-import axios from 'axios';
-import { getAccessToken } from './axios.config';
+import axiosInstance from './axios.config';
 
-const API_BASE_URL = 'http://localhost:5000/api/sessions';
-
-/**
- * Book a new session with a peer counselor
- */
 export const bookSession = async (data) => {
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-        'Content-Type': 'application/json',
-      },
-    };
-
-    // Format date to ISO string
     const formattedData = {
       ...data,
       sessionDate: new Date(data.sessionDate).toISOString().split('T')[0],
     };
 
-    const response = await axios.post(`${API_BASE_URL}/book`, formattedData, config);
+    const response = await axiosInstance.post('/sessions/book', formattedData);
     return response.data;
   } catch (error) {
     console.error('Error booking session:', error);
@@ -29,18 +15,9 @@ export const bookSession = async (data) => {
   }
 };
 
-/**
- * Get user's booked sessions
- */
 export const getUserSessions = async () => {
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-      },
-    };
-
-    const response = await axios.get(`${API_BASE_URL}/my`, config);
+    const response = await axiosInstance.get('/sessions/my');
     return response.data;
   } catch (error) {
     console.error('Error fetching user sessions:', error);
@@ -48,18 +25,9 @@ export const getUserSessions = async () => {
   }
 };
 
-/**
- * Get peer supporter's bookings
- */
 export const getSupporterBookings = async () => {
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-      },
-    };
-
-    const response = await axios.get(`${API_BASE_URL}/peer-supporter/bookings`, config);
+    const response = await axiosInstance.get('/sessions/peer-supporter/bookings');
     return response.data;
   } catch (error) {
     console.error('Error fetching supporter bookings:', error);
@@ -67,23 +35,10 @@ export const getSupporterBookings = async () => {
   }
 };
 
-/**
- * Get available slots for a peer counselor on a specific date
- */
 export const getAvailableSlots = async (supporterId, date) => {
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-      },
-    };
-
-    const response = await axios.get(`${API_BASE_URL}/available-slots`, {
-      params: {
-        supporterId,
-        date,
-      },
-      ...config,
+    const response = await axiosInstance.get('/sessions/available-slots', {
+      params: { supporterId, date },
     });
     return response.data;
   } catch (error) {
@@ -92,18 +47,9 @@ export const getAvailableSlots = async (supporterId, date) => {
   }
 };
 
-/**
- * Get session details
- */
 export const getSessionDetails = async (sessionId) => {
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-      },
-    };
-
-    const response = await axios.get(`${API_BASE_URL}/${sessionId}`, config);
+    const response = await axiosInstance.get(`/sessions/${sessionId}`);
     return response.data;
   } catch (error) {
     console.error('Error fetching session details:', error);
@@ -111,19 +57,9 @@ export const getSessionDetails = async (sessionId) => {
   }
 };
 
-/**
- * Cancel a session
- */
 export const cancelSession = async (sessionId, reason = '') => {
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-        'Content-Type': 'application/json',
-      },
-    };
-
-    const response = await axios.post(`${API_BASE_URL}/${sessionId}/cancel`, { reason }, config);
+    const response = await axiosInstance.post(`/sessions/${sessionId}/cancel`, { reason });
     return response.data;
   } catch (error) {
     console.error('Error canceling session:', error);
@@ -131,19 +67,9 @@ export const cancelSession = async (sessionId, reason = '') => {
   }
 };
 
-/**
- * Accept a session (peer counselor)
- */
 export const acceptSession = async (sessionId) => {
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-        'Content-Type': 'application/json',
-      },
-    };
-
-    const response = await axios.post(`${API_BASE_URL}/${sessionId}/accept`, {}, config);
+    const response = await axiosInstance.post(`/sessions/${sessionId}/accept`, {});
     return response.data;
   } catch (error) {
     console.error('Error accepting session:', error);
@@ -151,19 +77,9 @@ export const acceptSession = async (sessionId) => {
   }
 };
 
-/**
- * Add feedback to a session
- */
 export const addSessionFeedback = async (sessionId, feedbackData) => {
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-        'Content-Type': 'application/json',
-      },
-    };
-
-    const response = await axios.post(`${API_BASE_URL}/${sessionId}/feedback`, feedbackData, config);
+    const response = await axiosInstance.post(`/sessions/${sessionId}/feedback`, feedbackData);
     return response.data;
   } catch (error) {
     console.error('Error adding session feedback:', error);
@@ -171,19 +87,9 @@ export const addSessionFeedback = async (sessionId, feedbackData) => {
   }
 };
 
-/**
- * Update session details
- */
 export const updateSessionDetails = async (sessionId, details) => {
   try {
-    const config = {
-      headers: {
-        Authorization: `Bearer ${getAccessToken()}`,
-        'Content-Type': 'application/json',
-      },
-    };
-
-    const response = await axios.put(`${API_BASE_URL}/${sessionId}/details`, details, config);
+    const response = await axiosInstance.put(`/sessions/${sessionId}/details`, details);
     return response.data;
   } catch (error) {
     console.error('Error updating session details:', error);

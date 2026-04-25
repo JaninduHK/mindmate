@@ -27,16 +27,12 @@ export const addAvailability = asyncHandler(async (req, res) => {
     throw new ApiError(403, 'Only peer supporters can add availability');
   }
 
-  // Verify peer supporter profile exists, create if not
-  let peerProfile = await PeerSupporterProfile.findOne({ userId: supporterId });
-  if (!peerProfile) {
-    // Auto-create peer supporter profile if it doesn't exist
-    peerProfile = await PeerSupporterProfile.create({
-      userId: supporterId,
-      isVerified: false,
-    });
-    console.log('Created peer supporter profile for user:', supporterId);
-  }
+  // Verify peer supporter profile exists, create if not (atomic upsert to avoid duplicate key errors)
+  await PeerSupporterProfile.findOneAndUpdate(
+    { userId: supporterId },
+    { $setOnInsert: { userId: supporterId, isVerified: false } },
+    { upsert: true, new: true }
+  );
 
   // Validate required fields
   if (!date || !startTime || !endTime) {

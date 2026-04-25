@@ -1,4 +1,6 @@
 import Message from '../models/message.model.js';
+import User from '../models/User.model.js';
+import { sendNotification } from '../services/notification.service.js';
 
 export const socketHandler = (io) => {
     io.on('connection', (socket) => {
@@ -40,6 +42,29 @@ export const socketHandler = (io) => {
                 });
 
                 console.log(`✅ Message saved with ID: ${savedMessage._id}`);
+
+                // Create notification for recipient
+                const senderUser = await User.findById(senderId).select('name');
+                const senderName = senderUser?.name || 'Someone';
+                const preview = message.length > 60 ? message.slice(0, 57) + '...' : message;
+
+                await sendNotification({
+                    userId: recipientId,
+                    type: 'new_message',
+                    title: `New message from ${senderName}`,
+                    message: preview,
+                    data: { senderId, messageId: savedMessage._id },
+                });
+
+                // Push real-time notification badge update to recipient
+                io.to(recipientId).emit('new_notification', {
+                    type: 'new_message',
+                    title: `New message from ${senderName}`,
+                    message: preview,
+                    senderId,
+                    createdAt: new Date(),
+                    isRead: false,
+                });
 
                 // Send to recipient's room
                 io.to(recipientId).emit('receive_message', {

@@ -52,8 +52,7 @@ export const WITHDRAWAL_STATUSES = ['pending', 'processing', 'completed', 'rejec
 export const NOTIFICATION_TYPES = [
   'booking_confirmed', 'booking_cancelled', 'event_reminder',
   'payment_received', 'review_received', 'system', 'goal_missed',
-  'payment_received', 'review_received', 'system', 'session_booked',
-
+  'session_booked', 'new_message',
 ];
 
 export const HTTP_STATUS = {

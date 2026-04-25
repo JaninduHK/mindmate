@@ -4,6 +4,7 @@ import { FiBell } from 'react-icons/fi';
 import { notificationAPI } from '../../api/notification.api';
 import { useNotification } from '../../hooks/useNotification';
 import { formatDistanceToNow } from 'date-fns';
+import { socket } from '../../socket/socket';
 
 const NotificationBell = () => {
   const [open, setOpen] = useState(false);
@@ -28,8 +29,19 @@ const NotificationBell = () => {
 
   useEffect(() => {
     fetchNotifications();
-    const interval = setInterval(fetchNotifications, 30000); // Poll every 30s
+    const interval = setInterval(fetchNotifications, 30000);
     return () => clearInterval(interval);
+  }, []);
+
+  useEffect(() => {
+    socket.on('new_notification', (notification) => {
+      setUnreadCount((c) => c + 1);
+      setNotifications((prev) => [
+        { _id: `rt-${Date.now()}`, ...notification },
+        ...prev.slice(0, 9),
+      ]);
+    });
+    return () => socket.off('new_notification');
   }, []);
 
   // Close on outside click

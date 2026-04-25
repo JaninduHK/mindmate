@@ -12,6 +12,7 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
   const [message, setMessage] = useState("");
   const [messages, setMessages] = useState([]);
   const [isTyping, setIsTyping] = useState(false);
+  const [isConnected, setIsConnected] = useState(socket.connected);
   const [loading, setLoading] = useState(false);
   const [searchQuery, setSearchQuery] = useState("");
   const [showSearch, setShowSearch] = useState(false);
@@ -65,7 +66,8 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
 
     socket.on("connect", () => {
       console.log("[Chat] Socket connected:", socket.id);
-      toast.success("Connected to chat server");
+      setIsConnected(true);
+      socket.emit("join_room", currentUserId);
     });
 
     socket.on("receive_message", (data) => {
@@ -133,7 +135,7 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
 
     socket.on("disconnect", (reason) => {
       console.log("[Chat] Socket disconnected:", reason);
-      toast.error("Disconnected from chat server");
+      setIsConnected(false);
     });
 
     socket.on("message_error", (data) => {
@@ -178,8 +180,9 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
     console.log("[Chat] Sending message:", messageData);
     
     if (!socket.connected) {
-      console.error("[Chat] Socket not connected!");
-      toast.error("Not connected to chat server. Please refresh.");
+      console.error("[Chat] Socket not connected, attempting to reconnect...");
+      socket.connect();
+      toast.error("Reconnecting to chat server, please try again in a moment.");
       return;
     }
 
@@ -438,6 +441,37 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
         </div>
       )}
 
+      {!isConnected && (
+        <div style={{
+          padding: "8px 12px",
+          marginBottom: "10px",
+          backgroundColor: "#fff3cd",
+          border: "1px solid #ffc107",
+          borderRadius: "4px",
+          color: "#856404",
+          fontSize: "13px",
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "center"
+        }}>
+          <span>Disconnected from chat server. Reconnecting...</span>
+          <button
+            onClick={() => socket.connect()}
+            style={{
+              background: "none",
+              border: "1px solid #856404",
+              borderRadius: "4px",
+              padding: "2px 8px",
+              cursor: "pointer",
+              color: "#856404",
+              fontSize: "12px"
+            }}
+          >
+            Retry
+          </button>
+        </div>
+      )}
+
       <div style={{ display: "flex", gap: "10px" }}>
         <input
           type="text"
@@ -445,23 +479,26 @@ const ChatBox = ({ currentUserId, recipientId, recipientName }) => {
           value={message}
           onChange={handleTyping}
           onKeyPress={handleKeyPress}
+          disabled={!isConnected}
           style={{
             flex: 1,
             padding: "8px",
             borderRadius: "4px",
-            border: "1px solid #ddd"
+            border: "1px solid #ddd",
+            opacity: isConnected ? 1 : 0.6
           }}
         />
 
         <button
           onClick={sendMessage}
+          disabled={!isConnected}
           style={{
             padding: "8px 16px",
-            backgroundColor: "#007bff",
+            backgroundColor: isConnected ? "#007bff" : "#aaa",
             color: "white",
             border: "none",
             borderRadius: "4px",
-            cursor: "pointer"
+            cursor: isConnected ? "pointer" : "not-allowed"
           }}
         >
           Send
