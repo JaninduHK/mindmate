@@ -8,6 +8,7 @@ import { getStripe } from '../config/stripe.js';
 import { cloudinary } from '../config/cloudinary.js';
 import { encrypt } from '../utils/encryption.util.js';
 import { HTTP_STATUS } from '../config/constants.js';
+import { sendNotification } from '../services/notification.service.js';
 
 // POST /api/bookings
 export const createBooking = asyncHandler(async (req, res) => {
@@ -87,11 +88,33 @@ export const createBooking = asyncHandler(async (req, res) => {
   });
 
   if (paymentMethod === 'bank_transfer') {
+    // Auto-confirm bank transfer bookings (simulate admin confirmation)
+    booking.status = 'confirmed';
+    booking.paymentStatus = 'paid';
+    await booking.save();
+
+    await Event.findByIdAndUpdate(eventId, { $inc: { seatsAvailable: -1 } });
+
+    await sendNotification({
+      userId: booking.userId,
+      type: 'booking_confirmed',
+      title: 'Booking Confirmed',
+      message: `Your booking for "${event.title}" has been confirmed!`,
+      data: { bookingId: booking._id, eventId: booking.eventId },
+    });
+    await sendNotification({
+      userId: booking.counselorId,
+      type: 'payment_received',
+      title: 'New Booking',
+      message: `You have a new booking for "${event.title}" (bank transfer).`,
+      data: { bookingId: booking._id, eventId: booking.eventId },
+    });
+
     return res.status(HTTP_STATUS.CREATED).json(
       new ApiResponse(
         HTTP_STATUS.CREATED,
         { booking },
-        'Booking created — upload your payment slip to complete'
+        'Booking confirmed'
       )
     );
   }
