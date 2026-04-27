@@ -8,9 +8,26 @@ import {
   markMessageAsRead,
   markConversationAsRead,
   searchMessages,
+  createGroupChat,
+  getAvailableGroupChats,
+  getGroupChatMessages,
+  joinGroupChat,
+  leaveGroupChat,
+  getGroupDetails,
+  sendGroupMessage
 } from '../controllers/chat.controller.js';
+import { verifyToken } from '../middlewares/auth.middleware.js';
 
 const router = express.Router();
+
+// ---- GROUP CHAT ROUTES ----
+router.post('/groups', verifyToken, createGroupChat);
+router.get('/groups/available', verifyToken, getAvailableGroupChats);
+router.get('/groups/:groupId', verifyToken, getGroupDetails);
+router.get('/groups/:groupId/messages', verifyToken, getGroupChatMessages);
+router.post('/groups/:groupId/join', verifyToken, joinGroupChat);
+router.post('/groups/:groupId/leave', verifyToken, leaveGroupChat);
+router.post('/groups/:groupId/send', verifyToken, sendGroupMessage);
 
 // Get conversations list
 router.get('/conversations', getConversations);

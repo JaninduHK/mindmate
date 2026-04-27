@@ -42,7 +42,7 @@ export default function MoodForm({ existingMood, onSubmitUpsert, submitting }) {
   const selectedMood = useWatch({ control, name: 'mood' });
   const selectedKeyword = useWatch({ control, name: 'keyword' });
   const currentWords = wordCount(watchedDescription);
-  const isLimitExceeded = currentWords > 20;
+  const isLimitExceeded = currentWords > 20; //validation
 
   useEffect(() => {
     const loadConfigs = async () => {
@@ -195,7 +195,7 @@ export default function MoodForm({ existingMood, onSubmitUpsert, submitting }) {
               required: 'Description is required',
               pattern: {
                 value: /^[^0-9]*$/,
-                message: 'Numbers are not allowed in this field',
+                message: 'Numbers are not allowed in this field', //validation
               },
               validate: (v) => wordCount(v) <= 20 || 'Description cannot exceed 20 words',
             })}

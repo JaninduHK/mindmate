@@ -3,10 +3,12 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
 import { AuthProvider } from './contexts/AuthContext';
 import { AppProvider } from './context/AppContext';
+import { NotificationProvider } from './contexts/NotificationContext';
 import Header from './components/layout/Header';
 import Footer from './components/layout/Footer';
 import EmergencyBanner from './components/emergency/EmergencyBanner';
 import ProtectedRoute from './components/common/ProtectedRoute';
+import GlobalMessageListener from './components/listeners/GlobalMessageListener';
 
 import Home from './pages/Home';
 import Login from './pages/Login';
@@ -19,11 +21,13 @@ import Profile from './pages/Profile';
 import ContentLibrary from './pages/ContentLibrary';
 import EmergencyContacts from './pages/EmergencyContacts';
 import NotFound from './pages/NotFound';
-import ChatPage from './pages/chat/ChatPage';
-
 // Events
 import EventList from './pages/Events/EventList';
 import EventDetail from './pages/Events/EventDetail';
+
+// Chat
+import ChatPage from './pages/chat/ChatPage';
+import GroupChatPage from './pages/chat/GroupChatPage';
 
 // Counselors (public)
 import CounselorList from './pages/Counselors/CounselorList';
@@ -51,18 +55,27 @@ import EventEdit from './pages/Counselor/EventEdit';
 // Peer Supporter pages
 import PeerSupporterRegister from './pages/PeerSupporter/PeerSupporterRegister';
 import PeerSupporterDashboard from './pages/PeerSupporter/PeerSupporterDashboard';
+import ManageAvailability from './pages/PeerSupporter/ManageAvailability';
 import PeerSupporterList from './pages/PeerSupporter/PeerSupporterList';
+import BookSessionPage from './pages/PeerSupporter/BookSessionPage';
 import UsersList from './pages/PeerSupporter/UsersList';
+import MySessionsPage from './pages/PeerSupporter/MySessionsPage';
+import UserSessions from './pages/PeerSupporter/UserSessions';
+import PeerSupporterSessions from './pages/PeerSupporter/PeerSupporterSessions';
 
+// Personal tracking
 import PersonalTrackingPage from './pages/PersonalTracking/PersonalTrackingPage';
 import { useAuth } from './hooks/useAuth';
 
 function App() {
   return (
-    <BrowserRouter>
+    <BrowserRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
       <AuthProvider>
         <AppProvider>
-          <AppContent />
+          <NotificationProvider>
+            <GlobalMessageListener />
+            <AppContent />
+          </NotificationProvider>
         </AppProvider>
       </AuthProvider>
     </BrowserRouter>
@@ -108,6 +121,7 @@ function AppContent() {
             <Header />
             <main className={`flex-1 ${emergencyActive ? 'pt-40' : ''}`}>
             <Routes>
+              {/* Public */}
               <Route path="/" element={<Home />} />
               <Route path="/login" element={<Login />} />
               <Route path="/guardian-login" element={<GuardianLogin />} />
@@ -120,8 +134,10 @@ function AppContent() {
               <Route path="/counselors" element={<CounselorList />} />
               <Route path="/counselors/:id" element={<CounselorProfile />} />
               <Route path="/peer-supporters" element={<PeerSupporterList />} />
+              <Route path="/book-session/:supporterId" element={<BookSessionPage />} />
               <Route path="/chat" element={<ChatPage />} />
               <Route path="/chat/:recipientId" element={<ChatPage />} />
+              <Route path="/chat-group/:groupId" element={<GroupChatPage />} />
               {/* Protected — user role only */}
               <Route element={<ProtectedRoute allowedRoles={['user']} />}>
                 <Route path="/dashboard" element={<Dashboard />} />
@@ -140,13 +156,20 @@ function AppContent() {
                 <Route path="/booking/checkout/:eventId" element={<BookingCheckout />} />
                 <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
                 <Route path="/booking/my" element={<MyBookings />} />
+
+                <Route path="/my-sessions" element={<MySessionsPage />} />
+
+                <Route path="/my-sessions" element={<UserSessions />} />
+
                 <Route path="/counselor/onboarding" element={<CounselorOnboarding />} />
               </Route>
 
               {/* Protected — peer supporter role */}
               <Route element={<ProtectedRoute allowedRoles={['peer_supporter']} />}>
                 <Route path="/peer-supporter/dashboard" element={<PeerSupporterDashboard />} />
+                <Route path="/peer-supporter/manage-availability" element={<ManageAvailability />} />
                 <Route path="/peer-supporter/users" element={<UsersList />} />
+                <Route path="/peer-supporter/sessions" element={<PeerSupporterSessions />} />
               </Route>
 
               {/* Protected — counselor role */}
@@ -177,7 +200,15 @@ function AppContent() {
           </main>
           {user?.role !== 'emergency_contact' && <Footer />}
         </div>
+<<<<<<< HEAD
       );
     }
+=======
+        </NotificationProvider>
+      </AuthProvider>
+    </BrowserRouter>
+  );
+}
+>>>>>>> f2dce68fdefbe3f78aec8776c188c98b3f4c39e8
 
 export default App;

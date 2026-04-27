@@ -31,6 +31,8 @@ import notificationRoutes from './routes/notification.routes.js';
 import analyticsRoutes from './routes/analytics.routes.js';
 import adminRoutes from './routes/admin.routes.js';
 import withdrawalRoutes from './routes/withdrawal.routes.js';
+import sessionRoutes from './routes/session.routes.js';
+import availabilityRoutes from './routes/availability.routes.js';
 import moodRoutes from './routes/moodRoutes.js';
 import goalRoutes from './routes/goalRoutes.js';
 import personalTrackingAnalyticsRoutes from './routes/analyticsRoutes.js';
@@ -39,6 +41,8 @@ import guardianRoutes from './routes/guardian.routes.js';
 import emergencyContactRoutes from './routes/emergencyContact.routes.js';
 import emergencyRoutes from './routes/emergency/emergency.routes.js';
 import contentRoutes from './routes/content.routes.js';
+import peerSessionRoutes from './routes/peerSession.routes.js';
+import { registerGoalMissedAlertJobs } from './services/goalMissedAlert.service.js';
 
 // Import models to ensure they are created in MongoDB
 import GuardianSignup from './models/GuardianSignup.model.js';
@@ -112,7 +116,13 @@ const corsOptions = {
 // ===============================
 const io = new Server(server, {
   cors: corsOptions,
+  transports: ['websocket', 'polling'],
 });
+
+console.log('🔌 Socket.IO initialized with CORS:', corsOptions);
+
+// Make io available globally via app for use in controllers
+app.io = io;
 
 // Initialize socket events
 socketHandler(io);
@@ -134,8 +144,9 @@ const globalLimiter = rateLimit({
 // ===============================
 // MIDDLEWARE STACK
 // ===============================
-app.use(helmet()); // Security headers
-app.use(cors(corsOptions)); // CORS
+app.use(cors(corsOptions)); // CORS — must come before helmet so preflight is handled first
+app.options('*', cors(corsOptions)); // Explicitly handle all preflight requests
+app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
 
 // Stripe webhook must come BEFORE JSON parser
 app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
@@ -182,6 +193,8 @@ app.use('/api/reviews', reviewRoutes);
 app.use('/api/notifications', notificationRoutes);
 app.use('/api/analytics', analyticsRoutes);
 app.use('/api/chats', chatRoutes);
+app.use('/api/sessions', sessionRoutes);
+app.use('/api/availability', availabilityRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/withdrawals', withdrawalRoutes);
 app.use('/api/personal-tracking/moods', moodRoutes);
@@ -194,7 +207,15 @@ app.use('/api/guardian', guardianRoutes);
 app.use('/api/emergency-contacts', emergencyContactRoutes);
 app.use('/api/emergency', emergencyRoutes);
 app.use('/api/content', contentRoutes);
+app.use('/api/peer-sessions', peerSessionRoutes);
 
+// Register goal missed alert jobs
+try {
+  registerGoalMissedAlertJobs();
+  console.log('✅ Goal missed alert jobs registered');
+} catch (error) {
+  console.error('Error registering goal missed alert jobs:', error);
+}
 
 // ===============================
 // 404 HANDLER
@@ -223,6 +244,8 @@ connectDB().then(() => {
     console.log(`🌐 API: http://localhost:${PORT}/api`);
     console.log(`🏥 Health: http://localhost:${PORT}/api/health\n`);
   });
+  // Register scheduled jobs after DB is connected
+  registerGoalMissedAlertJobs();
 });
 
 

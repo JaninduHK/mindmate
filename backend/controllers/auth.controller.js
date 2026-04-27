@@ -17,12 +17,20 @@ import { composeInvitationSMS } from '../utils/smsBodies.js';
 import { generateInvitationUrl, verifyTokenHash, hashToken } from '../utils/tokenGenerator.js';
 import { sendSMS, normalizePhoneNumber } from '../utils/smsService.js';
 
-// Helper function to set refresh token cookie
+// Cross-origin SPA (e.g. Vite :5173 → API :5000) needs Lax in dev; production HTTPS needs None + Secure.
+const refreshCookieBase = () => {
+  const isProd = process.env.NODE_ENV === 'production';
+  return {
+    httpOnly: true,
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    path: '/',
+  };
+};
+
 const setRefreshTokenCookie = (res, token) => {
   res.cookie('refreshToken', token, {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: process.env.NODE_ENV === 'production' ? 'strict' : 'lax',
+    ...refreshCookieBase(),
     maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
   });
 };
@@ -530,12 +538,7 @@ export const logout = asyncHandler(async (req, res) => {
     }
   }
 
-  // Clear cookie
-  res.clearCookie('refreshToken', {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
-  });
+  res.clearCookie('refreshToken', refreshCookieBase());
 
   res.status(HTTP_STATUS.OK).json(new ApiResponse(HTTP_STATUS.OK, null, 'Logout successful'));
 });

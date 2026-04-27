@@ -94,9 +94,14 @@ const Header = () => {
             {isAuthenticated ? (
               <>
                 {isUserRole && (
-                  <Link to="/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
-                    Dashboard
-                  </Link>
+                  <>
+                    <Link to="/dashboard" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
+                      Dashboard
+                    </Link>
+                    <Link to="/personal-tracking" className="text-gray-700 hover:text-primary-600 transition-colors text-sm">
+                      Personal Tracking
+                    </Link>
+                  </>
                 )}
 
                 {isCounselor && (
@@ -162,9 +167,14 @@ const Header = () => {
             {isAuthenticated ? (
               <>
                 {isUserRole && (
-                  <Link to="/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>
-                    Dashboard
-                  </Link>
+                  <>
+                    <Link to="/dashboard" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>
+                      Dashboard
+                    </Link>
+                    <Link to="/personal-tracking" className="block py-2 text-gray-700 hover:text-primary-600" onClick={() => setShowMenu(false)}>
+                      Personal Tracking
+                    </Link>
+                  </>
                 )}
 
                 {isCounselor && (

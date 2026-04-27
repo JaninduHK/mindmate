@@ -5,7 +5,7 @@ import { chatAPI } from '../../api/chat.api';
 import { socket } from '../../socket/socket';
 import { useAuth } from '../../hooks/useAuth';
 import Loading from '../../components/common/Loading';
-import { FiMessageCircle, FiCheck, FiX, FiRefreshCw, FiBell } from 'react-icons/fi';
+import { FiMessageCircle, FiCheck, FiX, FiRefreshCw, FiBell, FiCalendar } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 
 const PeerSupporterList = () => {
@@ -103,6 +103,10 @@ const PeerSupporterList = () => {
     navigate(`/chat/${supporterId}`);
   };
 
+  const handleBookSession = (supporterId) => {
+    navigate(`/book-session/${supporterId}`);
+  };
+
   const handleManualRefresh = async () => {
     await fetchPeerSupporters(page, false);
     toast.success('List refreshed');
@@ -172,6 +176,16 @@ const PeerSupporterList = () => {
                     )}
                   </div>
 
+                  {/* Book Session Button */}
+                  <button
+                    onClick={() => handleBookSession(ps._id)}
+                    className="w-full py-2.5 rounded-xl transition-colors font-semibold flex items-center justify-center gap-2 text-sm mb-3 bg-blue-50 text-blue-700 hover:bg-blue-100"
+                  >
+                    <FiCalendar className="w-4.5 h-4.5" />
+                    Book Session
+                  </button>
+
+                  {/* Chat Now Button */}
                   <button
                     onClick={() => handleChatClick(ps._id, ps.isAvailableNow)}
                     disabled={!ps.isAvailableNow}

@@ -18,7 +18,7 @@ export const getUsers = asyncHandler(async (req, res) => {
 
     const [users, total] = await Promise.all([
       User.find({ role: 'user', isActive: true })
-        .select('name email avatar')
+        .select('name email avatar username')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -135,10 +135,12 @@ export const deleteAccount = asyncHandler(async (req, res) => {
   await user.deleteOne();
 
   // Clear cookie
+  const isProd = process.env.NODE_ENV === 'production';
   res.clearCookie('refreshToken', {
     httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    secure: isProd,
+    sameSite: isProd ? 'none' : 'lax',
+    path: '/',
   });
 
   res.status(HTTP_STATUS.OK).json(

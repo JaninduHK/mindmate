@@ -78,7 +78,10 @@ export default function GoalForm({
 
     if (goalType === 'daily') {
       const dup = normalizedExisting.find(
-        (g) => g.goalType === 'daily' && g.goalNameNorm === nameNorm && g.dateISO === targetDateISO
+        (g) =>
+          g.goalType === 'daily' &&
+          g.goalNameNorm === nameNorm &&
+          g.dateISO === targetDateISO
       );
       const safeDup = dup && (!isEditing || String(dup._id) !== String(editingGoal._id));
       return safeDup ? 'Daily goal already exists for this date.' : null;
@@ -88,7 +91,10 @@ export default function GoalForm({
     if (!weeklyOrCustom) return null;
 
     const dup = normalizedExisting.find(
-      (g) => g.goalType === goalType && g.goalNameNorm === nameNorm && g.weekKey === targetWeekKey
+      (g) =>
+        g.goalType === goalType &&
+        g.goalNameNorm === nameNorm &&
+        g.weekKey === targetWeekKey
     );
     const safeDup = dup && (!isEditing || String(dup._id) !== String(editingGoal._id));
     return safeDup ? 'This goal already exists for this week.' : null;
@@ -146,7 +152,7 @@ export default function GoalForm({
             validate: (v) => String(v ?? '').trim().length > 0 || 'Goal name is required',
             pattern: {
               value: /^[^0-9]*$/,
-              message: 'Numbers are not allowed in this field',
+              message: 'Numbers are not allowed in this field', //number not allowed validation
             },
           })}
         />
