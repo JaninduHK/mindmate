@@ -1,35 +1,28 @@
-import nodemailer from 'nodemailer';
+import sgMail from '@sendgrid/mail';
 
-let transporter = null;
-
-const getTransporter = () => {
-  if (transporter) return transporter;
-
-  transporter = nodemailer.createTransport({
-    host: process.env.EMAIL_HOST || 'smtp.gmail.com',
-    port: parseInt(process.env.EMAIL_PORT) || 587,
-    secure: process.env.EMAIL_SECURE === 'true',
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASS,
-    },
-  });
-
-  return transporter;
-};
+// Initialize SendGrid with API key
+sgMail.setApiKey(process.env.SENDGRID_API_KEY);
 
 /**
- * Send an email.
+ * Send an email using SendGrid
  * @param {Object} options - { to, subject, html, text }
  */
 export const sendEmail = async ({ to, subject, html, text }) => {
   try {
-    const t = getTransporter();
-    const from = process.env.EMAIL_FROM || 'MindMate <noreply@mindmate.com>';
-    await t.sendMail({ from, to, subject, html, text });
+    const message = {
+      to,
+      from: process.env.SENDGRID_FROM_EMAIL || 'noreply@mindmate.com',
+      subject,
+      html: html || text,
+      text: text || 'Please view this email in HTML format.',
+    };
+
+    const response = await sgMail.send(message);
+    console.log(`✅ Email sent to ${to} - ${subject}`);
+    return response;
   } catch (error) {
     // Log but don't throw — email failure should not break the request
-    console.error('Email send error:', error.message);
+    console.error('❌ SendGrid Email Error:', error.message);
   }
 };
 

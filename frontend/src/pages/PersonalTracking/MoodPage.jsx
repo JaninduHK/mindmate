@@ -22,7 +22,7 @@ const toMonthRange = (monthCursor) => {
   };
 };
 
-export default function MoodPage() {
+export default function MoodPage({ onMoodAdded = () => {} }) {
   const todayISO = useMemo(() => format(new Date(), 'yyyy-MM-dd'), []);
 
   const [monthCursor, setMonthCursor] = useState(new Date());
@@ -112,6 +112,9 @@ export default function MoodPage() {
       await refreshTodayMood();
       await refreshMonthMoods(new Date());
       setSelectedDate(todayISO);
+      
+      // Trigger analytics refresh
+      onMoodAdded();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to save mood');
     } finally {
@@ -131,6 +134,9 @@ export default function MoodPage() {
 
       await refreshMonthMoods(monthCursor);
       await refreshTodayMood();
+      
+      // Trigger analytics refresh
+      onMoodAdded();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete mood entry');
     } finally {

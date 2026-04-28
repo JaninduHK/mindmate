@@ -86,7 +86,6 @@ function AppContent() {
   const { user } = useAuth();
   const [emergencyActive, setEmergencyActive] = React.useState(false);
 
-  // Check emergency status and listen for changes
   React.useEffect(() => {
     const checkEmergencyStatus = () => {
       const isActive = localStorage.getItem('emergencyModeActive') === 'true';
@@ -108,107 +107,98 @@ function AppContent() {
 
   return (
     <div className="flex flex-col min-h-screen">
-            <Toaster
-              position="top-right"
-              toastOptions={{
-                duration: 3000,
-                style: { background: '#363636', color: '#fff' },
-                success: { duration: 3000, iconTheme: { primary: '#10b981', secondary: '#fff' } },
-                error: { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
-              }}
-            />
-            <EmergencyBanner />
-            <Header />
-            <main className={`flex-1 ${emergencyActive ? 'pt-40' : ''}`}>
-            <Routes>
-              {/* Public */}
-              <Route path="/" element={<Home />} />
-              <Route path="/login" element={<Login />} />
-              <Route path="/guardian-login" element={<GuardianLogin />} />
-              <Route path="/guardian-signup/:token" element={<GuardianSignup />} />
-              <Route path="/register/guardian" element={<GuardianSignup />} />
-              <Route path="/register" element={<Register />} />
-              <Route path="/register/peer-supporter" element={<PeerSupporterRegister />} />
-              <Route path="/events" element={<EventList />} />
-              <Route path="/events/:id" element={<EventDetail />} />
-              <Route path="/counselors" element={<CounselorList />} />
-              <Route path="/counselors/:id" element={<CounselorProfile />} />
-              <Route path="/peer-supporters" element={<PeerSupporterList />} />
-              <Route path="/book-session/:supporterId" element={<BookSessionPage />} />
-              <Route path="/chat" element={<ChatPage />} />
-              <Route path="/chat/:recipientId" element={<ChatPage />} />
-              <Route path="/chat-group/:groupId" element={<GroupChatPage />} />
-              {/* Protected — user role only */}
-              <Route element={<ProtectedRoute allowedRoles={['user']} />}>
-                <Route path="/dashboard" element={<Dashboard />} />
-                <Route path="/emergency-contacts" element={<EmergencyContacts />} />
-                <Route path="/content-library" element={<ContentLibrary />} />
-              </Route>
+      <Toaster
+        position="top-right"
+        toastOptions={{
+          duration: 3000,
+          style: { background: '#363636', color: '#fff' },
+          success: { duration: 3000, iconTheme: { primary: '#10b981', secondary: '#fff' } },
+          error: { duration: 4000, iconTheme: { primary: '#ef4444', secondary: '#fff' } },
+        }}
+      />
+      <EmergencyBanner />
+      <Header />
+      <main className={`flex-1 ${emergencyActive ? 'pt-40' : ''}`}>
+        <Routes>
+          {/* Public */}
+          <Route path="/" element={<Home />} />
+          <Route path="/login" element={<Login />} />
+          <Route path="/guardian-login" element={<GuardianLogin />} />
+          <Route path="/guardian-signup" element={<GuardianSignup />} />
+          <Route path="/register/guardian" element={<GuardianSignup />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/register/peer-supporter" element={<PeerSupporterRegister />} />
+          <Route path="/events" element={<EventList />} />
+          <Route path="/events/:id" element={<EventDetail />} />
+          <Route path="/counselors" element={<CounselorList />} />
+          <Route path="/counselors/:id" element={<CounselorProfile />} />
+          <Route path="/peer-supporters" element={<PeerSupporterList />} />
+          <Route path="/book-session/:supporterId" element={<BookSessionPage />} />
+          <Route path="/chat" element={<ChatPage />} />
+          <Route path="/chat/:recipientId" element={<ChatPage />} />
+          <Route path="/chat-group/:groupId" element={<GroupChatPage />} />
 
-              {/* Protected — user only */}
-              <Route element={<ProtectedRoute allowedRoles={['user']} />}>
-                <Route path="/personal-tracking" element={<PersonalTrackingPage />} />
-              </Route>
+          {/* Protected — user role only */}
+          <Route element={<ProtectedRoute allowedRoles={['user']} />}>
+            <Route path="/dashboard" element={<Dashboard />} />
+            <Route path="/emergency-contacts" element={<EmergencyContacts />} />
+            <Route path="/content-library" element={<ContentLibrary />} />
+          </Route>
 
-              {/* Protected — any authenticated user */}
-              <Route element={<ProtectedRoute />}>
-                <Route path="/profile" element={<Profile />} />
-                <Route path="/booking/checkout/:eventId" element={<BookingCheckout />} />
-                <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
-                <Route path="/booking/my" element={<MyBookings />} />
+          {/* Protected — user only */}
+          <Route element={<ProtectedRoute allowedRoles={['user']} />}>
+            <Route path="/personal-tracking" element={<PersonalTrackingPage />} />
+          </Route>
 
-                <Route path="/my-sessions" element={<MySessionsPage />} />
+          {/* Protected — any authenticated user */}
+          <Route element={<ProtectedRoute />}>
+            <Route path="/profile" element={<Profile />} />
+            <Route path="/booking/checkout/:eventId" element={<BookingCheckout />} />
+            <Route path="/booking/confirmation/:bookingId" element={<BookingConfirmation />} />
+            <Route path="/booking/my" element={<MyBookings />} />
+            <Route path="/my-sessions" element={<MySessionsPage />} />
+            <Route path="/my-sessions" element={<UserSessions />} />
+            <Route path="/counselor/onboarding" element={<CounselorOnboarding />} />
+          </Route>
 
-                <Route path="/my-sessions" element={<UserSessions />} />
+          {/* Protected — peer supporter role */}
+          <Route element={<ProtectedRoute allowedRoles={['peer_supporter']} />}>
+            <Route path="/peer-supporter/dashboard" element={<PeerSupporterDashboard />} />
+            <Route path="/peer-supporter/manage-availability" element={<ManageAvailability />} />
+            <Route path="/peer-supporter/users" element={<UsersList />} />
+            <Route path="/peer-supporter/sessions" element={<PeerSupporterSessions />} />
+          </Route>
 
-                <Route path="/counselor/onboarding" element={<CounselorOnboarding />} />
-              </Route>
+          {/* Protected — counselor role */}
+          <Route element={<ProtectedRoute allowedRoles={['counselor']} />}>
+            <Route path="/counselor/dashboard" element={<CounselorDashboard />} />
+            <Route path="/counselor/events" element={<EventManage />} />
+            <Route path="/counselor/events/create" element={<EventCreate />} />
+            <Route path="/counselor/events/:id/edit" element={<EventEdit />} />
+            <Route path="/counselor/analytics" element={<CounselorAnalytics />} />
+            <Route path="/counselor/withdrawals" element={<CounselorWithdrawals />} />
+          </Route>
 
-              {/* Protected — peer supporter role */}
-              <Route element={<ProtectedRoute allowedRoles={['peer_supporter']} />}>
-                <Route path="/peer-supporter/dashboard" element={<PeerSupporterDashboard />} />
-                <Route path="/peer-supporter/manage-availability" element={<ManageAvailability />} />
-                <Route path="/peer-supporter/users" element={<UsersList />} />
-                <Route path="/peer-supporter/sessions" element={<PeerSupporterSessions />} />
-              </Route>
+          {/* Protected — admin role */}
+          <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+            <Route path="/admin" element={<AdminDashboard />} />
+            <Route path="/admin/*" element={<AdminDashboard />} />
+          </Route>
 
-              {/* Protected — counselor role */}
-              <Route element={<ProtectedRoute allowedRoles={['counselor']} />}>
-                <Route path="/counselor/dashboard" element={<CounselorDashboard />} />
-                <Route path="/counselor/events" element={<EventManage />} />
-                <Route path="/counselor/events/create" element={<EventCreate />} />
-              <Route path="/counselor/events/:id/edit" element={<EventEdit />} />
-                <Route path="/counselor/analytics" element={<CounselorAnalytics />} />
-                <Route path="/counselor/withdrawals" element={<CounselorWithdrawals />} />
-              </Route>
+          {/* Protected — emergency_contact role (guardians) */}
+          <Route element={<ProtectedRoute allowedRoles={['emergency_contact']} />}>
+            <Route path="/guardian-dashboard" element={<GuardianDashboard />} />
+            <Route path="/guardian-dashboard/:monitoredUserId" element={<GuardianDashboard />} />
+            <Route path="/guardian/dashboard" element={<GuardianDashboard />} />
+          </Route>
 
-              {/* Protected — admin role */}
-              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route path="/admin" element={<AdminDashboard />} />
-                <Route path="/admin/*" element={<AdminDashboard />} />
-              </Route>
-
-              {/* Protected — emergency_contact role (guardians) */}
-              <Route element={<ProtectedRoute allowedRoles={['emergency_contact']} />}>
-                <Route path="/guardian-dashboard" element={<GuardianDashboard />} />
-                <Route path="/guardian/dashboard" element={<GuardianDashboard />} />
-              </Route>
-
-              {/* 404 */}
-              <Route path="*" element={<NotFound />} />
-            </Routes>
-          </main>
-          {user?.role !== 'emergency_contact' && <Footer />}
-        </div>
-<<<<<<< HEAD
-      );
-    }
-=======
-        </NotificationProvider>
-      </AuthProvider>
-    </BrowserRouter>
+          {/* 404 */}
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </main>
+      {user?.role !== 'emergency_contact' && <Footer />}
+    </div>
   );
 }
->>>>>>> f2dce68fdefbe3f78aec8776c188c98b3f4c39e8
 
 export default App;

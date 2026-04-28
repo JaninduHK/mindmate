@@ -208,6 +208,10 @@ function EmergencyContacts() {
   };
 
   const getInitials = (name) => {
+    // Handle undefined/null names
+    if (!name) {
+      return '?';
+    }
     return name
       .split(' ')
       .map((n) => n[0])
@@ -263,11 +267,11 @@ function EmergencyContacts() {
               <div className="flex justify-between items-start mb-6">
                 <div className="flex items-center gap-4">
                   <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg">
-                    {getInitials(contact.fullName)}
+                    {getInitials(contact.fullName || contact.email)}
                   </div>
                   <div>
                     <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-gray-900">{contact.fullName}</h3>
+                      <h3 className="font-bold text-gray-900">{contact.fullName || contact.email}</h3>
                       {getStatusBadge(contact)}
                     </div>
                     <span className="inline-block px-2.5 py-0.5 bg-gray-100 text-gray-600 text-xs rounded-full mt-1">

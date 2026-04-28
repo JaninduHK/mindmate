@@ -6,7 +6,7 @@ import { useAuth } from '../../hooks/useAuth';
 import AnalyticsSummary from '../../components/personalTracking/AnalyticsSummary';
 import AdminWellnessDashboard from '../../components/personalTracking/AdminWellnessDashboard';
 
-export default function AnalyticsPage() {
+export default function AnalyticsPage({ refreshTrigger = 0 }) {
   const { user } = useAuth();
 
   const [summary, setSummary] = useState(null);
@@ -40,7 +40,7 @@ export default function AnalyticsPage() {
 
   useEffect(() => {
     loadSummary();
-  }, [loadSummary]);
+  }, [loadSummary, refreshTrigger]);
 
   return (
     <div className="space-y-8">

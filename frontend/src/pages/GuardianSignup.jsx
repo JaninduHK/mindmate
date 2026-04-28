@@ -5,9 +5,11 @@ import Input from '../components/common/Input';
 import { FiUser, FiMail, FiLock, FiAlertCircle } from 'react-icons/fi';
 import toast from 'react-hot-toast';
 import axiosInstance, { setAccessToken } from '../api/axios.config';
+import { useAuth } from '../hooks/useAuth';
 
 const GuardianSignup = () => {
   const navigate = useNavigate();
+  const { updateUser } = useAuth();
   const [searchParams] = useSearchParams();
   const invitationToken = searchParams.get('token');
   
@@ -109,18 +111,21 @@ const GuardianSignup = () => {
         toast.success('Account created successfully!');
         
         // Store the access token from signup response
-        const { accessToken, monitoredUserId } = response.data.data;
-        if (accessToken) {
+        const { accessToken, user } = response.data.data;
+        if (accessToken && user) {
           // Store token to localStorage and axios headers
           setAccessToken(accessToken);
           
-          // Redirect to guardian dashboard with monitored user ID
-          if (monitoredUserId) {
-            navigate(`/guardian-dashboard/${monitoredUserId}`);
-          } else {
-            // Fallback if no monitored user (shouldn't happen in invitation flow)
-            navigate('/guardian-dashboard');
+          // Update auth context with user data
+          if (updateUser) {
+            updateUser(user);
           }
+          
+          // Redirect to guardian dashboard
+          // The dashboard will fetch monitored users automatically
+          setTimeout(() => {
+            navigate('/guardian-dashboard');
+          }, 500);
         }
       }
     } catch (error) {

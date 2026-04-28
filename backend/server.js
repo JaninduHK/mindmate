@@ -42,6 +42,7 @@ import emergencyContactRoutes from './routes/emergencyContact.routes.js';
 import emergencyRoutes from './routes/emergency/emergency.routes.js';
 import contentRoutes from './routes/content.routes.js';
 import peerSessionRoutes from './routes/peerSession.routes.js';
+import testEmailRoutes from './routes/testEmail.routes.js';
 import { registerGoalMissedAlertJobs } from './services/goalMissedAlert.service.js';
 
 // Import models to ensure they are created in MongoDB
@@ -208,6 +209,7 @@ app.use('/api/emergency-contacts', emergencyContactRoutes);
 app.use('/api/emergency', emergencyRoutes);
 app.use('/api/content', contentRoutes);
 app.use('/api/peer-sessions', peerSessionRoutes);
+app.use('/api/test', testEmailRoutes);
 
 // Register goal missed alert jobs
 try {

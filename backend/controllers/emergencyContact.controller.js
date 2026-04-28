@@ -110,7 +110,7 @@ export const addEmergencyContact = asyncHandler(async (req, res) => {
   const user = await req.user.constructor.findById(userId).select('name');
 
   // Generate invitation URL
-  const frontendUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3000';
   const invitationUrl = generateInvitationUrl(invitationToken, frontendUrl);
 
   try {
@@ -244,7 +244,7 @@ export const resendEmergencyInvite = asyncHandler(async (req, res) => {
 
   // Resend email
   const user = await req.user.constructor.findById(userId).select('name');
-  const frontendUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+  const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3000';
   const invitationUrl = generateInvitationUrl(invitationToken, frontendUrl);
 
   try {
@@ -325,6 +325,112 @@ export const getMonitoredUsers = asyncHandler(async (req, res) => {
     )
   );
 });
+
+// Send invitations to all emergency contacts
+export const sendAllEmergencyInvitations = asyncHandler(async (req, res) => {
+  const userId = req.user._id;
+
+  // Get all emergency contacts for this user
+  const contacts = await EmergencyContact.find({ ownerUserId: userId });
+
+  if (contacts.length === 0) {
+    return res.status(HTTP_STATUS.OK).json(
+      new ApiResponse(
+        HTTP_STATUS.OK,
+        { data: { sent: 0, failed: 0, contacts: [] } },
+        'No emergency contacts found to send invitations to'
+      )
+    );
+  }
+
+  // Get user info
+  const user = await req.user.constructor.findById(userId).select('name');
+  const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+
+  let sentCount = 0;
+  let failureCount = 0;
+  const results = [];
+
+  // Send invitations to each contact
+  for (const contact of contacts) {
+    try {
+      // Generate new token
+      const invitationToken = generateInvitationToken();
+      contact.inviteTokenHash = hashToken(invitationToken);
+      contact.inviteExpiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+      contact.lastInvitedAt = new Date();
+
+      // Generate invitation URL
+      const invitationUrl = generateInvitationUrl(invitationToken, frontendUrl);
+
+      // Send email
+      const emailContent = composeInvitationEmail(
+        contact.fullName,
+        user.name,
+        invitationUrl,
+        contact.relationship
+      );
+
+      await sendEmail({
+        to: contact.email,
+        subject: emailContent.subject,
+        html: emailContent.html,
+        text: emailContent.text,
+      });
+
+      console.log(`[SEND_ALL] Email sent to ${contact.email}`);
+
+      // Send SMS if phone number exists
+      if (contact.phoneNumber && contact.phoneNumber.trim()) {
+        try {
+          const normalizedPhone = normalizePhoneNumber(contact.phoneNumber);
+          const smsContent = composeInvitationSMS(user.name, invitationUrl);
+          
+          const smsResult = await sendSMS(normalizedPhone, smsContent.body);
+          console.log(`[SEND_ALL] SMS sent to ${normalizedPhone}:`, smsResult);
+        } catch (smsError) {
+          console.error(`[SEND_ALL] SMS failed for ${contact.phoneNumber}:`, smsError.message);
+        }
+      }
+
+      contact.deliveryStatus.email = 'sent';
+      if (contact.phoneNumber) contact.deliveryStatus.sms = 'sent';
+      await contact.save();
+
+      sentCount++;
+      results.push({
+        email: contact.email,
+        fullName: contact.fullName,
+        status: 'sent',
+      });
+    } catch (error) {
+      failureCount++;
+      console.error(`[SEND_ALL] Failed to send invitation to ${contact.email}:`, error.message);
+      results.push({
+        email: contact.email,
+        fullName: contact.fullName,
+        status: 'failed',
+        error: error.message,
+      });
+    }
+  }
+
+  res.status(HTTP_STATUS.OK).json(
+    new ApiResponse(
+      HTTP_STATUS.OK,
+      {
+        data: {
+          sent: sentCount,
+          failed: failureCount,
+          total: sentCount + failureCount,
+          results,
+        },
+      },
+      `Invitations sent to ${sentCount} emergency contacts${failureCount > 0 ? `, ${failureCount} failed` : ''}`
+    )
+  );
+});
+
 // Accept emergency contact invitation (using token)
 export const acceptEmergencyContactInvitation = asyncHandler(async (req, res) => {
   const { token } = req.body;

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useCallback, useRef } from 'react';
 import MoodPage from './MoodPage';
 import GoalPage from './GoalPage';
 import AnalyticsPage from './AnalyticsPage';
@@ -11,6 +11,13 @@ const TABS = [
 
 export default function PersonalTrackingPage() {
   const [activeTab, setActiveTab] = useState('mood');
+  const analyticsRefreshTrigger = useRef(0);
+  const [analyticsRefresh, setAnalyticsRefresh] = useState(0);
+
+  const triggerAnalyticsRefresh = useCallback(() => {
+    analyticsRefreshTrigger.current += 1;
+    setAnalyticsRefresh(analyticsRefreshTrigger.current);
+  }, []);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 py-12">
@@ -52,9 +59,9 @@ export default function PersonalTrackingPage() {
 
         {/* Content Area */}
         <div className="mt-8">
-          {activeTab === 'mood' && <MoodPage />}
-          {activeTab === 'goals' && <GoalPage />}
-          {activeTab === 'analytics' && <AnalyticsPage />}
+          {activeTab === 'mood' && <MoodPage onMoodAdded={triggerAnalyticsRefresh} />}
+          {activeTab === 'goals' && <GoalPage onGoalAdded={triggerAnalyticsRefresh} />}
+          {activeTab === 'analytics' && <AnalyticsPage refreshTrigger={analyticsRefresh} />}
         </div>
       </div>
     </div>

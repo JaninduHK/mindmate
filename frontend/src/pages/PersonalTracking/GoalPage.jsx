@@ -15,7 +15,7 @@ const getLocalDateISO = () => {
   return `${y}-${m}-${day}`;
 };
 
-export default function GoalPage() {
+export default function GoalPage({ onGoalAdded = () => {} }) {
   const todayISO = useMemo(() => getLocalDateISO(), []);
 
   const [goals, setGoals] = useState([]);
@@ -69,6 +69,7 @@ export default function GoalPage() {
         date: todayISO,
       });
       await refreshGoals();
+      onGoalAdded();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to add goal');
       throw err;
@@ -85,6 +86,7 @@ export default function GoalPage() {
         toast.success(res.data?.message || 'Progress updated');
       }
       await refreshGoals();
+      onGoalAdded();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update goal');
     }
@@ -98,6 +100,7 @@ export default function GoalPage() {
       if (editingGoal?._id && String(editingGoal._id) === String(goalId)) {
         setEditingGoal(null);
       }
+      onGoalAdded();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to delete goal');
     }
@@ -109,6 +112,7 @@ export default function GoalPage() {
       toast.success('Goal updated successfully');
       setEditingGoal(null);
       await refreshGoals();
+      onGoalAdded();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to update goal');
     }
@@ -121,6 +125,7 @@ export default function GoalPage() {
       await axiosInstance.patch(`/personal-tracking/goals/${goalId}`, { status: 'incomplete' });
       toast.success('Goal re-activated for today');
       await refreshGoals();
+      onGoalAdded();
     } catch (err) {
       toast.error(err.response?.data?.message || 'Failed to re-activate goal');
     }

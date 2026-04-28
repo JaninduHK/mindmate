@@ -61,7 +61,7 @@ const resetInvitation = async (email) => {
     console.log('Contact record updated with new invitation token');
 
     // Generate invitation URL
-    const frontendUrl = process.env.CLIENT_URL || 'http://localhost:5173';
+    const frontendUrl = process.env.CLIENT_URL || 'http://localhost:3000';
     const invitationUrl = generateInvitationUrl(invitationToken, frontendUrl);
 
     console.log('Generated invitation URL:', invitationUrl);
